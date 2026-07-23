@@ -41,7 +41,8 @@ Phase 2: Foundational
 ├── US1: JSON Config Parsing (P1)
 │   ├── JsonParser (implementation)
 │   ├── JSON testdata files
-│   └── GraphRuntime file-based Initialize overload
+│   ├── GraphRuntime file-based Initialize overload
+│   └── JSON config driven pipeline example
 │
 ├── US2: Pluggable Formats (P2)
 │   ├── ParserRegistry
@@ -82,23 +83,24 @@ Phase 2: Foundational
 
 ### Sub-phase 3a — JsonParser Implementation
 
-- [X] - [ ] T006 [US1] Implement `JsonParser` (`graph_runtime/src/config/json/json_parser.h/.cc`): implements IGraphConfigParser, parses JSON into GraphConfig using nlohmann/json, validates required fields, calls ConfigValidator
-- [X] - [ ] T007 [P] [US1] Create JSON testdata — valid config (`graph_runtime/src/config/json/testdata/string_pipeline.json`): 3-Node pipeline with producer → transformer → consumer, 2 streams
-- [X] - [ ] T008 [P] [US1] Create JSON testdata — missing node reference (`graph_runtime/src/config/json/testdata/missing_node.json`): stream references non-existent node
-- [X] - [ ] T009 [P] [US1] Create JSON testdata — duplicate stream (`graph_runtime/src/config/json/testdata/duplicate_stream.json`): two streams with same name
-- [X] - [ ] T010 [P] [US1] Create JSON testdata — empty config (`graph_runtime/src/config/json/testdata/empty.json`): zero nodes, zero streams (valid)
-- [X] - [ ] T011 [P] [US1] Create JSON testdata — self-loop (`graph_runtime/src/config/json/testdata/self_loop.json`): stream connecting node to itself
-- [X] - [ ] T012 [P] [US1] Create JSON testdata — duplicate node (`graph_runtime/src/config/json/testdata/duplicate_node.json`): two nodes with same name
-- [X] - [ ] T013 [US1] Create config parser test (`graph_runtime/src/tests/config_parser_test.cc`): valid parse, missing node error, duplicate stream error, empty config, self-loop error, file not found error
+- [X] T006 [US1] Implement `JsonParser` (`graph_runtime/src/config/json/json_parser.h/.cc`): implements IGraphConfigParser, parses JSON into GraphConfig using nlohmann/json, validates required fields, calls ConfigValidator
+- [X] T007 [P] [US1] Create JSON testdata — valid config (`graph_runtime/src/config/json/testdata/string_pipeline.json`): 3-Node pipeline with producer → transformer → consumer, 2 streams
+- [X] T008 [P] [US1] Create JSON testdata — missing node reference (`graph_runtime/src/config/json/testdata/missing_node.json`): stream references non-existent node
+- [X] T009 [P] [US1] Create JSON testdata — duplicate stream (`graph_runtime/src/config/json/testdata/duplicate_stream.json`): two streams with same name
+- [X] T010 [P] [US1] Create JSON testdata — empty config (`graph_runtime/src/config/json/testdata/empty.json`): zero nodes, zero streams (valid)
+- [X] T011 [P] [US1] Create JSON testdata — self-loop (`graph_runtime/src/config/json/testdata/self_loop.json`): stream connecting node to itself
+- [X] T012 [P] [US1] Create JSON testdata — duplicate node (`graph_runtime/src/config/json/testdata/duplicate_node.json`): two nodes with same name
+- [X] T013 [US1] Create config parser test (`graph_runtime/src/tests/config_parser_test.cc`): valid parse, missing node error, duplicate stream error, empty config, self-loop error, file not found error
 
-### Sub-phase 3b — GraphRuntime Integration
+### Sub-phase 3b — GraphRuntime Integration & Examples
 
-- [X] - [ ] T014 [US1] Add file-based `Initialize()` overload to `GraphRuntime` (`graph_runtime/src/public/graph_runtime.h/.cc`): `Initialize(const std::string& file_path)` that auto-detects format and parses config
-- [X] - [ ] T015 [US1] Add `ParserRegistry` (`graph_runtime/src/config/parser_registry.h/.cc`): `Register(ext, factory)`, `CreateForFile(path)`, `IsFormatSupported(path)`, `GRAPH_RUNTIME_REGISTER_PARSER` macro
-- [X] - [ ] T016 [US1] Update `GraphRuntime::Initialize()` to validate missing side packets against GraphConfig declarations
-- [X] - [ ] T017 [US1] Create integration test with JSON config (`graph_runtime/src/tests/integration_test.cc`): load string_pipeline.json → Build → Start → WaitUntilDone
+- [X] T014 [US1] Add file-based `Initialize()` overload to `GraphRuntime` (`graph_runtime/src/public/graph_runtime.h/.cc`): `Initialize(const std::string& file_path)` that auto-detects format and parses config
+- [X] T015 [US1] Add `ParserRegistry` (`graph_runtime/src/config/parser_registry.h/.cc`): `Register(ext, factory)`, `CreateForFile(path)`, `IsFormatSupported(path)`, `GRAPH_RUNTIME_REGISTER_PARSER` macro
+- [X] T016 [US1] Update `GraphRuntime::Initialize()` to validate missing side packets against GraphConfig declarations
+- [X] T017 [US1] Create integration test with JSON config (`graph_runtime/src/tests/integration_test.cc`): load string_pipeline.json → Build → Start → WaitUntilDone
+- [X] T017b [US1] Create JSON config driven pipeline example (`graph_runtime/src/examples/string_pipeline_json.cc`): inline JSON string → write temp file → JsonParser::Parse → GraphConfig → ConfigValidator → manual RunOnce pipeline (producer→uppercase→consumer)
 
-**Checkpoint**: `bazel test //src/tests:config_parser_test && bazel test //src/tests:integration_test` passes with config-driven pipeline.
+**Checkpoint**: `bazel test //src/tests:config_parser_test` passes. `bazel run //src/examples:string_pipeline_json` produces correct pipeline output.
 
 ---
 
@@ -108,8 +110,8 @@ Phase 2: Foundational
 
 **Independent Test**: Each invalid config (missing node, duplicate name, self-loop) produces a specific error during `GraphBuilder::Build()`, before any runtime state is created.
 
-- [X] - [ ] T018 [US3] Integrate `ConfigValidator` into `GraphBuilder::Build()` (`graph_runtime/src/public/graph_builder.cc`): call `ConfigValidator::Validate()` as first step in Build pipeline
-- [X] - [ ] T019 [US3] Create build validation test (`graph_runtime/src/tests/build_validation_test.cc`): verify each invalid config produces correct error at Build() time
+- [X] T018 [US3] Integrate `ConfigValidator` into `GraphBuilder::Build()` (`graph_runtime/src/public/graph_builder.cc`): call `ConfigValidator::Validate()` as first step in Build pipeline
+- [X] T019 [US3] Create build validation test (`graph_runtime/src/tests/build_validation_test.cc`): verify each invalid config produces correct error at Build() time
 
 **Checkpoint**: `bazel test //src/tests:build_validation_test` passes.
 
@@ -146,25 +148,25 @@ Phase 1: Setup (T001–T003)
     │
 Phase 2: Foundational (T004–T005)
     │
-    ├──────────────────────────────┐
-    │                              │
-Phase 3a: JsonParser (T006–T013)   │
-    │                              │
-Phase 3b: Runtime Integ (T014–T017)│
-    │                              │
-    ├──────────────┐               │
-    │              │               │
-Phase 4: Build    │               │
-  Validation      │               │
-  (T018–T019)     │               │
-    │              │               │
-    └──────────────┘               │
-                   │               │
-            Phase 5: Pluggable     │
-              Formats (T020–T022)  │
-                   │               │
-            Phase 6: Polish        │
-              (T023–T025) ◄────────┘
+    ├─────────────────────────────────┐
+    │                                 │
+Phase 3a: JsonParser (T006–T013)      │
+    │                                 │
+Phase 3b: Runtime Integ (T014–T017b)  │
+    │                                 │
+    ├──────────────┐                  │
+    │              │                  │
+Phase 4: Build    │                  │
+  Validation      │                  │
+  (T018–T019)     │                  │
+    │              │                  │
+    └──────────────┘                  │
+                   │                  │
+            Phase 5: Pluggable        │
+              Formats (T020–T022)     │
+                   │                  │
+            Phase 6: Polish           │
+              (T023–T025) ◄───────────┘
 ```
 
 ### Within US1
@@ -175,11 +177,12 @@ Phase 4: Build    │               │
   ├── T007–T012: Test data files [P — all independent]
   └── T013: config_parser_test
 
-3b Runtime Integration (T014–T017)
+3b Runtime Integration (T014–T017b)
   ├── T014: GraphRuntime::Initialize(file)
   ├── T015: ParserRegistry
   ├── T016: Side packet validation
-  └── T017: integration_test
+  ├── T017: integration_test
+  └── T017b: string_pipeline_json example [P — independent of T017]
 ```
 
 ---
@@ -190,6 +193,7 @@ Phase 4: Build    │               │
 |-------|---------------|-----------|
 | Phase 3a | T007, T008, T009, T010, T011, T012 | All JSON testdata files — independent |
 | Phase 3a + 3b | T006 (JsonParser) and T015 (ParserRegistry) | Different files, no dependency |
+| Phase 3b | T017, T017b | integration_test and example — independent |
 | Phase 5 | T020, T021 | Macro and example — independent |
 
 ---
@@ -200,8 +204,8 @@ Phase 4: Build    │               │
 
 1. **Phase 1 + 2**: BUILD files + IGraphConfigParser + ConfigValidator
 2. **Phase 3a**: JsonParser + testdata + config_parser_test
-3. **Phase 3b**: ParserRegistry + GraphRuntime::Initialize(file) + integration_test
-4. **STOP and VALIDATE**: `bazel test //src/tests:config_parser_test && bazel test //src/tests:integration_test`
+3. **Phase 3b**: ParserRegistry + GraphRuntime::Initialize(file) + integration_test + string_pipeline_json example
+4. **STOP and VALIDATE**: `bazel test //src/tests:config_parser_test && bazel run //src/examples:string_pipeline_json`
 
 ### Incremental Delivery
 
