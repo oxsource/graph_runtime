@@ -221,3 +221,7 @@
 | Source context | Single default GraphContext reused | max_in_flight always 1 for sources |
 | Source layering | source_layer field (Phase 2) | Ordered multi-source startup; Phase 1: all concurrent |
 | Back-pressure recovery | Auto-unthrottle via becomes_not_full + HandleIdle deadlock break | Prevents deadlock without manual tuning |
+| Node registry | GlobalFactoryRegistry<unique_ptr<NodeFactory>> | MediaPipe CalculatorBaseRegistry, singleton, thread-safe |
+| Registration macro | `GRAPH_RUNTIME_REGISTER_NODE(type, class)` — file-scope static | Prefixed to avoid symbol conflicts; RAII NodeRegistrationToken |
+| Factory pattern | NodeFactory (base) + NodeFactoryFor<T> (template) | GetContract + CreateNode; analogous to CalculatorBaseFactoryFor<T> |
+| Port validation | NodeContract + static Node::GetContract() | Called at graph construction; type mismatches caught at build time |

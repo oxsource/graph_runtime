@@ -265,30 +265,87 @@ Pluggable strategy for running scheduler tasks. Works with `SchedulerQueue` via 
 
 ---
 
-### NodeFactory
+### NodeContract
 
-Registry for creating Node instances by type name.
+Port type declaration interface. Passed to Node's static `GetContract()` for graph validation.
 
 | Method | Description |
 |--------|-------------|
-| `Register(type_name, factory_fn)` | Register a Node type for creation |
-| `Create(type_name) -> unique_ptr<Node>` | Create a Node instance by type name |
+| `Inputs().Get("name").Set<T>()` | Declare an input port of type T |
+| `Inputs().Get("name").SetAny()` | Declare an input port accepting any type |
+| `Inputs().Get("name").SetSameAs(other)` | Mirror another port's type |
+| `Outputs()...` | Same as Inputs for output ports |
+| `Options<T>()` | Typed access to node config options |
+| `SetMaxInFlight(n)` | Limit concurrent Process invocations |
 
 **Boundaries**:
-- Used by GraphBuilder during graph construction (not during execution).
-- Registry is global — all Node types must be registered before graph construction.
-- Default Node types (for the string pipeline example) are registered during library init.
+- Used at graph construction time — called once per node type during `ValidatedGraphConfig::Initialize()`.
+- No Node instance exists yet — only port contracts are validated.
+- Type mismatch between connected ports produces an error at build time.
+- All node types MUST implement `static GetContract(NodeContract*)` (enforced by static_assert).
+
+---
+
+### NodeFactory
+
+Polymorphic factory for creating Node instances. Each registered node type has one factory.
+
+| Method | Description |
+|--------|-------------|
+| `GetContract(NodeContract*)` | Declare port types — calls T::GetContract() |
+| `CreateNode(name, options) -> unique_ptr<Node>` | Create a Node instance for a graph run |
+
+**NodeFactoryFor<T>**:
+- Template specialization that calls `T::GetContract(contract)` and `return make_unique<T>(name, options)`.
+- static_assert enforces that T inherits from Node and has `GetContract`.
+
+---
+
+### NodeFactoryRegistry
+
+Global singleton registry mapping type names to `unique_ptr<NodeFactory>`.
+
+| Method | Description |
+|--------|-------------|
+| `Register(type_name, factory) -> int` | Register a factory, returns registration ID |
+| `Unregister(id) -> bool` | Remove a factory by ID (for testing) |
+| `CreateByName(name, ...)` | Look up and create a Node by type name |
+| `CreateByNameInNamespace(ns, name, ...)` | Look up with namespace prefix |
+| `GetFactory(name)` | Look up factory without creating (for validation) |
+| `IsRegistered(name)` | Check if a type is registered |
+
+**Registration macro**:
+```cpp
+GRAPH_RUNTIME_REGISTER_NODE("TypeName", MyNode)
+```
+- File-scope static variable, runs before main().
+- `GRAPH_RUNTIME_` prefix avoids symbol conflicts across projects.
+- Creates a `NodeRegistrationToken` that auto-unregisters on destruction.
+
+**Boundaries**:
+- Registry is global — populated at program initialization via static registration.
+- All node types must be registered before graph construction.
+- Default node types are registered via `GRAPH_RUNTIME_REGISTER_NODE` in their respective .cc files.
 
 ---
 
 ## Relationships
 
 ```
-GraphBuilder
-  │  creates Nodes via NodeFactory
-  │  creates InputStreamManager per input port (deque + bound + callbacks)
-  │  creates OutputStream per output port (mirrors_ = list of downstream managers)
-  │  wires OutputStream::mirrors_ → InputStreamManager* via graph topology
+GraphBuilder (validation phase)
+  │  for each config node:
+  │    factory = NodeFactoryRegistry::CreateByName(type_name)  // or CreateByNameInNamespace
+  │    factory->GetContract(&contract)                          // validate port types
+  │    store NodeContract in NodeTypeInfo
+  ▼
+
+GraphBuilder (construction phase)
+  │  for each validated node:
+  │    factory = NodeFactoryRegistry::GetFactory(type_name)
+  │    node = factory->CreateNode(name, options)
+  │    creates InputStreamManager per input port
+  │    creates OutputStream per output port
+  │    wires OutputStream::mirrors_ → InputStreamManager*
   ▼
 
 Node (per instance)
@@ -433,19 +490,22 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
 
 ## Module Responsibility Matrix
 
-| Concern | Packet | InputStreamMgr | OutputStream | Node | GraphCtx | Scheduler | InputStreamHandler | Executor | NodeFactory |
-|---------|--------|----------------|--------------|------|----------|-----------|-------------------|----------|-------------|
-| Data transport | Carrier | deque + bound | Fan-out via mirrors | — | — | — | — | — | — |
-| Notification | — | Arrival callback | — | — | — | — | — | — | — |
-| Timestamp bound | — | Track + MinTimestampOrBound | Propagate bound to mirrors | — | — | — | Consume bound | — | — |
-| Queue storage | — | `std::deque<Packet>` | — | — | — | — | — | — | — |
-| Business logic | — | — | — | Execute | — | — | — | — | — |
-| Activation scheduling | — | — | — | — | — | Orchestrate | — | Dispatch | — |
-| Readiness policy | — | — | — | — | — | — | Decide | — | — |
-| Back-pressure | — | becomes_full/not_full callbacks | — | — | — | Throttle/Unthrottle | — | — | — |
-| Source layering (Ph2) | — | — | — | Declare layer | — | Sequence layers | — | — | — |
-| Completion tracking | — | IsDone() | — | — | — | Detect all closed | Detect kReadyForClose | — | — |
-| Type erasure | Provide | — | — | — | — | — | — | — | — |
-| Lifecycle | — | Close()→bound=Done | Close()→mirror bound=Done | Open/Process/Close | Per-invoke bag | State machine + stopping | — | — | — |
-| Node creation | — | — | — | — | — | — | — | — | Register/Create |
-| Error propagation | — | — | — | Return error | — | Abort graph + stopping_ | — | — | — |
+| Concern | Packet | InputStreamMgr | OutputStream | Node | NodeContract | NodeFactoryReg | NodeFactory | GraphCtx | Scheduler | InputStreamHdlr | Executor |
+|---------|--------|----------------|--------------|------|-------------|---------------|------------|----------|-----------|----------------|----------|
+| Data transport | Carrier | deque + bound | Fan-out mirrors | — | — | — | — | — | — | — | — |
+| Notification | — | Arrival callback | — | — | — | — | — | — | — | — | — |
+| Timestamp bound | — | Track bound | Propagate bound | — | — | — | — | — | — | Consume bound | — |
+| Queue storage | — | `std::deque<Packet>` | — | — | — | — | — | — | — | — | — |
+| Business logic | — | — | — | Execute | — | — | — | — | — | — | — |
+| Port declaration | — | — | — | static GetContract | Declare types | — | — | — | — | — | — |
+| Port validation | — | — | — | — | Validate | Lookup factory | GetContract | — | — | — | — |
+| Node instantiation | — | — | — | — | — | CreateByName | CreateNode | — | — | — | — |
+| Activation scheduling | — | — | — | — | — | — | — | — | Orchestrate | — | Dispatch |
+| Readiness policy | — | — | — | — | — | — | — | — | — | Decide | — |
+| Back-pressure | — | Full/not_full cb | — | — | — | — | — | — | Throttle/Unthrottle | — | — |
+| Registration | — | — | — | — | — | Register macro | — | — | — | — | — |
+| Source layering(Ph2) | — | — | — | Declare layer | — | — | — | — | Sequence layers | — | — |
+| Completion tracking | — | IsDone() | — | — | — | — | — | — | Detect closed | Detect kReadyForClose | — |
+| Type erasure | Provide | — | — | — | — | — | — | — | — | — | — |
+| Lifecycle | — | Close→bound=Done | Close→bound=Done | O/P/C | — | — | — | Per-invoke | State machine + stopping | — | — |
+| Error propagation | — | — | — | Return error | — | — | — | — | Abort + stopping_ | — | — |

@@ -5,36 +5,50 @@
 ```cpp
 namespace graph::runtime {
 
-using NodeCreator = std::function<std::unique_ptr<Node>(const std::string& name, const NodeOptions& options)>;
+class NodeContract;
+class Node;
+struct NodeOptions;
 
+// Abstract factory base — analogous to MediaPipe's CalculatorBaseFactory.
+// Each registered node type has one factory instance.
 class NodeFactory {
  public:
-  // Register a Node type for creation
-  static void Register(const std::string& type_name, NodeCreator creator);
+  virtual ~NodeFactory() = default;
 
-  // Create a Node instance by type name
-  static std::unique_ptr<Node> Create(
-      const std::string& type_name,
-      const std::string& node_name,
-      const NodeOptions& options);
+  // Called at graph construction time to declare and validate port types.
+  // The implementation calls T::GetContract(contract) internally.
+  virtual absl::Status GetContract(NodeContract* contract) = 0;
 
-  // Check if a type is registered
-  static bool IsRegistered(const std::string& type_name);
+  // Called at graph run time to create a Node instance.
+  virtual std::unique_ptr<Node> CreateNode(
+      const std::string& name, const NodeOptions& options) = 0;
+};
 
-  // List all registered type names
-  static std::vector<std::string> RegisteredTypes();
+// Template implementation — analogous to MediaPipe's CalculatorBaseFactoryFor<T>.
+// T must inherit from Node and define a static GetContract method.
+template <typename T>
+class NodeFactoryFor : public NodeFactory {
+  static_assert(std::is_base_of_v<Node, T>,
+                "T must inherit from Node");
 
- private:
-  NodeFactory() = default;
-  static std::map<std::string, NodeCreator>& Registry();
+  static_assert(HasGetContract<T>(nullptr),
+                "Node must define a static GetContract(NodeContract*) method");
+
+  absl::Status GetContract(NodeContract* contract) override {
+    return T::GetContract(contract);
+  }
+
+  std::unique_ptr<Node> CreateNode(
+      const std::string& name, const NodeOptions& options) override {
+    return std::make_unique<T>(name, options);
+  }
 };
 
 }  // namespace graph::runtime
 ```
 
 **Semantics**:
-- `Register()` stores a factory function for a given type name. Called during program initialization for built-in Node types.
-- `Create()` looks up the registered factory and invokes it. Returns nullptr if type not found.
-- Registry is global (static) — all registrations happen before graph construction begins.
-- Type names correspond to the `"type"` field in the JSON graph config.
-- Example registration: `NodeFactory::Register("StringProducer", [](auto& name, auto& opts) { return std::make_unique<StringProducerNode>(name, opts); });`
+- `NodeFactory` is the polymorphic base class. Each node type has one persistent factory instance registered in `NodeFactoryRegistry`.
+- `GetContract()` calls the node type's static `GetContract(NodeContract*)` method. This is called once during graph validation to declare port types and validate type compatibility with connected nodes.
+- `CreateNode()` creates a new `Node` instance each time the graph runs (via `PrepareForRun`). The Node is destroyed after `CleanupAfterRun()`. This mirrors MediaPipe's per-run `CalculatorBase` lifecycle.
+- `NodeFactoryFor<T>` provides the concrete implementation. The `static_assert(HasGetContract<T>)` ensures compile-time enforcement of the static contract method — similar to MediaPipe's `static_assert(CalculatorHasGetContract<T>)`.
