@@ -1,0 +1,9 @@
+workspace(name = "consumer_demo")
+
+local_repository(
+    name = "graph_runtime",
+    path = "../..",
+)
+
+load("@graph_runtime//:graph_runtime_deps.bzl", "graph_runtime_setup")
+graph_runtime_setup()
