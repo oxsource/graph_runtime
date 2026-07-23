@@ -21,7 +21,6 @@ constexpr char kKeyInputSidePkts[]      = "input_side_packets";
 constexpr char kKeyOutputSidePkts[]     = "output_side_packets";
 constexpr char kKeyExecutors[]          = "executors";
 constexpr char kKeyNodes[]              = "nodes";
-constexpr char kKeyStreams[]            = "streams";
 constexpr char kKeyName[]               = "name";
 constexpr char kKeyType[]               = "type";
 constexpr char kKeyNumThreads[]         = "num_threads";
@@ -29,10 +28,6 @@ constexpr char kKeyExecutor[]           = "executor";
 constexpr char kKeyInputStreamHandler[] = "input_stream_handler";
 constexpr char kKeyMaxInFlight[]        = "max_in_flight";
 constexpr char kKeySourceLayer[]        = "source_layer";
-constexpr char kKeySourceNode[]         = "source_node";
-constexpr char kKeySourcePort[]         = "source_port";
-constexpr char kKeyDestNode[]           = "dest_node";
-constexpr char kKeyDestPort[]           = "dest_port";
 
 // Default values
 constexpr int    kDefaultMaxQueueSize   = 100;
@@ -82,7 +77,7 @@ absl::StatusOr<GraphConfig> JsonParser::Parse(
     }
   }
 
-  // Parse nodes
+  // Parse nodes — connections are implicit via stream name matching.
   if (root.contains(kKeyNodes)) {
     for (const auto& nj : root[kKeyNodes]) {
       GraphConfig::NodeDef def;
@@ -106,21 +101,6 @@ absl::StatusOr<GraphConfig> JsonParser::Parse(
       def.max_in_flight = nj.value(kKeyMaxInFlight, kDefaultMaxInFlight);
       def.source_layer = nj.value(kKeySourceLayer, kDefaultSourceLayer);
       config.nodes.push_back(std::move(def));
-    }
-  }
-
-  // Parse streams
-  if (root.contains(kKeyStreams)) {
-    for (const auto& sj : root[kKeyStreams]) {
-      GraphConfig::StreamDef def;
-      def.name = sj.value(kKeyName, "");
-      if (def.name.empty())
-        return absl::InvalidArgumentError("stream name is required");
-      def.source_node = sj.value(kKeySourceNode, "");
-      def.source_port = sj.value(kKeySourcePort, "");
-      def.dest_node = sj.value(kKeyDestNode, "");
-      def.dest_port = sj.value(kKeyDestPort, "");
-      config.streams.push_back(std::move(def));
     }
   }
 

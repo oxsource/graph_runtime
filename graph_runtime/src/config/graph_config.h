@@ -26,14 +26,6 @@ struct GraphConfig {
     int source_layer = 0;
   };
 
-  struct StreamDef {
-    std::string name;
-    std::string source_node;
-    std::string source_port;
-    std::string dest_node;
-    std::string dest_port;
-  };
-
   struct ExecutorDef {
     std::string name;
     std::string type;
@@ -41,7 +33,6 @@ struct GraphConfig {
   };
 
   std::vector<NodeDef> nodes;
-  std::vector<StreamDef> streams;
   std::vector<ExecutorDef> executors;
   std::vector<std::string> input_streams;
   std::vector<std::string> output_streams;

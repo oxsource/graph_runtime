@@ -34,14 +34,6 @@ class KeyValueParser : public IGraphConfigParser {
         if (tokens.size() > 3) def.input_streams.push_back(tokens[3]);
         if (tokens.size() > 4) def.output_streams.push_back(tokens[4]);
         config.nodes.push_back(std::move(def));
-      } else if (tokens[0] == "stream" && tokens.size() >= 6) {
-        GraphConfig::StreamDef def;
-        def.name = tokens[1];
-        def.source_node = tokens[2];
-        def.source_port = tokens[3];
-        def.dest_node = tokens[4];
-        def.dest_port = tokens[5];
-        config.streams.push_back(std::move(def));
       }
     }
     auto status = ConfigValidator::Validate(config);
