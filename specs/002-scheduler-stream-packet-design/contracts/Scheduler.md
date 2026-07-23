@@ -114,6 +114,9 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
 ```
 --- OpenNode task runs ---
+  // Create GraphContext for Open (InputTimestamp = Unstarted)
+  GraphContext context(node->name(), node->id(), node->CalculatorType(),
+                       Timestamp::Unstarted(), input_shards, output_shards, &options)
   Node::Open(context)
   After Open → Scheduler fires OnNodeOpened(node):
     if Source: schedule initial ProcessNode via node->GetSchedulerQueue()
@@ -122,12 +125,36 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 --- ProcessNode task runs (via SchedulerQueue::RunNextTask) ---
   [if stopping_=true AND node is Source]
     → schedule CloseNode, skip Process
+
+  // Create GraphContext for Process (InputTimestamp = scheduled_ts)
+  InputStreamShardSet input_shards;      // initialized per port
+  OutputStreamShardSet output_shards;    // initialized per port
+  GraphContext context(node->name(), node->id(), node->CalculatorType(),
+                       scheduled_timestamp, input_shards, output_shards, &options)
+
   InputStreamHandler::FillInputSet(node, context)
     → PopPacketAtTimestamp on each InputStreamManager
+    → populates each InputStreamShard's packet_queue_
     → side effect: may fire becomes_not_full_callback_ → unthrottle
+
   status = Node::Process(context)
-  // error handling, output propagation (same as before)
+
+  // Output propagation: drain OutputStreamShards → OutputStream::Send()
+  for each OutputStreamShard& shard in context.Outputs():
+    if shard.IsEmpty(): continue
+    auto* output_stream = node->GetOutputPort(shard.Name())
+    for each packet in shard.output_queue_ (move):
+      output_stream->Send(packet)
+    if shard.IsClosed():
+      output_stream->Close()
+
   // Source rescheduling via node->GetSchedulerQueue()->AddNode(node)
+
+--- CloseNode task runs ---
+  // Create GraphContext for Close (InputTimestamp = Done)
+  GraphContext context(node->name(), node->id(), node->CalculatorType(),
+                       Timestamp::Done(), input_shards, output_shards, &options)
+  Node::Close(context)
 
 --- Queue idle state change ---
   idle_callback_(true) → QueueIdleStateChanged

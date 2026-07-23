@@ -51,3 +51,10 @@ class OutputStream {
 - `Close()` sets `closed_ = true` and calls `SetNextTimestampBound(Timestamp::Done())` on all mirrors. `Close()` does NOT push a sentinel Done packet — end-of-stream is signaled by bound propagation alone.
 - `SetNextTimestampBound(bound)` propagates the bound to all mirrors via `InputStreamManager::SetNextTimestampBound()`. This is how timestamp bounds advance without sending data.
 - The Scheduler's task runner calls `Send()` during output propagation (no separate `OutputStreamHandler` — post-process is inlined in the task runner).
+
+**Relationship with OutputStreamShard**:
+- `OutputStreamShard` (in `GraphContext`) is the per-invocation write buffer — the Node writes packets to shards during `Process()`.
+- After `Process()` returns, the Scheduler's task runner reads each `OutputStreamShard`'s `output_queue_` and calls `OutputStream::Send()` to propagate to downstream.
+- One `OutputStream` per output port persists across invocations. One `OutputStreamShard` per output port is created fresh per `GraphContext` invocation.
+- The shard accumulates packets during a single `Process()` call; `OutputStream` fans them out to all mirrors.
+- `SetOffset()` and `SetHeader()` on the shard configure the underlying `OutputStreamSpec` — only valid during `Open()`.

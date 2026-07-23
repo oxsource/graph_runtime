@@ -47,7 +47,7 @@ class InputStreamHandler {
 **Semantics**:
 - `SetScheduleCallback()` provides the handler with a mechanism to schedule Node execution. Called once during Scheduler initialization.
 - `GetNodeReadiness()` is called by the handler itself within `NotifyPacketArrival()` — no central polling loop. Returns `kReadyForProcess` when all input conditions are met, `kReadyForClose` when all input Streams have reached end-of-stream, or `kNotReady`.
-- `FillInputSet()` is called by the Scheduler's task runner just before executing `Node::Process()`. It pops one Packet per input port via `InputStreamManager::Pop()` and places them in `GraphContext::inputs`.
+- `FillInputSet()` is called by the Scheduler's task runner just before executing `Node::Process()`. It pops one Packet per input port via `InputStreamManager::PopPacketAtTimestamp(ts)` and places each into the corresponding `InputStreamShard` in `GraphContext::Inputs()`. If a port has no packet at the given timestamp, the shard is populated with an empty Packet (`IsEmpty() == true`).
 - `NotifyPacketArrival()` is the **core event entry point**. Called by the `InputStreamManager`'s arrival callback every time a Packet is enqueued. The handler:
   1. Updates internal readiness state (tracks per-port packet availability).
   2. Calls `GetNodeReadiness()`.

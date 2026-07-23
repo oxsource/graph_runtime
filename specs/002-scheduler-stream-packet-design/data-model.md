@@ -83,21 +83,79 @@ Created ──Open()──► Opened ──Process()──► Processing ──�
 
 ---
 
-### GraphContext
+### InputStreamShard
 
-Per-invocation context passed to Node lifecycle methods.
+Per-input-port, per-invocation view of a single input Packet.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `inputs` | `map<string, Packet&>` | Named input Packets for this invocation |
-| `outputs` | `map<string, PacketProducer>` | Named output producers for this invocation |
-| `options` | `const NodeOptions&` | Node configuration from graph config |
+| `packet_queue_` | `std::queue<Packet>` | Holds the one Packet for this invocation (populated by FillInputSet) |
+| `is_done_` | `bool` | Stream is closed and no more packets will arrive |
 
-**Boundaries**:
-- Valid only during the scope of the current lifecycle call.
-- Created by Scheduler before each Open/Process/Close call.
-- Inputs are pre-populated by Scheduler from `InputStreamManager::PopPacketAtTimestamp()`.
-- Outputs are collected by Scheduler's task runner after `Process()` returns and sent via `OutputStream::Send()` directly to downstream `InputStreamManager` deques — no intermediate Stream.
+**Accessors**: `Value()` / `Get<T>()` / `IsEmpty()` / `IsDone()` / `Name()` / `Header()`
+
+---
+
+### InputStreamShardSet
+
+Tag/index-addressable collection of all input shards.
+
+| Method | Description |
+|--------|-------------|
+| `Get("TAG")` or `Get("TAG", index)` | Access by tag name and optional index |
+| `Index(i)` | Access by flat index |
+| `NumEntries()` | Total shards |
+| Range iteration | `for (auto& shard : inputs)` |
+
+---
+
+### OutputStreamShard
+
+Per-output-port, per-invocation write buffer.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `output_queue_` | `std::list<Packet>` | Packets added during Process() |
+| `closed_` | `bool` | Close() called on this shard |
+| `next_timestamp_bound_` | `Timestamp` | Next valid output timestamp |
+
+**Methods**: `AddPacket()` / `Add<T>()` / `SetNextTimestampBound()` / `SetOffset()` / `Close()` / `SetHeader()` / `Name()`
+
+---
+
+### OutputStreamShardSet
+
+Tag/index-addressable collection of all output shards.
+
+| Method | Description |
+|--------|-------------|
+| `Get("TAG")` / `Get("TAG", index)` | Access by tag name and optional index |
+| `Index(i)` | Access by flat index |
+| `NumEntries()` | Total shards |
+
+---
+
+### GraphContext
+
+Per-invocation context passed to Node lifecycle methods. Aligns with MediaPipe's `CalculatorContext`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `node_name_` | `string` | Node's name in the graph |
+| `node_id_` | `int` | Node's unique ID |
+| `calculator_type_` | `string` | Registered type name (from NodeFactory) |
+| `input_timestamp_` | `Timestamp` | Unstarted() for Open, scheduled ts for Process, Done() for Close |
+| `inputs_` | `InputStreamShardSet` | Per-input-port shards with current packet |
+| `outputs_` | `OutputStreamShardSet` | Per-output-port shards for writing |
+| `options_` | `const NodeOptions*` | Node configuration |
+
+**Lifecycle matrix**:
+
+| Phase | InputTimestamp | Inputs state | Outputs state |
+|-------|---------------|-------------|---------------|
+| Open | `Unstarted()` | Header available | SetHeader/SetOffset allowed |
+| Process | scheduled ts | Current batch packet per shard | AddPacket allowed |
+| Close | `Done()` | All IsDone()=true | AddPacket + Close allowed |
 
 ---
 

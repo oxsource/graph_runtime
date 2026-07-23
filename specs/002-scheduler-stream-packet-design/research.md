@@ -225,3 +225,7 @@
 | Registration macro | `GRAPH_RUNTIME_REGISTER_NODE(type, class)` — file-scope static | Prefixed to avoid symbol conflicts; RAII NodeRegistrationToken |
 | Factory pattern | NodeFactory (base) + NodeFactoryFor<T> (template) | GetContract + CreateNode; analogous to CalculatorBaseFactoryFor<T> |
 | Port validation | NodeContract + static Node::GetContract() | Called at graph construction; type mismatches caught at build time |
+| GraphContext | Aligned with MediaPipe CalculatorContext — InputStreamShard, OutputStreamShard, tag/index Sets, InputTimestamp, Options, identity | Per-invocation context with full port access and lifecycle phase distinction |
+| Input shard | InputStreamShard with Value/Get/IsEmpty/IsDone/Header | One per port per Process call; populated by FillInputSet |
+| Output shard | OutputStreamShard with AddPacket/SetOffset/SetNextBound/Close/SetHeader | One per port per Process call; drained by Scheduler task runner |
+| Open/Process/Close distinction | InputTimestamp: Unstarted / scheduled_ts / Done | Outputs: SetHeader allowed / AddPacket allowed / Close allowed |
