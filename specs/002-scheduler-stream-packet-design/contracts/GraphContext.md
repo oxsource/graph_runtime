@@ -130,3 +130,40 @@ class GraphContext {
 - **Options<T>()**: Typed access to node configuration from the graph config. Delegates to the `NodeOptions` map stored in the node's state.
 
 - **SetOffset(offset)**: Applies a timestamp offset to ALL output streams, meaning output timestamp >= input_timestamp + offset. Per-stream override via `OutputStreamShard::SetOffset()`. Can only be called during `Open()`.
+
+---
+
+### GraphContextManager
+
+Manages lifecycle of `GraphContext` instances. Owned by `CalculatorNode`. Analogous to MediaPipe's `CalculatorContextManager`.
+
+```cpp
+class GraphContextManager {
+ public:
+  void Initialize(
+      const std::string& node_name, int node_id,
+      const std::string& calculator_type,
+      InputStreamShardSet inputs, OutputStreamShardSet outputs,
+      const NodeOptions* options);
+
+  // Default context — used for Open(), Close(), and sequential Process()
+  GraphContext* GetDefaultCalculatorContext();
+
+  // Parallel execution (Phase 2):
+  GraphContext* PrepareCalculatorContext(Timestamp input_timestamp);
+  void RecycleCalculatorContext();
+  void CleanupAfterRun();
+
+ private:
+  std::unique_ptr<GraphContext> default_context_;
+  // Phase 2: std::map<Timestamp, std::unique_ptr<GraphContext>> active_contexts_;
+  // Phase 2: std::deque<std::unique_ptr<GraphContext>> idle_contexts_;
+};
+```
+
+**Semantics**:
+- One `GraphContextManager` per Node. Manages the per-invocation `GraphContext` instances.
+- `GetDefaultCalculatorContext()` returns a single reusable context. Used for `Open()`, `Close()`, and sequential `Process()` calls. Source Nodes always use this context.
+- `PrepareCalculatorContext(ts)` (Phase 2): for parallel execution, creates or reuses a context per distinct input timestamp. Each active timestamp gets its own `GraphContext` with independent shards.
+- `RecycleCalculatorContext()` (Phase 2): returns a context to the idle pool after its outputs have been propagated.
+- `CleanupAfterRun()`: destroys all contexts after graph run completes.

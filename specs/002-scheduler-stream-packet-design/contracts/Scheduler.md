@@ -94,17 +94,19 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
                   All closed ──────┴──────► kTerminated
 ```
 
-- `Schedule()` is **non-blocking**. It performs one-time initialization and installs event observers, then returns immediately:
+- `Schedule()` is **non-blocking**. It performs one-time initialization and installs event observers, then returns immediately. Called by `GraphRuntime::Start()` after `GraphRuntime::Initialize()` has completed:
 
   1. Build topological ordering from Graph's Node/Stream wiring.
   2. Group Source Nodes by `source_layer` (Phase 2: layer-ordered; Phase 1: all concurrent).
-  3. Set up `InputStreamManager` per Node per input port:
+  3. For each virtual GraphInputStream source node: wire its `OutputStream` to the downstream `InputStreamManager`s declared for that input stream.
+  4. For each virtual GraphOutputStream sink node: wire its `InputStreamManager` to the upstream `OutputStreamManager` declared for that output stream. Set up the user callback to fire on packet arrival.
+  5. Set up `InputStreamManager` per Node per input port:
      - `SetArrivalCallback()` → `InputStreamHandler::NotifyPacketArrival()`.
      - `SetQueueSizeCallbacks()` → throttle/unthrottle.
-  4. Create `OutputStream` per Node per output port with mirrors.
-  5. Register each queue's idle callback → `QueueIdleStateChanged()` (contributes to `non_idle_queue_count_`).
-  6. For each Node: `AssignNodeToQueue(node)` — routes to `default_queue_` or named queue based on `Node::ExecutorName()`.
-  7. Activate all Source Nodes (schedule their `Open` tasks).
+  6. Create `OutputStream` per Node per output port with mirrors.
+  7. Register each queue's idle callback → `QueueIdleStateChanged()` (contributes to `non_idle_queue_count_`).
+  8. For each Node: `AssignNodeToQueue(node)` — routes to `default_queue_` or named queue based on `Node::ExecutorName()`.
+  9. Activate all Source Nodes (including virtual GraphInputStream sources) — schedule their `Open` tasks.
 
 - **AssignNodeToQueue(node)**: If `node->ExecutorName()` is non-empty, looks up the name in `non_default_queues_` and sets `node->SetSchedulerQueue(queue)`. Otherwise uses `default_queue_`. All subsequent scheduling for this node goes through the assigned queue.
 

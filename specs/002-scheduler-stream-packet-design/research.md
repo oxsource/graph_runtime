@@ -236,3 +236,7 @@
 | OutputStreamShard | Per-invocation buffer implementing OutputStream — output_queue_, Reset, friend of Manager | One per Process() call; drained by Manager::PropagateUpdatesToMirrors |
 | OutputStreamManager | Per-stream persistent state — mirrors_, bound, closed, ComputeOutputTimestampBound, PropagateUpdatesToMirrors | Persists across invocations; zero-copy last-mirror move |
 | OutputStreamHandler | Per-Node orchestrator — PrepareOutputs, PostProcess, Close | MediaPipe InOrderOutputStreamHandler; Phase 1 sequential, Phase 2 parallel PropagationLoop |
+| GraphRuntime | Top-level API — Initialize/Start/Wait/Shutdown + AddPacketToInputStream/SetOutputStreamCallback | Entry point for users; owns Scheduler + all runtime state |
+| GraphInputStream | Virtual Source Node for external data injection | Packets injected directly into OutputStreamManager, no Process() overhead |
+| GraphOutputStream | Virtual Sink Node for external output observation | Callback invoked per received packet; silent sink when no callback |
+| GraphContextManager | Context pool — GetDefaultCalculatorContext for sequential, Prepare/Recycle for Phase 2 parallel | MediaPipe CalculatorContextManager; Source always uses default context |

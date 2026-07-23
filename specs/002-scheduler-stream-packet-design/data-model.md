@@ -617,22 +617,24 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
 
 ## Module Responsibility Matrix
 
-| Concern | Packet | InputStreamMgr | OutputStream | Node | NodeContract | NodeFactoryReg | NodeFactory | GraphCtx | Scheduler | InputStreamHdlr | Executor |
-|---------|--------|----------------|--------------|------|-------------|---------------|------------|----------|-----------|----------------|----------|
-| Data transport | Carrier | deque + bound | Fan-out mirrors | — | — | — | — | — | — | — | — |
-| Notification | — | Arrival callback | — | — | — | — | — | — | — | — | — |
-| Timestamp bound | — | Track bound | Propagate bound | — | — | — | — | — | — | Consume bound | — |
-| Queue storage | — | `std::deque<Packet>` | — | — | — | — | — | — | — | — | — |
-| Business logic | — | — | — | Execute | — | — | — | — | — | — | — |
-| Port declaration | — | — | — | static GetContract | Declare types | — | — | — | — | — | — |
-| Port validation | — | — | — | — | Validate | Lookup factory | GetContract | — | — | — | — |
-| Node instantiation | — | — | — | — | — | CreateByName | CreateNode | — | — | — | — |
-| Activation scheduling | — | — | — | — | — | — | — | — | Orchestrate | — | Dispatch |
-| Readiness policy | — | — | — | — | — | — | — | — | — | Decide | — |
-| Back-pressure | — | Full/not_full cb | — | — | — | — | — | — | Throttle/Unthrottle | — | — |
-| Registration | — | — | — | — | — | Register macro | — | — | — | — | — |
-| Source layering(Ph2) | — | — | — | Declare layer | — | — | — | — | Sequence layers | — | — |
-| Completion tracking | — | IsDone() | — | — | — | — | — | — | Detect closed | Detect kReadyForClose | — |
-| Type erasure | Provide | — | — | — | — | — | — | — | — | — | — |
-| Lifecycle | — | Close→bound=Done | Close→bound=Done | O/P/C | — | — | — | Per-invoke | State machine + stopping | — | — |
-| Error propagation | — | — | — | Return error | — | — | — | — | Abort + stopping_ | — | — |
+| Concern | Packet | InputStreamMgr | OutputStreamMgr | OutputStream | Node | NodeContract | NodeFactoryReg | NodeFactory | GraphCtx | GraphCtxMgr | GraphRuntime | Scheduler | InputStreamHdlr | Executor |
+|---------|--------|----------------|-----------------|--------------|------|-------------|---------------|------------|----------|-------------|-------------|-----------|----------------|----------|
+| Data transport | Carrier | deque + bound | Fan-out mirrors | — | — | — | — | — | — | — | — | — | — | — |
+| Notification | — | Arrival callback | — | — | — | — | — | — | — | — | — | — | — | — |
+| Timestamp bound | — | Track bound | Propagate bound | — | — | — | — | — | — | — | — | — | Consume bound | — |
+| Queue storage | — | deque | — | — | — | — | — | — | — | — | — | — | — | — |
+| Business logic | — | — | — | — | Execute | — | — | — | — | — | — | — | — | — |
+| Port declaration | — | — | — | — | static GetContract | Declare types | — | — | — | — | — | — | — | — |
+| Port validation | — | — | — | — | — | Validate | Lookup factory | GetContract | — | — | — | — | — | — |
+| Node instantiation | — | — | — | — | — | — | CreateByName | CreateNode | — | — | — | — | — | — |
+| Activation scheduling | — | — | — | — | — | — | — | — | — | — | — | Orchestrate | — | Dispatch |
+| Readiness policy | — | — | — | — | — | — | — | — | — | — | — | — | Decide | — |
+| Back-pressure | — | Full/not_full cb | — | — | — | — | — | — | — | — | — | Throttle | — | — |
+| Registration | — | — | — | — | — | — | Register macro | — | — | — | — | — | — | — |
+| Source layering(Ph2) | — | — | — | — | Declare layer | — | — | — | — | — | — | Sequence layers | — | — |
+| Completion tracking | — | IsDone() | — | — | — | — | — | — | — | — | — | Detect closed | Detect kReadyForClose | — |
+| Type erasure | Provide | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Context pool | — | — | — | — | — | — | — | — | — | Default/Prepare/Recycle | — | — | — | — |
+| External I/O | — | — | — | — | — | — | — | — | — | — | AddPacket/SetCallback | — | — | — |
+| Graph lifecycle | — | — | — | — | — | — | — | — | — | — | Init/Start/Wait/Shutdown | — | — | — |
+| Error propagation | — | — | — | — | Return error | — | — | — | — | — | — | Abort + stopping_ | — | — |

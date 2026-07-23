@@ -36,7 +36,7 @@ class NodeContract {
 
   // Optional settings
   void SetMaxInFlight(int n);
-};
+  void SetProcessTimestampBounds(bool enable);  // call Process() on timestamp bound advance
 
 }  // namespace graph::runtime
 ```
