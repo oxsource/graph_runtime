@@ -151,7 +151,22 @@
 
 **Phase 1 behavior**: `source_layer` field exists but is not consulted. All sources activate together.
 
-### 10. Back-pressure: Auto-Unthrottle
+### 10. Stream Layer Removal — Direct OutputStream → InputStreamManager Write (Align with MediaPipe)
+
+**Decision**: Remove the `Stream` class and `OutputStreamHandler` class. `OutputStream` writes directly to downstream `InputStreamManager` deques via mirrors. Output propagation is inlined in the Scheduler task runner.
+
+**Rationale**:
+- MediaPipe has no intermediate Stream component between OutputStreamManager and InputStreamManager — eliminating it removes a layer of complexity and a per-packet queue round-trip.
+- `Close()` semantics align with MediaPipe: set `next_timestamp_bound_ = Timestamp::Done()` on all mirrors. No sentinel Done packet is pushed. Downstream detects end-of-stream via `IsDone()`.
+- Back-pressure uses callback notifications (MediaPipe's model) instead of error returns from `Push()`.
+- `OutputStreamHandler` is unnecessary — the 3 lines of output propagation logic are inlined in the Scheduler task runner.
+
+**New ownership model**:
+- `InputStreamManager` owns the `std::deque<Packet>` and timestamp bound — it IS the queue.
+- `OutputStream` holds `mirrors_` (list of `InputStreamManager*`) — writes directly.
+- GraphBuilder populates mirror lists during graph construction.
+
+### 11. Back-pressure: Auto-Unthrottle
 
 **Decision**: Push failure triggers throttle; consumer Pop below `max_queue_size / 2` triggers auto-unthrottle. `HandleIdle()` detects deadlock and unthrottles all.
 
@@ -164,8 +179,13 @@
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Stream back-pressure | Bounded queue, push-based, status return | Simple, safe for single-thread |
-| Activation model | Event-driven: Stream events → InputStreamHandler → Executor | No central polling, reactive, scales to multi-thread |
+| Stream layer | Eliminated — OutputStream writes directly to InputStreamManager deque | Aligns with MediaPipe; removes intermediate queue round-trip |
+| Queue storage | `std::deque<Packet>` owned by InputStreamManager | Supports timestamp-based popping, zero-copy last-mirror move |
+| Back-pressure | Callback-based (becomes_full / becomes_not_full) via InputStreamManager | Packets never rejected; Scheduler reacts to threshold crossing |
+| Close semantics | Set bound = Timestamp::Done() on all mirrors — no sentinel packet | Single unified end-of-stream detection via IsDone() |
+| Output propagation | Inlined in Scheduler task runner (no OutputStreamHandler) | 3 lines of logic, no separate class |
+| Activation model | Event-driven: OutputStream::Send → InputStreamManager::AddPackets → arrival_callback → NotifyPacketArrival | No central polling, reactive, scales to multi-thread |
+| Schedule() mode | Non-blocking — installs event observers, returns | WaitUntilDone() blocks for completion |
 | Schedule() mode | Non-blocking — installs event observers, returns | WaitUntilDone() blocks for completion |
 | Node blocking | Non-blocking required | Single-thread constraint |
 | Timestamp model | Standalone Timestamp class with special-value encoding | Aligns with MediaPipe; Done() replaces is_empty |

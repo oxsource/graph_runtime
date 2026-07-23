@@ -49,45 +49,17 @@ Atomic data unit flowing through the graph.
 
 ---
 
-### Stream
 
-Unidirectional data conduit between a single Node output port and a single Node input port.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | `std::string` | Unique identifier within the Graph |
-| `queue_` | bounded queue of Packet | Internal packet buffer |
-| `max_queue_size_` | `size_t` | Back-pressure threshold — Push fails when full |
-| `is_closed_` | `bool` | Stream lifecycle state |
-
-**States**:
-```
-Open ──► Active (first packet enqueued) ──► Closed (Close() called, Done() packet enqueued)
-```
-
-**Boundaries**:
-- Owned by Graph, referenced by Node via pointer.
-- One producer Node (output port), one consumer Node (input port).
-- Stream does NOT know which Nodes are connected to it — that is Graph's responsibility.
-
-**Validation rules**:
-- `Push()` returns error status if queue is full (back-pressure).
-- `Pop()` returns error status if queue is empty.
-- `Close()` pushes a Packet with `Timestamp::Done()`; subsequent `Push()` calls fail.
-- After `Close()`, `Pop()` continues until queue is drained, then returns `OutOfRangeError`.
-- Consumer detects end-of-stream by checking `popped_packet.timestamp().IsDone()`. No separate boolean needed.
-
----
 
 ### Node
 
-Computational unit with lifecycle, bound to input and output Streams.
+Computational unit with lifecycle, served by InputStreamManager (input) and OutputStream (output).
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `std::string` | Unique identifier within the Graph |
-| `input_ports_` | `map<string, Stream*>` | Named input Stream references |
-| `output_ports_` | `map<string, Stream*>` | Named output Stream references |
+| `input_port_managers_` | `map<string, InputStreamManager*>` | Named input port references (deque + bound owner) |
+| `output_streams_` | `map<string, OutputStream*>` | Named output port references (fan-out + mirrors) |
 
 **Lifecycle**:
 ```
@@ -98,7 +70,7 @@ Created ──Open()──► Opened ──Process()──► Processing ──�
 
 **Boundaries**:
 - Node MUST NOT reference other Nodes directly.
-- Node MUST NOT own Streams — Streams are owned by Graph.
+- Node MUST NOT own InputStreamManagers or OutputStreams — these are owned by Graph.
 - Node contains NO scheduling logic — that is Scheduler's responsibility.
 - Node contains NO configuration parsing — that is Config's responsibility.
 
@@ -124,8 +96,8 @@ Per-invocation context passed to Node lifecycle methods.
 **Boundaries**:
 - Valid only during the scope of the current lifecycle call.
 - Created by Scheduler before each Open/Process/Close call.
-- Inputs are pre-populated by Scheduler from `Stream::Pop()`.
-- Outputs are collected by Scheduler and pushed to output Streams after `Process()` returns.
+- Inputs are pre-populated by Scheduler from `InputStreamManager::PopPacketAtTimestamp()`.
+- Outputs are collected by Scheduler's task runner after `Process()` returns and sent via `OutputStream::Send()` directly to downstream `InputStreamManager` deques — no intermediate Stream.
 
 ---
 
@@ -141,7 +113,7 @@ Execution engine with state machine, pluggable input policies, and task executio
 | `non_idle_queue_count_` | `int` | Tracks active Executor queues; HandleIdle fires when reaches 0 |
 | `handling_idle_` | `int` | Reentrancy guard counter for HandleIdle (int, not bool) |
 | `active_sources_` | `set<Node*>` | Currently open, running source Nodes (for stopping_ cleanup) |
-| `stream_to_input_mgr_` | `map<Stream*, InputStreamManager*>` | Pre-built mapping; task runner calls OnPacketEnqueued directly after Push — no callback on Stream |
+
 | `input_stream_handler_` | `unique_ptr<InputStreamHandler>` | Pluggable readiness policy |
 | `executor_` | `shared_ptr<Executor>` | Task execution strategy |
 | `throttled_sources_` | `set<Node*>` | Source Nodes paused by back-pressure |
@@ -161,7 +133,7 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
 **Boundaries**:
 - Owned by Graph, which calls `Schedule()`, `Pause()`, `Resume()`, `WaitUntilDone()`, and `Shutdown()`.
-- Scheduler does NOT own Nodes, Streams, InputStreamManagers, or OutputStreams — Graph does.
+- Scheduler does NOT own Nodes, InputStreamManagers, or OutputStreams — Graph does.
 - Scheduler does NOT know about graph topology — that is Graph's responsibility.
 - Readiness logic is delegated to `InputStreamHandler`; execution is delegated to `Executor`.
 - Scheduler does NOT have a central polling loop — it reacts to Stream/Node events via registered observers.
@@ -180,53 +152,46 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
 ### InputStreamManager
 
-Per-input-port wrapper adding notification and timestamp tracking on top of Stream.
+Owns the `std::deque<Packet>` for one downstream Node input port. Data is written directly by upstream `OutputStream::Send()` — no intermediate Stream component.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `stream_` | `Stream*` | The underlying 1:1 data pipe (consumer side) |
-| `arrival_callback_` | `PacketArrivalCallback` | Fires when a new Packet is enqueued |
-| `min_timestamp_bound_` | `int64_t` | Smallest unsettled timestamp for readiness calculation |
+| `queue_` | `std::deque<Packet>` | Packet buffer, written by OutputStream mirrors, read by FillInputSet |
+| `next_timestamp_bound_` | `Timestamp` | Smallest timestamp at which a packet may arrive; advances on Close() to Done |
+| `closed_` | `bool` | true after Close(), which sets bound = Timestamp::Done() |
+| `max_queue_size_` | `int` | Back-pressure threshold (-1 = unlimited) |
+| `arrival_callback_` | `PacketArrivalCallback` | Fires when queue transitions from empty to non-empty |
+| `becomes_full_callback_` / `becomes_not_full_callback_` | `QueueSizeCallback` | Trigger Scheduler throttle/unthrottle |
 
 **Boundaries**:
 - One per Node input port, created during Scheduler initialization.
-- `arrival_callback_` is set by the Scheduler and typically triggers `InputStreamHandler::NotifyPacketArrival()`.
-- `MinTimestampOrBound()` is used by `InputStreamHandler::GetNodeReadiness()` to determine timestamp settlement.
+- `arrival_callback_` is set by the Scheduler and triggers `InputStreamHandler::NotifyPacketArrival()`.
+- `MinTimestampOrBound()` used by `InputStreamHandler::GetNodeReadiness()` to compute settled timestamp.
+- `PopPacketAtTimestamp(ts)` is the primary consumer API — pops all packets <= ts.
+- `IsDone()` returns true when `queue_.empty() && next_timestamp_bound_ == Timestamp::Done()`. No sentinel Done packet is pushed.
+- Back-pressure: callbacks fire when queue crosses `max_queue_size_`, not by rejecting packets.
 
 ---
 
 ### OutputStream
 
-Output port abstraction supporting fan-out to multiple downstream Streams.
+Output port abstraction. Writes directly to downstream `InputStreamManager` deques via mirrors. No intermediate Stream.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name_` | `std::string` | Port name matching the GraphConfig |
-| `downstream_streams_` | `vector<Stream*>` | All downstream Streams this port writes to |
+| `mirrors_` | `vector<InputStreamManager*>` | All downstream managers this port writes to |
 
 **Boundaries**:
 - One per Node output port, created during Scheduler initialization.
-- Downward connections are established by GraphBuilder during graph construction.
-- `Send(Packet)` writes to every downstream Stream; first error is returned.
-- Fan-in (multiple upstream → one downstream) is handled by separate OutputStreams writing to the same Stream.
+- Mirrors are populated by GraphBuilder when wiring graph connectivity.
+- `Send(Packet)` writes to each mirror via `InputStreamManager::AddPackets()` (copy) or `MovePackets()` (move, last mirror only).
+- `Close()` sets `Timestamp::Done()` bound on all mirrors — no sentinel Done packet is pushed.
+- Fan-in (multiple upstream → one downstream) is handled by multiple OutputStreams each writing to the same InputStreamManager.
 
 ---
 
-### OutputStreamHandler
 
-Per-Node handler for output propagation after Process completes.
-
-| Method | Description |
-|--------|-------------|
-| `PostProcess(GraphContext&)` | Collect outputs, call OutputStream::Send(), propagate bounds |
-| `Flush()` | Flush buffered outputs before Close |
-
-**Boundaries**:
-- One per Node, created during Scheduler initialization.
-- Called by Scheduler's task runner after `Node::Process()`.
-- Complements `InputStreamHandler` on the output side — both follow the same pluggability pattern.
-
----
 
 ### InputStreamHandler
 
@@ -278,31 +243,34 @@ Registry for creating Node instances by type name.
 ## Relationships
 
 ```
-GraphBuilder  ──uses NodeFactory──►  Node  ──served by──►  InputStreamManager (per input port)
-                                                           │  wraps Stream (consumer side)
-                                                           │  fires arrival_callback → NotifyPacketArrival
-                                                           ▼
-       ┌──────────────────────────────────────────┐
-       │  Scheduler                               │
-       │  ● state machine (kRunning/kPaused/...)   │
-       │  ● stopping_ flag (StatusStop shortcut)   │
-       │  ● HandleIdle with reentrancy guard       │
-       │  ● non_idle_queue_count_ aggregation      │
-       │  ● output_stream_handler_ + input_handler │
-       └────┬──────────────────────────────┬───────┘
-            │                              │
-            ▼                              ▼
-     InputStreamHandler              OutputStreamHandler
-     ● GetNodeReadiness              ● PostProcess()
-     ● FillInputSet                  ● Flush()
-            │                              │
-            ▼                              ▼
-  InputStreamManager (N)           OutputStream (M)
-       │  wraps Stream                    │  fan-out to 1..N Streams
-       │  arrival_callback                │  Send() → Stream::Push()
-       ▼                                  ▼
-     Stream  ──carries──►  Packet      Stream
-       (consumer side)                    (producer side)
+GraphBuilder
+  │  creates Nodes via NodeFactory
+  │  creates InputStreamManager per input port (deque + bound + callbacks)
+  │  creates OutputStream per output port (mirrors_ = list of downstream managers)
+  │  wires OutputStream::mirrors_ → InputStreamManager* via graph topology
+  ▼
+
+Node (per instance)
+  ├── input_ports_:  map<string, InputStreamManager*>
+  │                     │
+  │                     ├── queue_: std::deque<Packet>
+  │                     ├── next_timestamp_bound_: Timestamp
+  │                     ├── arrival_callback_ → NotifyPacketArrival
+  │                     ├── becomes_full/not_full_callback_ → throttle/unthrottle
+  │                     └── PopPacketAtTimestamp() / PopQueueHead()
+  │
+  └── output_ports_: map<string, OutputStream*>
+                        │
+                        └── mirrors_: vector<InputStreamManager*>  ← direct write
+                            Send(packet) → AddPackets/MovePackets on each mirror
+                            Close() → SetNextTimestampBound(Done) on each mirror
+
+Scheduler
+  ● state machine (kRunning/kPaused/...)
+  ● stopping_ flag + error_callback_
+  ● HandleIdle with reentrancy guard + non_idle_queue_count_
+  ● InputStreamHandler → GetNodeReadiness → FillInputSet → PopPacketAtTimestamp
+  ● task runner: Process → output propagation (inline) → OutputStream::Send()
 ```
 
 ## Data Flow Sequence (Event-Driven)
@@ -312,7 +280,8 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
 ```
  1. Graph::Initialize()
     │  Creates Nodes via NodeFactory
-    │  Creates Streams between Node ports
+    │  Creates InputStreamManager per input port (deque + bound + callbacks)
+    │  Creates OutputStream per output port (mirrors_ set by GraphBuilder)
     │  Creates Scheduler with InputStreamHandler + Executor
     ▼
  2. Graph::Start()
@@ -321,25 +290,20 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
  3. Scheduler::Schedule(graph) — NON-BLOCKING, returns immediately
     │  state_ → kRunning
     │
-    ├── a. Build topological layers from Node/Stream wiring.
+    ├── a. Build topological layers from Node wiring.
     │
-    ├── b. Group Source Nodes by source_layer (Phase 2 — in Phase 1 all sources are layer 0 and activate together).
+    ├── b. Group Source Nodes by source_layer (Phase 2 — Phase 1: all concurrent).
     │
-    ├── c. For each Node input port: create InputStreamManager wrapping Stream consumer side.
-    │    Set arrival_callback → InputStreamHandler::NotifyPacketArrival().
+    ├── c. For each InputStreamManager:
+    │    • SetArrivalCallback → InputStreamHandler::NotifyPacketArrival()
+    │    • SetQueueSizeCallbacks → Scheduler throttle/unthrottle
     │
-    ├── d. Build stream_to_input_mgr_ mapping.
+    ├── d. Event observers:
+    │    • InputStreamManager::arrival_callback_ → NotifyPacketArrival
+    │    • InputStreamManager::Close() → bound = Done → downstream detects via IsDone()
+    │    • Node::Close() → OnNodeClosed → completion check
     │
-    ├── e. For each Node output port: create OutputStream with downstream Stream list.
-    │
-    ├── f. For each Node: create OutputStreamHandler.
-    │
-    ├── g. Register event observers:
-    │    • InputStreamManager::OnPacketEnqueued → NotifyPacketArrival
-    │    • Stream::Close() → mark input done
-    │    • Node::Close() → OnNodeClosed → completion check + [Ph2: layer advance]
-    │
-    └── h. Activate all Source Nodes:
+    └── e. Activate all Source Nodes:
          Executor::ScheduleTask([OpenNode])
     ▼
  4. [EVENT-DRIVEN — no central loop; reactions to events]
@@ -357,11 +321,11 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
     │  [if stopping_=true AND node is Source]   [fix #3]
     │    → schedule CloseNode, skip Process, return
     │
-    │  // Back-pressure unthrottle (side effect of FillInputSet)  [fix #5]
+    │  // FillInputSet — pops from InputStreamManager deques
     │  InputStreamHandler::FillInputSet(node, context)
-    │    → for each input: InputStreamManager::Pop()
-    │    → if queue < max_queue_size/2 AND upstream throttled:
-    │      → unthrottle upstream → NotifyPacketArrival(upstream)
+    │    → for each input: InputStreamManager::PopPacketAtTimestamp(ts)
+    │    → side effect: PopPacketAtTimestamp may fire becomes_not_full_callback_
+    │      → Scheduler unthrottles upstream source
     │
     │  absl::Status status = Node::Process(context)
     │
@@ -378,17 +342,16 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
     │    schedule CloseNode for all active_sources_   [fix #3]
     │    return
     │
-    │  // Output propagation  [fix #1 — no Stream callback]
-    │  OutputStreamHandler::PostProcess(context)
-    │    for each output port:
-    │      for each downstream Stream:
-    │        status = OutputStream::Send(packet) → Stream::Push(packet)
-    │        if (status.ok()):
-    │          auto* input_mgr = stream_to_input_mgr_[stream]  // pre-built
-    │          input_mgr->OnPacketEnqueued()   // direct call on downstream
-    │          → arrival_callback_ → InputStreamHandler::NotifyPacketArrival(node)
-    │        elif (status == ResourceExhausted):
-    │          → throttle upstream source
+    │  // Output propagation — inline, no separate OutputStreamHandler
+    │  for each output port (from GraphContext::outputs):
+    │    OutputStream::Send(packet)
+    │      → for each mirror(InputStreamManager*):
+    │        last mirror: MovePackets(packets)   // zero-copy
+    │        others:      AddPackets(packets)    // shared_ptr bump
+    │        → if queue was empty: arrival_callback_ fires
+    │          → NotifyPacketArrival(downstream Node)
+    │        → if crosses max_queue_size: becomes_full_callback_
+    │          → Scheduler throttles upstream source
     │
     │  // Source rescheduling (loop)
     │  if (node is Source && !stopping_):
@@ -409,10 +372,10 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
     │        → state_ → kTerminated
     │        → signal WaitUntilDone()
     │
-    ─── Event: Stream closed (end-of-stream) ─────────────────  [fix #5]
-    │  Mark input port as done on consuming Node
-    │  InputStreamHandler::NotifyPacketArrival(consumer)
-    │    → GetNodeReadiness may return kReadyForClose
+    ─── Event: InputStreamManager::Close() (bound=Done) ──────
+    │  OutputStream::Close() → SetNextTimestampBound(Done) on all mirrors
+    │  Downstream InputStreamManager::IsDone() becomes true when queue drains
+    │  InputStreamHandler detects via GetNodeReadiness → may return kReadyForClose
     │
     ─── Event: HandleIdle (called from Schedule/Resume/error/non_idle=0) ─  [fix #7]
     │  [handling_idle_++, reentrancy guard]
@@ -429,19 +392,19 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
 
 ## Module Responsibility Matrix
 
-| Concern | Packet | Stream | InputStreamMgr | OutputStream | OutputStreamHandler | Node | GraphCtx | Scheduler | InputStreamHandler | Executor | NodeFactory |
-|---------|--------|--------|----------------|--------------|-------------------|------|----------|-----------|-------------------|----------|-------------|
-| Data transport | Carrier | 1:1 pipe | — | Fan-out | — | — | — | — | — | — | — |
-| Notification | — | — | Arrival callback | — | — | — | — | — | — | — | — |
-| Timestamp bound | — | — | Track bound | Propagate bound | — | — | — | — | Consume bound | — | — |
-| Business logic | — | — | — | — | — | Execute | — | — | — | — | — |
-| Activation scheduling | — | — | — | — | — | — | — | Orchestrate | — | Dispatch | — |
-| Readiness policy | — | — | — | — | — | — | — | — | Decide | — | — |
-| Output post-process | — | — | — | — | PostProcess | — | — | — | — | — | — |
-| Back-pressure | — | Enforce | — | — | — | — | — | Throttle/Unthrottle | — | — | — |
-| Source layering (Ph2) | — | — | — | — | — | Declare layer | — | Sequence layers | — | — | — |
-| Completion tracking | — | — | — | — | — | — | — | Detect all closed | — | — | — |
-| Type erasure | Provide | — | — | — | — | — | — | — | — | — | — |
-| Lifecycle | — | Closed signal | — | — | Flush | Open/Process/Close | Per-invoke bag | State machine + stopping | Detect kReadyForClose | — | — |
-| Node creation | — | — | — | — | — | — | — | — | — | — | Register/Create |
-| Error propagation | — | — | — | — | — | Return error | — | Abort graph + stopping_ | — | — | — |
+| Concern | Packet | InputStreamMgr | OutputStream | Node | GraphCtx | Scheduler | InputStreamHandler | Executor | NodeFactory |
+|---------|--------|----------------|--------------|------|----------|-----------|-------------------|----------|-------------|
+| Data transport | Carrier | deque + bound | Fan-out via mirrors | — | — | — | — | — | — |
+| Notification | — | Arrival callback | — | — | — | — | — | — | — |
+| Timestamp bound | — | Track + MinTimestampOrBound | Propagate bound to mirrors | — | — | — | Consume bound | — | — |
+| Queue storage | — | `std::deque<Packet>` | — | — | — | — | — | — | — |
+| Business logic | — | — | — | Execute | — | — | — | — | — |
+| Activation scheduling | — | — | — | — | — | Orchestrate | — | Dispatch | — |
+| Readiness policy | — | — | — | — | — | — | Decide | — | — |
+| Back-pressure | — | becomes_full/not_full callbacks | — | — | — | Throttle/Unthrottle | — | — | — |
+| Source layering (Ph2) | — | — | — | Declare layer | — | Sequence layers | — | — | — |
+| Completion tracking | — | IsDone() | — | — | — | Detect all closed | Detect kReadyForClose | — | — |
+| Type erasure | Provide | — | — | — | — | — | — | — | — |
+| Lifecycle | — | Close()→bound=Done | Close()→mirror bound=Done | Open/Process/Close | Per-invoke bag | State machine + stopping | — | — | — |
+| Node creation | — | — | — | — | — | — | — | — | Register/Create |
+| Error propagation | — | — | — | Return error | — | Abort graph + stopping_ | — | — | — |

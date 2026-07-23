@@ -39,9 +39,10 @@ class InputStreamHandler {
 ```
 
 **Collaboration with InputStreamManager**:
-- Each Node input port has one `InputStreamManager` wrapping the underlying `Stream`.
-- `InputStreamManager::OnPacketEnqueued()` fires the `arrival_callback_`, which calls `NotifyPacketArrival()`.
+- Each Node input port has one `InputStreamManager` owning a `std::deque<Packet>` and timestamp bound.
+- `InputStreamManager::AddPackets()` / `MovePackets()` fires `arrival_callback_` when queue transitions from empty to non-empty, which calls `NotifyPacketArrival()`.
 - The handler reads each port's state via `InputStreamManager::MinTimestampOrBound()` and `IsEmpty()` to determine readiness.
+- `FillInputSet()` calls `InputStreamManager::PopPacketAtTimestamp(ts)` to consume packets.
 
 **Semantics**:
 - `SetScheduleCallback()` provides the handler with a mechanism to schedule Node execution. Called once during Scheduler initialization.

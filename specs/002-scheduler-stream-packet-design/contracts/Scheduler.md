@@ -79,14 +79,12 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
   1. Build topological ordering from Graph's Node/Stream wiring.
   2. Group Source Nodes by `source_layer` (default 0). (Phase 2: layer-ordered activation; Phase 1: all sources activate concurrently.)
-  3. Create `InputStreamManager` per Node per input port — wraps Stream consumer side, registers arrival callback.
-  4. Build `stream_to_input_mgr_` mapping: for each `Stream*`, record the downstream `InputStreamManager*` that wraps it. The Scheduler uses this mapping inside the task runner to call `OnPacketEnqueued()` after a successful `Stream::Push()` — **no callback mechanism on Stream itself is needed**.
-  5. Create `OutputStream` per Node per output port — supports fan-out to multiple downstream Streams.
-  6. Create `OutputStreamHandler` per Node — handles output propagation after Process.
-  7. Register event observers:
-     - For each `InputStreamManager`: arrival callback → `InputStreamHandler::NotifyPacketArrival()` on owning Node.
-     - For each Stream: on end-of-stream → mark downstream Node's input as done.
-  8. Activate all Source Nodes (schedule their `Open` tasks). Source Nodes reuse a single default `GraphContext` across all invocations (max_in_flight is always 1 for sources).
+  3. Create `InputStreamManager` per Node per input port — owns the `std::deque<Packet>`, tracks timestamp bound. Set up:
+     - `SetArrivalCallback()` → `InputStreamHandler::NotifyPacketArrival()` on owning Node.
+     - `SetQueueSizeCallbacks()` → Scheduler throttle/unthrottle logic.
+  4. Create `OutputStream` per Node per output port — holds `mirrors_` (downstream `InputStreamManager*` list). GraphBuilder populates mirrors.
+  5. Register end-of-stream observer: each `InputStreamManager::Close()` sets bound to `Timestamp::Done()`; downstream `InputStreamHandler` detects completion via `IsDone()`.
+  6. Activate all Source Nodes (schedule their `Open` tasks). Source Nodes reuse a single default `GraphContext` across all invocations (max_in_flight is always 1 for sources).
 
 - `Pause()` suspends scheduling. Queued tasks complete but no new Nodes are activated. Returns `FailedPreconditionError` if `stopping_ == true` (pausing during shutdown is contradictory).
 - `Resume()` resumes scheduling after a pause. Calls `HandleIdle()` to re-evaluate.
@@ -160,18 +158,15 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
     schedule CloseNode for all active Sources  [fix #3]
     return
 
-  // Output propagation  [fix #1 — no Stream callback needed]
-  OutputStreamHandler::PostProcess(context)
-    for each output port:
-      for each downstream Stream:
-        status = OutputStream::Send(packet) → Stream::Push(packet)
-        if (status.ok()):
-          auto* input_mgr = stream_to_input_mgr_[stream]  // pre-built mapping
-          input_mgr->OnPacketEnqueued()                    // direct call
-          → arrival_callback_ fires
-          → InputStreamHandler::NotifyPacketArrival(owning_node)
-        else if (IsResourceExhausted(status)):
-          → throttle upstream source
+  // Output propagation [inline PostProcess — no separate OutputStreamHandler]
+  for each output port (from GraphContext::outputs):
+    status = OutputStream::Send(packet)
+      → calls OutputStream::Send() which writes directly to each mirror:
+        last mirror: manager->MovePackets()  (zero-copy)
+        prior mirrors: manager->AddPackets() (shared_ptr bump)
+      → each AddPackets/MovePackets sets *notify if queue was empty
+      → if notify: arrival_callback_ → NotifyPacketArrival(downstream Node)
+      → if queue crosses max_queue_size: becomes_full_callback_ → throttle upstream
 
 --- Non-source returns StatusStop ---
   → stopping_ = true
@@ -228,7 +223,6 @@ HandleIdle():
 - No central ready_queue. Task scheduling is distributed via `Executor::ScheduleTask()` callbacks.
 - **Idle tracking**: Each Executor queue has a `non_idle_count` — incremented before submitting a task, decremented after the task callback completes. `HandleIdle()` fires when `non_idle_count` reaches 0.
 - **HandleIdle reentrancy guard**: Uses `int handling_idle_` counter — incremented on entry, decremented on exit. If >1, returns immediately. Prevents reentrant issues when `state_mutex_` is unlocked/relocked inside `HandleIdle()`.
-- **stream_to_input_mgr_ mapping**: `flat_hash_map<Stream*, InputStreamManager*>` built during Schedule() initialization. Used inside ProcessNode output propagation to call `OnPacketEnqueued()` directly — no callback on Stream.
-- Throttle tracking: `flat_hash_set<Node*>` for throttled sources. Unthrottle triggered as a side effect of `FillInputSet` → Pop → queue depth check.
+- **Throttle tracking**: `flat_hash_set<Node*>` for throttled sources. Unthrottle triggered when `InputStreamManager::PopPacketAtTimestamp()` drains queue below `max_queue_size / 2` and fires `becomes_not_full_callback_`.
 - `OnNodeOpened()` callback: after Node::Open() completes. For Sources, schedules initial ProcessNode. For non-sources, registers with InputStreamHandler.
 - **CloseNode idempotency** [fix C]: `Node::Close()` is idempotent — if the Node is already closed, calling `Close()` again is a no-op and returns `OkStatus()`. This prevents double-close scenarios when `stopping_` fires concurrently with an in-flight ProcessNode intercept.
