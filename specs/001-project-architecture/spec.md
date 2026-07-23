@@ -85,13 +85,21 @@ As a framework developer, I want to replace the default scheduler or config pars
 
 ## Key Entities
 
-- **GraphConfig**: Configuration object produced by parser, consumed by builder. Platform-independent.
-- **Graph**: Runtime representation of the pipeline — owns Nodes and Streams.
-- **Node**: Computational unit with input/output Stream ports. Implements `Open()`, `Process()`, `Close()`.
-- **Stream**: Data conduit between Nodes. Carries Packets.
-- **Packet**: Atomic data unit flowing through Streams.
-- **Scheduler**: Drives Node execution by managing work queues and timing.
-- **CalculatorFactory**: Creates Node instances from config entries.
+- **GraphConfig**: Configuration object with NodeDef/StreamDef/ExecutorDef, consumed by GraphBuilder.
+- **GraphRuntime**: Top-level API. Owns all Nodes, Scheduler, executors. Lifecycle: Initialize → Start → WaitUntilDone → Shutdown.
+- **Node**: Computation unit with Open/Process/Close lifecycle. Implements static GetContract() for port type declaration.
+- **InputStreamManager**: Per-input-port deque + timestamp bound + back-pressure callbacks. Receives data directly from upstream OutputStreamManager mirrors. No intermediate Stream class exists.
+- **OutputStreamManager**: Per-output-port persistent state with mirrors (downstream InputStreamManager references). Propagates packets via PropagateUpdatesToMirrors (last mirror zero-copy move).
+- **Packet**: Atomic data unit (value type, shallow copy via shared_ptr). MakePacket/Adopt factories, Get/ValidateAsType/Share accessors.
+- **Timestamp**: int64_t-based with 8 special values (Unstarted, Done, etc.). End-of-stream signaled by Timestamp::Done().
+- **Scheduler**: 5-state machine (kNotStarted → kRunning ↔ kPaused → kCancelling → kTerminated). Event-driven, non-blocking Schedule(). Handles stopping_ propagation, error callbacks, and HandleIdle with reentrancy guard.
+- **ThreadPoolExecutor**: Multi-threaded task execution. Default thread count = min(CPUs, nodes).
+- **SchedulerQueue**: Per-executor priority queue (Open > non-source > source) with idle callbacks.
+- **InputStreamHandler**: Pluggable readiness policy with ScheduleInvocations loop, SyncSet, Default/Immediate/Barrier strategies.
+- **OutputStreamHandler**: Per-Node output orchestrator — PrepareOutputs, PostProcess, Close.
+- **GraphContext**: Per-invocation context (NodeName, InputTimestamp, InputStreamShardSet, OutputStreamShardSet, Options, SidePackets).
+- **NodeFactoryRegistry**: Global registry mapping type names to NodeFactory instances. GRAPH_RUNTIME_REGISTER_NODE macro for static registration.
+- **NodeContract**: Port type declaration interface. GetContract() called at graph construction for type validation.
 
 ## Success Criteria
 

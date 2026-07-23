@@ -8,166 +8,187 @@ Atomic data unit flowing through the graph.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data` | `std::any` | Type-erased payload |
-| `timestamp` | `int64_t` | Monotonic timestamp for ordering |
-| `is_empty` | `bool` | Marker for end-of-stream / flush signals |
+| `holder_` | `shared_ptr<HolderBase>` | Type-erased payload via custom Holder<T> |
+| `timestamp_` | `Timestamp` | Timestamp for ordering + lifecycle signalling |
 
 **Validation rules**:
-- Timestamp MUST be monotonically non-decreasing within a Stream.
-- Empty packets signal stream boundaries (open/close).
+- Timestamp MUST be monotonically non-decreasing within a single Stream.
+- End-of-stream is signaled by `Timestamp::Done()`, not by a boolean.
+- Payload type checked at read time via `Get<T>()` or `ValidateAsType<T>()`.
+
+**Ownership**: Shallow-copy semantics — copy increments shared_ptr refcount (O(1)). Source never deep-copied.
 
 ---
 
-### Stream
+### Timestamp
 
-Unidirectional data conduit between Node output and Node input.
+Timestamp class with special values encoded in int64_t range extremes.
+
+**Special values**: `Unset()` (INT64_MIN), `Unstarted()` (Open phase), `PreStream()` (header), `Min()`, `Max()`, `PostStream()` (summary), `OneOverPostStream()` (internal), `Done()` (Close phase, INT64_MAX).
+
+**Validation**: Constructor CHECK-fails if called with special value. End-of-stream detected via `timestamp() == Timestamp::Done()`.
+
+---
+
+### InputStreamManager
+
+Per-input-port queue + timestamp tracking. No intermediate Stream class — receives data directly from upstream OutputStreamManager mirrors.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | `std::string` | Unique identifier within Graph |
-| `queue_` | `std::queue<Packet>` | Bounded packet buffer |
-| `max_queue_size_` | `size_t` | Back-pressure threshold |
-| `is_closed_` | `bool` | Stream lifecycle state |
+| `queue_` | `std::deque<Packet>` | Packet buffer, written by upstream mirrors, read by FillInputSet |
+| `next_timestamp_bound_` | `Timestamp` | Advances on AddPackets/SetNextTimestampBound/Close |
+| `closed_` | `bool` | true after Close(), which sets bound = Timestamp::Done() |
+| `max_queue_size_` | `int` | Back-pressure threshold (-1 = unlimited) |
+| `arrival_callback_` | `PacketArrivalCallback` | Fires when queue transitions from empty to non-empty |
+| `becomes_full/not_full_callback_` | `QueueSizeCallback` | Trigger Scheduler throttle/unthrottle |
 
-**State transitions**:
-- `Open` → `Active` (first packet enqueued) → `Closed` (end-of-stream packet received)
+**Key methods**: `AddPackets()` / `MovePackets()` (last mirror gets move, zero-copy), `PopPacketAtTimestamp(ts)`, `PopQueueHead()`, `MinTimestampOrBound()`, `IsDone()` (queue empty && bound == Timestamp::Done()).
+
+---
+
+### OutputStreamManager
+
+Per-output-stream persistent state. Owns mirrors and handles propagation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `spec_` | `OutputStreamSpec` | name, offset, header, locked_intro_data |
+| `mirrors_` | `vector<Mirror>` | Downstream (InputStreamHandler*, CollectionItemId) |
+| `next_timestamp_bound_` | `Timestamp` | Current output bound |
+
+**Key methods**: `ComputeOutputTimestampBound(shard, input_ts)`, `PropagateUpdatesToMirrors(bound, shard)` (last mirror: MovePackets, others: AddPackets), `ResetShard(shard)`.
+
+---
+
+### OutputStreamShard
+
+Per-invocation write buffer. Implements `OutputStream`. Drained by `OutputStreamManager` after Process().
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `output_queue_` | `std::list<Packet>` | Packets added during Process() |
+| `next_timestamp_bound_` | `Timestamp` | Advanced on each AddPacket |
+| `updated_next_timestamp_bound_` | `Timestamp` | Only set by explicit SetNextBound |
 
 ---
 
 ### Node
 
-Computational unit executing on Stream data.
+Computational unit with lifecycle.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | `std::string` | Unique identifier within Graph |
-| `input_streams_` | `std::vector<Stream*>` | Connected input streams |
-| `output_streams_` | `std::vector<Stream*>` | Connected output streams |
-| `calculator_` | `std::unique_ptr<Calculator>` | Business logic implementation |
+| `input_port_managers_` | `map<string, InputStreamManager*>` | Named input ports (deque + bound owner) |
+| `output_streams_` | `map<string, OutputStream*>` | Named output ports (fan-out + mirrors) |
+| `executor_name_` | `std::string` | Named executor assignment |
+| `scheduler_queue_` | `SchedulerQueue*` | Queue for task scheduling |
+| `source_layer_` | `int` | Source activation order (Phase 2) |
 
-**Lifecycle**:
-1. `Open(CalculatorContext&)` — one-time init (read options, open resources)
-2. `Process(CalculatorContext&)` — called when all inputs ready
-3. `Close(CalculatorContext&)` — one-time teardown
-
-**Validation rules**:
-- Node MUST NOT reference other Nodes directly.
-- Node MUST have at least one input or output stream.
+**Lifecycle**: `Open(GraphContext&)` → `Process(GraphContext&)` (repeated) → `Close(GraphContext&)`.
+**Required static method**: `static GetContract(NodeContract* contract)` declares port types.
 
 ---
 
-### Calculator
+### GraphContext
 
-Abstract interface for business logic executed by a Node.
-
-| Method | Description |
-|--------|-------------|
-| `Open(CalculatorContext&) -> absl::Status` | Validate options, open resources |
-| `Process(CalculatorContext&) -> absl::Status` | Read inputs, write outputs |
-| `Close(CalculatorContext&) -> absl::Status` | Release resources |
-
----
-
-### CalculatorContext
-
-Per-invocation context passed to Calculator methods.
+Per-invocation context, analogous to MediaPipe's CalculatorContext.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `inputs` | `std::map<std::string, Packet&>` | Named input packets |
-| `outputs` | `std::map<std::string, PacketProducer>` | Named output producers |
-| `options` | `const NodeOptions&` | Node configuration from graph config |
+| `node_name_` | `string` | Node's name |
+| `input_timestamp_` | `Timestamp` | Unstarted()/scheduled_ts/Done() |
+| `inputs_` | `InputStreamShardSet` | Per-input-port shards |
+| `outputs_` | `OutputStreamShardSet` | Per-output-port shards |
+| `input_side_packets_` | `PacketSet` | Graph-level constants |
+| `output_side_packets_` | `OutputSidePacketSet` | Output side packets |
 
----
-
-### GraphConfig
-
-Immutable configuration object produced by parsers, consumed by GraphBuilder.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `nodes` | `std::vector<NodeDef>` | Node definitions with type + options |
-| `streams` | `std::vector<StreamDef>` | Stream connections between nodes |
-| `version` | `std::string` | Config schema version |
-
-**Validation rules**:
-- All referenced node names in StreamDef MUST exist in nodes.
-- No duplicate node names.
-- No duplicate stream names.
-
----
-
-### Graph
-
-Runtime representation of the pipeline.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `nodes_` | `std::vector<std::unique_ptr<Node>>` | Owned nodes |
-| `streams_` | `std::vector<std::unique_ptr<Stream>>` | Owned streams |
-| `scheduler_` | `std::unique_ptr<Scheduler>` | Assigned scheduler |
-
-**Lifecycle**:
-1. `Initialize(const GraphConfig&)` → create nodes + streams, wire them up
-2. `Start()` → scheduler begins processing
-3. `WaitUntilDone()` → block until all nodes close
-4. `Shutdown()` → stop scheduler, release resources
+**Shard types**: `InputStreamShard` (Value/IsEmpty/IsDone/Header), `OutputStreamShard` (AddPacket/SetOffset/SetHeader/Close).
 
 ---
 
 ### Scheduler
 
-Abstract interface driving Node execution.
+Event-driven execution engine with 5-state machine.
 
-| Method | Description |
-|--------|-------------|
-| `Schedule(Graph&)` | Begin scheduling all nodes |
-| `AddNode(Node*)` | Reserved for Phase 2 dynamic graph |
-| `RemoveNode(Node*)` | Reserved for Phase 2 dynamic graph |
-| `Shutdown()` | Stop all scheduling activity |
+| State | Meaning |
+|-------|---------|
+| `kNotStarted` | Before Schedule() |
+| `kRunning` | Actively scheduling |
+| `kPaused` | All queues stopped |
+| `kCancelling` | Error recorded, draining |
+| `kTerminated` | Final state |
 
-**Phase 1 implementation**: Topological-layer scheduler that processes Nodes when all input streams have data.
+**Key fields**: `stopping_` (StatusStop flag), `has_error_`, `non_idle_queue_count_` (idle aggregation), `handling_idle_` (reentrancy guard), `active_sources_` (set of open sources).
+
+---
+
+### SchedulerQueue
+
+Per-executor priority queue implementing `TaskQueue`.
+
+| Priority | Order |
+|----------|-------|
+| 1 (highest) | OpenNode tasks |
+| 2 | Non-sources |
+| 3 (lowest) | Sources (by layer → node_id) |
+
+**Key methods**: `AddNode()`, `AddNodeForOpen()`, `RunNextTask()`, `SetExecutor()`, `SetIdleCallback()`.
+
+---
+
+### Executor / ThreadPoolExecutor
+
+`Executor`: abstract base with `AddTask(TaskQueue*)` and `Schedule(closure)`.
+`ThreadPoolExecutor`: multi-threaded, `num_threads = min(CPUs, nodes)`, mutex + condition variable.
+
+---
+
+### InputStreamHandler / SyncSet
+
+`InputStreamHandler`: pluggable readiness policy with `ScheduleInvocations(max_allowance, input_bound)`.
+`SyncSet`: inner class for readiness calculation — compares `min_packet` vs `min_bound`.
+**Strategies**: `DefaultInputStreamHandler` (all-inputs barrier), `ImmediateInputStreamHandler`, `BarrierInputStreamHandler`.
+
+---
+
+### NodeFactory / NodeFactoryRegistry
+
+`NodeFactory`: polymorphic base with `GetContract()` and `CreateNode()`.
+`NodeFactoryFor<T>`: template implementation with `static_assert(HasGetContract<T>)`.
+`NodeFactoryRegistry`: global singleton, `GRAPH_RUNTIME_REGISTER_NODE(type, class)` macro.
+`NodeRegistrationToken`: RAII token for test cleanup.
+
+---
+
+### GraphConfig / GraphBuilder
+
+`GraphConfig`: `NodeDef` (name, type, ports, options, executor, source_layer), `StreamDef` (connections), `ExecutorDef` (name, type, num_threads), global `max_queue_size`, `report_deadlock`.
+`GraphBuilder::Build(config)`: validate contracts → create executors → create nodes → create managers → wire mirrors → return GraphRuntime.
 
 ---
 
 ## Relationships
 
 ```
-GraphConfig  ──parsed-by──>  IGraphConfigParser
-                                    │
-                          GraphConfig (immutable)
-                                    │
-                          GraphBuilder::Build()
-                                    │
-                              RuntimeGraph
-                              ├── Node* (N) ──has──> Calculator
-                              ├── Stream* (M) ──connects──> Node pairs
-                              └── Scheduler* (1)
-                                      │
-                              drives Node::Process()
-                                      │
-                              produces/consumes Packet via Stream
+GraphBuilder::Build(config)
+  → NodeFactoryRegistry::CreateByName(type)
+    → NodeFactory::CreateNode(name, options)
+      → Node (input_port_managers_ + output_streams_)
+
+OutputStreamManager::AddMirror(handler, id)  ← GraphBuilder wiring
+  → writes directly to InputStreamManager::AddPackets/MovePackets
+  → arrival_callback_ → NotifyPacketArrival
+    → InputStreamHandler::ScheduleInvocations
+      → SyncSet::GetReadiness
+        → kReadyForProcess → SchedulerQueue::AddNode(node)
+          → Executor::ScheduleTask
+            → SchedulerQueue::RunNextTask
+              → InputStreamHandler::FillInputSet → PopPacketAtTimestamp
+              → Node::Process(context)
+              → OutputStreamHandler::PostProcess
+                → OutputStreamManager::PropagateUpdatesToMirrors
 ```
 
-## State Diagram (Node)
-
-```
-  ┌─────────┐   Open()    ┌──────────┐
-  │ Created ├────────────►│  Opened   │
-  └─────────┘             └────┬─────┘
-                               │
-                    Process()  │  (all inputs ready)
-                     ┌────────▼────────┐
-                     │   Processing    │
-                     └────────┬────────┘
-                              │
-                    Process() │  (more input available)
-                     ┌────────▼────────┐
-                     │   Processing    │  ◄── loop
-                     └────────┬────────┘
-                              │
-                    Close()   │  (end-of-stream on all inputs)
-                     ┌────────▼────────┐
-                     │    Closed       │
-                     └─────────────────┘
-```
+No intermediate Stream class. Data flows directly between OutputStreamManager and InputStreamManager.

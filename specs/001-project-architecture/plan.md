@@ -19,89 +19,94 @@ The core execution flow of Graph Runtime follows a linear build-then-run pipelin
 │                      BUILD TIME                                 │
 │                                                                  │
 │  ┌──────────────┐                                                │
-│  │  JSON File   │                                                │
+│  │  GraphConfig │  programmatic or JSON                          │
+│  │  (NodeDef,   │                                                │
+│  │   StreamDef, │                                                │
+│  │   ExecutorDef)│                                                │
 │  └──────┬───────┘                                                │
 │         ▼                                                        │
 │  ┌────────────────┐                                              │
-│  │JsonParser      │  implements IGraphConfigParser               │
-│  │(src/config/json│)                                             │
+│  │  GraphBuilder  │  validates contracts, creates nodes,          │
+│  │  (Build())     │  wires OutputStream mirrors to                │
+│  │                │  InputStreamManager deques                   │
 │  └──────┬─────────┘                                              │
 │         ▼                                                        │
 │  ┌────────────────┐                                              │
-│  │  GraphConfig   │  immutable config object                     │
-│  │  (nodes,       │  consumed by builder                         │
-│  │   streams)     │                                              │
+│  │  GraphRuntime  │  owns Nodes, Scheduler, Executors            │
 │  └──────┬─────────┘                                              │
 │         ▼                                                        │
 │  ┌────────────────┐                                              │
-│  │  GraphBuilder  │  creates Node + Stream instances             │
-│  │  (src/graph/)  │  wires Node ports via Stream refs            │
-│  └──────┬─────────┘                                              │
-│         ▼                                                        │
-│  ┌────────────────┐                                              │
-│  │  RuntimeGraph  │  owns all Node/Stream/Scheduler              │
-│  └──────┬─────────┘                                              │
-│         ▼                                                        │
-│  ┌────────────────┐                                              │
-│  │  Scheduler     │  drives Node::Process() when inputs ready    │
+│  │  Scheduler     │  5-state machine, event-driven               │
+│  │  (Schedule())  │  drives Node::Process() when inputs ready    │
 │  │  (src/scheduler│)                                             │
 │  └──────┬─────────┘                                              │
 └─────────┼───────────────────────────────────────────────────────┘
           │ RUN TIME
           ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    NODE EXECUTION LOOP                           │
+│                    NODE EXECUTION LOOP (Event-Driven)             │
 │                                                                   │
-│  ┌──────────┐     ┌──────────┐     ┌──────────┐                  │
-│  │  Node A  │────►│  Node B  │────►│  Node C  │                  │
-│  │(Producer)│     │(Transform│     │(Consumer)│                  │
-│  └──────────┘     └──────────┘     └──────────┘                  │
-│       │                │                │                         │
-│       ▼                ▼                ▼                         │
-│  ┌──────────┐     ┌──────────┐     ┌──────────┐                  │
-│  │ Stream   │────►│ Stream   │────►│ Stream   │                  │
-│  │(Packet   │     │(Packet   │     │(Packet   │                  │
-│  │ Queue)   │     │ Queue)   │     │ Queue)   │                  │
-│  └──────────┘     └──────────┘     └──────────┘                  │
-│                                                                   │
+│  ┌──────────┐   OutputStream    ┌──────────┐   OutputStream    ┌──────────┐
+│  │  Node A  │──Manager::Send()──►│  Node B  │──Manager::Send()──►│  Node C  │
+│  │(Producer)│   → mirrors       │(Transform│   → mirrors       │(Consumer)│
+│  └──────────┘   → InputStreamMgr │          │   → InputStreamMgr │          │
+│       │         → deque          └──────────┘   → deque          └──────────┘
+│       │              │                              │
+│       ▼              ▼                              ▼
+│  InputStreamManager::AddPackets/SetNextTimestampBound
+│       → arrival_callback_ → NotifyPacketArrival
+│       → InputStreamHandler::ScheduleInvocations
+│         → SyncSet::GetReadiness → kReadyForProcess
+│         → SchedulerQueue::AddNode
+│           → Executor::ScheduleTask
+│             → ThreadPoolExecutor::Schedule
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+**Key difference from traditional designs**: No intermediate "Stream" class. The `OutputStreamManager` writes directly to downstream `InputStreamManager` deques via mirror references. Data flows through `Node → OutputStreamShard → OutputStreamManager::PropagateUpdatesToMirrors → InputStreamManager::AddPackets/MovePackets → InputStreamShard → downstream Node`.
 
 ### Core Element Interactions
 
 ```
-ExecutionContext (per Process() call)
+GraphContext (per Process() call)
 ┌─────────────────────────────────────────┐
-│  CalculatorContext                       │
-│  ├── inputs:  map<string, Packet&>      │  ← read from input Streams
-│  ├── outputs: map<string, PacketProducer>│  → write to output Streams
-│  └── options: NodeOptions                │  config-specified parameters
-│                                          │
-│  Calculator::Process(context)            │  user-defined business logic
-│    ├── read input Packets                │
-│    ├── compute result                    │
-│    └── push output Packets               │
+│  Inputs:  InputStreamShardSet           │  ← pre-popped from InputStreamManager
+│  Outputs: OutputStreamShardSet          │  → written during Process(), propagated after
+│  Options: NodeOptions                   │  config-specified parameters (typed via OptionsRegistry)
+│                                         │
+│  Node::Process(context)                 │  user-defined business logic
+│    ├── read input from Inputs().Get()   │
+│    ├── compute result                   │
+│    └── write output via Outputs().Get() │
 └─────────────────────────────────────────┘
 ```
 
 ### Data Flow Sequence (per Node activation)
 
 ```
- 1. Scheduler marks Node ready
-       │
- 2. For each input Stream:
-       ▼
-    Pop next Packet → place in context.inputs
-       │
- 3. Calculator::Process(context) called
-       │
- 4. Calculator writes to context.outputs
-       │
- 5. For each output Stream:
-       ▼
-    Enqueue Packet → notify downstream Scheduler
-       │
- 6. Scheduler marks downstream Node(s) ready
+1. Scheduler marks Node ready via SchedulerQueue::AddNode
+     │
+2. SchedulerQueue::RunNextTask
+     ▼
+3. OutputStreamHandler::PrepareOutputs(shards)
+     │
+4. InputStreamHandler::FillInputSet(node, context)
+     → for each input port: InputStreamManager::PopPacketAtTimestamp(ts)
+     → populates InputStreamShard
+     │
+5. Node::Process(context)
+     │
+6. Node writes via context.Outputs().Get("port").AddPacket(packet)
+     │
+7. OutputStreamHandler::PostProcess(input_timestamp, shards)
+     → for each OutputStreamManager:
+       → ComputeOutputTimestampBound(shard)
+       → PropagateUpdatesToMirrors(bound, shard)
+         → last mirror: MovePackets()  |  others: AddPackets()
+         → arrival_callback_ fires → NotifyPacketArrival
+         → InputStreamHandler::ScheduleInvocations()
+           → SyncSet::GetReadiness
+           → if kReadyForProcess → SchedulerQueue::AddNode(downstream)
 ```
 
 **Language/Version**: C++17
@@ -125,7 +130,7 @@ ExecutionContext (per Process() call)
 - `-fvisibility=hidden` for all translation units
 - No dynamic Graph in Phase 1
 
-**Scale/Scope**: Phase 1 — single-process, single-threaded scheduler; <50 Nodes; JSON-only config
+**Scale/Scope**: Phase 1 — single-process, single-threaded scheduler; <50 Nodes; programmatic config (JSON Phase 2)
 
 ## Constitution Check
 
@@ -133,11 +138,11 @@ ExecutionContext (per Process() call)
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| I. Stream-Based Graph Architecture | ✅ PASS | Core design — Nodes decoupled via Streams |
-| II. Configuration Driven | ✅ PASS | JSON parser via IGraphConfigParser interface |
-| III. Modularity & Extensibility | ✅ PASS | All core modules have replaceable interfaces |
-| IV. Google C++ Code Style | ✅ PASS | Strictly enforced; GRAPH_RUNTIME_API macro |
-| V. Build System Integrity | ✅ PASS | Bazel 6.5, platforms/, single entry point |
+| I. Stream-Based Graph Architecture | ✅ PASS | Core design — Nodes decoupled via InputStreamManagers/OutputStreamManagers |
+| II. Configuration Driven | ✅ PASS | GraphConfig supports programmatic config; JSON parser Phase 2 |
+| III. Modularity & Extensibility | ✅ PASS | All core modules define replaceable interfaces (Scheduler, Executor, InputStreamHandler) |
+| IV. Google C++ Code Style | ✅ PASS | Google C++ Style enforced throughout |
+| V. Build System Integrity | ✅ PASS | Bazel 6.5, platforms/, single entry point //src/public:runtime |
 
 **GATE RESULT**: ✅ PASS — all constitutional principles satisfied. No violations requiring Complexity Tracking.
 
@@ -164,6 +169,8 @@ graph_runtime/
 ├── .bazelversion                 (6.5.0)
 ├── .bazelrc
 ├── graph_runtime_deps.bzl        (external dep bootstrap)
+├── docs/
+│   └── thread_safety.md          (thread safety documentation)
 ├── third_party/
 │   └── nlohmann_json/
 │       └── BUILD.bazel           (cc_library for nlohmann/json)
@@ -172,52 +179,55 @@ graph_runtime/
 │   └── platforms.bzl             (config_setting_and_platform + graph_runtime_select)
 └── src/
     ├── public/
-    │   ├── BUILD                 (public cc_library + cc_binary shared)
-    │   ├── include/
-    │   │   └── graph_runtime/
-    │   │       ├── graph_runtime.h            (umbrella)
-    │   │       ├── graph_runtime_export.h     (GRAPH_RUNTIME_API)
-    │   │       ├── graph.h
-    │   │       ├── packet.h
-    │   │       ├── node.h
-    │   │       └── types.h
-    │   └── graph_runtime_init.cc
+    │   ├── BUILD                 (runtime cc_library aggregating all modules)
+    │   ├── types.h               (CollectionItemId, ErrorCallback, IsStopStatus)
+    │   ├── side_packet.h         (PacketSet, OutputSidePacketSet)
+    │   ├── graph_builder.h/.cc   (GraphBuilder — validates and constructs graph)
+    │   └── graph_runtime.h/.cc   (GraphRuntime — top-level public API)
     ├── config/
     │   ├── BUILD.bazel
-    │   ├── i_graph_config_parser.h
-    │   ├── graph_config.h
-    │   └── json/
-    │       ├── BUILD.bazel
-    │       └── json_parser.h / .cc
-    ├── graph/
-    │   ├── BUILD.bazel
-    │   ├── graph.h / .cc
-    │   └── graph_builder.h / .cc
-    ├── runtime/
-    │   ├── BUILD.bazel
-    │   └── runtime.h / .cc
-    ├── scheduler/
-    │   ├── BUILD.bazel
-    │   └── scheduler.h / .cc
+    │   └── graph_config.h        (GraphConfig with NodeDef/StreamDef/ExecutorDef)
     ├── stream/
     │   ├── BUILD.bazel
-    │   └── stream.h / .cc, packet.h / .cc
+    │   ├── timestamp.h/.cc       (Timestamp with 8 special values)
+    │   ├── packet.h/.cc          (Packet with MakePacket/Get/Share)
+    │   ├── input_stream.h        (InputStream abstract interface)
+    │   ├── input_stream_manager.h/.cc (deque, PopPacketAtTimestamp, callbacks)
+    │   ├── output_stream.h       (OutputStream abstract interface)
+    │   ├── output_stream_shard.h/.cc (per-invocation write buffer)
+    │   ├── output_stream_manager.h/.cc (mirrors, PropagateUpdatesToMirrors)
+    │   └── output_stream_handler.h/.cc (PostProcess, PrepareOutputs, Close)
     ├── node/
     │   ├── BUILD.bazel
-    │   ├── node.h / .cc
-    │   └── node_factory.h / .cc
+    │   ├── node.h/.cc            (Node base class — Open/Process/Close lifecycle)
+    │   ├── node_contract.h       (NodeContract — port type declaration)
+    │   ├── node_factory.h/.cc    (NodeFactory + NodeFactoryFor<T>)
+    │   ├── node_registry.h/.cc   (NodeFactoryRegistry + GRAPH_RUNTIME_REGISTER_NODE)
+    │   ├── node_options.h/.cc    (NodeOptions — key-value config)
+    │   ├── options_registry.h/.cc (OptionsRegistry — typed deserialization)
+    │   └── graph_context.h/.cc   (GraphContext, InputStreamShard, OutputStreamShard)
+    ├── scheduler/
+    │   ├── BUILD.bazel
+    │   ├── executor.h            (TaskQueue + Executor interfaces)
+    │   ├── scheduler_queue.h/.cc (priority queue, idle callbacks, executor binding)
+    │   ├── scheduler.h/.cc       (5-state machine, HandleIdle, stopping_)
+    │   ├── thread_pool_executor.h/.cc (Multi-threaded thread pool)
+    │   ├── input_stream_handler.h/.cc (SyncSet, ScheduleInvocations)
+    │   └── counters.h            (PerfCounters for monitoring)
     ├── examples/
     │   ├── BUILD.bazel
-    │   └── string_pipeline.cc
+    │   └── string_pipeline.cc    (Producer → Uppercase → Consumer)
     └── tests/
         ├── BUILD.bazel
-        ├── graph_builder_test.cc
-        ├── config_parser_test.cc
-        ├── scheduler_test.cc
-        └── integration_test.cc
+        ├── foundational_test.cc   (Timestamp, Packet, NodeOptions)
+        ├── input_chain_test.cc    (InputStreamManager, Add/Pop)
+        ├── output_chain_test.cc   (OutputStreamShard, Propagate)
+        ├── node_chain_test.cc     (NodeFactory, lifecycle)
+        ├── node_lifecycle_test.cc (Source/Sink/Single/Disconnected)
+        └── execution_infra_test.cc(SchedulerQueue, ThreadPool)
 ```
 
-**Structure Decision**: Single C++ library project under `graph_runtime/` subdirectory, following Atlas layout conventions. All source under `graph_runtime/src/`, public API under `graph_runtime/src/public/include/graph_runtime/` with `strip_include_prefix`. Bazel commands run from the `graph_runtime/` directory.
+**Structure Decision**: Single C++ library project under `graph_runtime/` subdirectory. All source under `graph_runtime/src/`, organized by module (stream, node, scheduler, public, config). No intermediate Stream class — OutputStreamManager writes directly to InputStreamManager deques. Bazel commands run from the `graph_runtime/` directory.
 
 **Build Conventions**:
 - All third-party dependencies MUST declare their `BUILD.bazel` in `third_party/<name>/` — inline `build_file_content` is prohibited.
