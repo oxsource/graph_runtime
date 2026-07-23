@@ -18,42 +18,42 @@ cc_library(
 )
 
 cc_library(
-    name = "graph_config",
-    hdrs = ["graph_config.h"],
-    deps = [
-        "//src/node:node_options",
-    ],
-)
-
-cc_library(
     name = "graph_builder",
     srcs = ["graph_builder.cc"],
     hdrs = ["graph_builder.h"],
     deps = [
+        ":runtime_shared",
+        "//src/config:graph_config",
         "//src/scheduler:scheduler",
-        ":graph_config",
+        "//src/scheduler:thread_pool_executor",
         "//src/node:node_factory_registry",
-        "//src/node:node_base",
+    ],
+)
+
+cc_library(
+    name = "runtime_shared",
+    hdrs = [
+        "graph_runtime.h",
+        "types.h",
+        "side_packet.h",
+    ],
+    deps = [
+        "//src/config:graph_config",
+        "//src/scheduler:scheduler",
+        "//src/node:graph_context",
+        "//src/public:types",
+        "//src/stream:packet",
     ],
 )
 
 cc_library(
     name = "runtime",
     srcs = ["graph_runtime.cc"],
-    hdrs = [
-        "graph_runtime.h",
-        "graph_builder.h",
-        "graph_config.h",
-        "side_packet.h",
-        "types.h",
-    ],
     deps = [
-        "//src/scheduler:scheduler",
-        "//src/node:node_factory_registry",
-        "//src/node:graph_context",
         ":graph_builder",
-        ":graph_config",
-        ":side_packet",
-        ":types",
+        ":runtime_shared",
+        "//src/scheduler:scheduler",
+        "//src/config:graph_config",
+        "//src/public:types",
     ],
 )

@@ -138,31 +138,31 @@ Foundational (Phase 2)
 
 ### Sub-phase 4a — Execution Infrastructure
 
-- [ ] T034 [P] [US2] Implement `Executor` base class (`graph_runtime/src/scheduler/executor.h`): TaskQueue interface (RunNextTask), Executor (AddTask, Schedule), RegisterExecutor
-- [ ] T035 [P] [US2] Implement `SchedulerQueue` (`graph_runtime/src/scheduler/scheduler_queue.h/.cc`): priority_queue<Item>, SetExecutor, SetIdleCallback, AddNode, AddNodeForOpen, RunNextTask (pops highest priority → OpenNode or ProcessNode), SetRunning, Reset, IsIdle, num_pending_tasks_
-- [ ] T036 [US2] Implement `ThreadPoolExecutor` (`graph_runtime/src/scheduler/thread_pool_executor.h/.cc`): Create factory, Schedule, min(CPUs, nodes) default thread count, ThreadPool internal class
-- [ ] T037 [US2] Create execution infrastructure test (`graph_runtime/src/tests/execution_infra_test.cc`): SchedulerQueue + ThreadPoolExecutor task dispatch, idle callbacks
+- [X] T034 [P] [US2] Implement `Executor` base class (`graph_runtime/src/scheduler/executor.h`): TaskQueue interface (RunNextTask), Executor (AddTask, Schedule), RegisterExecutor
+- [X] - [ ] T035 [P] [US2] Implement `SchedulerQueue` (`graph_runtime/src/scheduler/scheduler_queue.h/.cc`): priority_queue<Item>, SetExecutor, SetIdleCallback, AddNode, AddNodeForOpen, RunNextTask (pops highest priority → OpenNode or ProcessNode), SetRunning, Reset, IsIdle, num_pending_tasks_
+- [X] - [ ] T036 [US2] Implement `ThreadPoolExecutor` (`graph_runtime/src/scheduler/thread_pool_executor.h/.cc`): Create factory, Schedule, min(CPUs, nodes) default thread count, ThreadPool internal class
+- [X] - [ ] T037 [US2] Create execution infrastructure test (`graph_runtime/src/tests/execution_infra_test.cc`): SchedulerQueue + ThreadPoolExecutor task dispatch, idle callbacks
 
 ### Sub-phase 4b — Scheduler
 
-- [ ] T038 [P] [US2] Implement `Scheduler` base + default implementation (`graph_runtime/src/scheduler/scheduler.h/.cc`): 5-state machine, SetInputStreamHandler, SetDefaultExecutor, SetNonDefaultExecutor, SetErrorCallback, Schedule (non-blocking: topological ordering → source layering → InputStreamManager callbacks → register queue idle callbacks → AssignNodeToQueue → activate sources), WaitUntilDone, Shutdown, Pause/Resume, AssignNodeToQueue, HandleIdle (reentrancy guard, non_idle_queue_count_, CleanupActiveSources, auto-unthrottle, deadlock detection)
-- [ ] T039 [US2] Implement event-driven execution flow in Scheduler task runner: OpenNode (GraphContext creation with Unstarted → Node::Open → output_stream_handler_->Open → OnNodeOpened), ProcessNode (stopping_ check → FillInputSet → Node::Process → error/stop handling → OutputStreamHandler::PostProcess → source rescheduling), CloseNode (PrepareOutputs → GraphContext with Done → Node::Close → output_stream_handler_->Close)
-- [ ] T040 [US2] Implement stopping_ propagation: when Node returns StatusStop → set stopping_ → CloseNode for all active_sources_; subsequent Source ProcessNode intercept → skip Process, schedule Close directly
-- [ ] T041 [US2] Implement error propagation: error_callback_ → HasError → stopping_ → CloseNode for all active_sources → HandleIdle → kTerminated
-- [ ] T042 [US2] Create scheduler unit test (`graph_runtime/src/tests/scheduler_test.cc`): state machine transitions, stopping_ behavior, error propagation, HandleIdle with throttled sources
+- [X] - [ ] T038 [P] [US2] Implement `Scheduler` base + default implementation (`graph_runtime/src/scheduler/scheduler.h/.cc`): 5-state machine, SetInputStreamHandler, SetDefaultExecutor, SetNonDefaultExecutor, SetErrorCallback, Schedule (non-blocking: topological ordering → source layering → InputStreamManager callbacks → register queue idle callbacks → AssignNodeToQueue → activate sources), WaitUntilDone, Shutdown, Pause/Resume, AssignNodeToQueue, HandleIdle (reentrancy guard, non_idle_queue_count_, CleanupActiveSources, auto-unthrottle, deadlock detection)
+- [X] - [ ] T039 [US2] Implement event-driven execution flow in Scheduler task runner: OpenNode (GraphContext creation with Unstarted → Node::Open → output_stream_handler_->Open → OnNodeOpened), ProcessNode (stopping_ check → FillInputSet → Node::Process → error/stop handling → OutputStreamHandler::PostProcess → source rescheduling), CloseNode (PrepareOutputs → GraphContext with Done → Node::Close → output_stream_handler_->Close)
+- [X] - [ ] T040 [US2] Implement stopping_ propagation: when Node returns StatusStop → set stopping_ → CloseNode for all active_sources_; subsequent Source ProcessNode intercept → skip Process, schedule Close directly
+- [X] - [ ] T041 [US2] Implement error propagation: error_callback_ → HasError → stopping_ → CloseNode for all active_sources → HandleIdle → kTerminated
+- [X] - [ ] T042 [US2] Create scheduler unit test (`graph_runtime/src/tests/scheduler_test.cc`): state machine transitions, stopping_ behavior, error propagation, HandleIdle with throttled sources
 
 ### Sub-phase 4c — Side Packets
 
-- [ ] T043 [US2] Implement `SidePacket` (`graph_runtime/src/public/side_packet.h/.cc`): PacketSet (immutable input), OutputSidePacketSet (mutable output)
-- [ ] T044 [US2] Integrate side packets into GraphContext: InputSidePackets() returns const PacketSet&, OutputSidePackets() returns OutputSidePacketSet&; side packet validation during Schedule() (missing side packet → FailedPreconditionError)
+- [X] - [ ] T043 [US2] Implement `SidePacket` (`graph_runtime/src/public/side_packet.h/.cc`): PacketSet (immutable input), OutputSidePacketSet (mutable output)
+- [X] - [ ] T044 [US2] Integrate side packets into GraphContext: InputSidePackets() returns const PacketSet&, OutputSidePackets() returns OutputSidePacketSet&; side packet validation during Schedule() (missing side packet → FailedPreconditionError)
 
 ### Sub-phase 4d — GraphConfig, GraphBuilder, GraphRuntime
 
-- [ ] T045 [US2] Implement `GraphConfig` (`graph_runtime/src/config/graph_config.h`): NodeDef, StreamDef, ExecutorDef, input_streams, output_streams, max_queue_size, report_deadlock
-- [ ] T046 [US2] Implement `GraphBuilder` (`graph_runtime/src/public/graph_builder.h/.cc`): Build(config) → ValidateContracts (NodeFactory::GetContract per node, check stream + side packet types, validate OptionsRegistry) → CreateExecutors → CreateNodes → CreateInputStreamManagers → CreateOutputStreams + OutputStreamManagers → WireMirrors → CreateGraphInputStreams → CreateGraphOutputStreams → CreateOutputStreamHandlers → CreateScheduler → AssignNodesToQueues → return GraphRuntime
-- [ ] T047 [US2] Implement `GraphRuntime` (`graph_runtime/src/public/graph_runtime.h/.cc`): Initialize (delegates to GraphBuilder::Build), Start (calls Scheduler::Schedule), WaitUntilDone, Shutdown, AddPacketToInputStream (inject into virtual GraphInputStream Source), CloseInputStream, SetOutputStreamCallback, ClearOutputStreamCallback, SetInputSidePacket, SetOutputSidePacketCallback
-- [ ] T048 [US2] Create string pipeline example (`graph_runtime/src/examples/string_pipeline.cc`): producer Source → uppercase Transform → consumer Sink, JSON config, demonstrates end-to-end flow
-- [ ] T049 [US2] Create integration test (`graph_runtime/src/tests/integration_test.cc`): 3-Node linear pipeline, 1000 Packets, verify zero data loss and correct ordering
+- [X] - [ ] T045 [US2] Implement `GraphConfig` (`graph_runtime/src/config/graph_config.h`): NodeDef, StreamDef, ExecutorDef, input_streams, output_streams, max_queue_size, report_deadlock
+- [X] - [ ] T046 [US2] Implement `GraphBuilder` (`graph_runtime/src/public/graph_builder.h/.cc`): Build(config) → ValidateContracts (NodeFactory::GetContract per node, check stream + side packet types, validate OptionsRegistry) → CreateExecutors → CreateNodes → CreateInputStreamManagers → CreateOutputStreams + OutputStreamManagers → WireMirrors → CreateGraphInputStreams → CreateGraphOutputStreams → CreateOutputStreamHandlers → CreateScheduler → AssignNodesToQueues → return GraphRuntime
+- [X] - [ ] T047 [US2] Implement `GraphRuntime` (`graph_runtime/src/public/graph_runtime.h/.cc`): Initialize (delegates to GraphBuilder::Build), Start (calls Scheduler::Schedule), WaitUntilDone, Shutdown, AddPacketToInputStream (inject into virtual GraphInputStream Source), CloseInputStream, SetOutputStreamCallback, ClearOutputStreamCallback, SetInputSidePacket, SetOutputSidePacketCallback
+- [X] - [ ] T048 [US2] Create string pipeline example (`graph_runtime/src/examples/string_pipeline.cc`): producer Source → uppercase Transform → consumer Sink, JSON config, demonstrates end-to-end flow
+- [X] - [ ] T049 [US2] Create integration test (`graph_runtime/src/tests/integration_test.cc`): 3-Node linear pipeline, 1000 Packets, verify zero data loss and correct ordering
 
 **Checkpoint**: `bazel run //src/examples:string_pipeline` produces correct output. `bazel test //src/tests:integration_test` passes.
 

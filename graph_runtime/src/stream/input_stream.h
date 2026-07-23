@@ -17,7 +17,7 @@ class InputStream {
   virtual Packet& Value() = 0;
 
   template <typename T>
-  const T& Get() const {
+  absl::StatusOr<T> Get() const {
     return Value().template Get<T>();
   }
 

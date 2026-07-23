@@ -1,0 +1,9 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "string_pipeline",
+    srcs = ["string_pipeline.cc"],
+    deps = [
+        "//src/public:runtime",
+    ],
+)
