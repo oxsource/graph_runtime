@@ -1,0 +1,5 @@
+workspace(name = "graph_runtime")
+
+load("//:graph_runtime_deps.bzl", "graph_runtime_setup")
+
+graph_runtime_setup()

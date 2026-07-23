@@ -6,6 +6,8 @@
 - C++17 compatible compiler (clang 14+ / gcc 11+)
 - macOS ARM64 or Linux x86_64
 
+All commands must be run from the `graph_runtime/` directory (Bazel workspace root).
+
 ## Build
 
 ```bash

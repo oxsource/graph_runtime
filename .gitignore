@@ -1,0 +1,30 @@
+# Bazel
+bazel-*
+/bazel-out/
+/bazel-testlogs/
+/bazel-bin/
+graph_runtime/bazel-*
+
+# C++ build artifacts
+*.o
+*.so
+*.a
+*.dll
+*.dylib
+*.exe
+*.obj
+*.out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

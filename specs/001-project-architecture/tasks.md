@@ -22,11 +22,12 @@ description: "Task list for Graph Runtime project architecture implementation"
 
 ## Path Conventions
 
-- **Project root**: `WORKSPACE`, `BUILD.bazel`, `.bazelversion`, `.bazelrc`, `graph_runtime_deps.bzl`
-- **Public API**: `src/public/include/graph_runtime/`
-- **Internal modules**: `src/config/`, `src/graph/`, `src/node/`, `src/scheduler/`, `src/stream/`, `src/runtime/`
-- **Examples**: `src/examples/`
-- **Tests**: `src/tests/`
+- **Workspace root** (run `bazel` from here): `graph_runtime/`
+- **Project root files**: `graph_runtime/WORKSPACE`, `graph_runtime/BUILD.bazel`, `graph_runtime/.bazelversion`, `graph_runtime/.bazelrc`, `graph_runtime/graph_runtime_deps.bzl`
+- **Public API**: `graph_runtime/src/public/include/graph_runtime/`
+- **Internal modules**: `graph_runtime/src/config/`, `graph_runtime/src/graph/`, `graph_runtime/src/node/`, `graph_runtime/src/scheduler/`, `graph_runtime/src/stream/`, `graph_runtime/src/runtime/`
+- **Examples**: `graph_runtime/src/examples/`
+- **Tests**: `graph_runtime/src/tests/`
 
 ---
 
@@ -66,11 +67,11 @@ Mapping to user stories:
 
 **Purpose**: Initialize Bazel workspace, platform definitions, external dependency bootstrap. Establish the build foundation before any module design begins.
 
-- [ ] T001 Create project directory structure per plan.md (`src/public/include/graph_runtime/`, `src/config/json/`, `src/graph/`, `src/node/`, `src/scheduler/`, `src/stream/`, `src/runtime/`, `src/examples/`, `src/tests/`, `platforms/`)
-- [ ] T002 [P] Initialize Bazel workspace (`WORKSPACE` with `workspace(name = "graph_runtime")`, `.bazelversion` with `6.5.0`, `.bazelrc` with platform config aliases)
-- [ ] T003 [P] Create root `BUILD.bazel` with `//:runtime` alias to `//src/public:runtime` and platform `config_setting` entries
-- [ ] T004 [P] Create `platforms/` directory (`BUILD` with `config_setting_and_platform` macro for `macos_arm64` and `linux_x86_64`, `platforms.bzl` with `graph_runtime_select()`)
-- [ ] T005 [P] Create `graph_runtime_deps.bzl` with `graph_runtime_setup()` macro pulling nlohmann/json, abseil-cpp, and googletest via `http_archive`
+- [X] T001 Create project directory structure per plan.md (`graph_runtime/src/public/include/graph_runtime/`, `graph_runtime/src/config/json/`, `graph_runtime/src/graph/`, `graph_runtime/src/node/`, `graph_runtime/src/scheduler/`, `graph_runtime/src/stream/`, `graph_runtime/src/runtime/`, `graph_runtime/src/examples/`, `graph_runtime/src/tests/`, `graph_runtime/platforms/`, `graph_runtime/third_party/nlohmann_json/`)
+- [X] T002 [P] Initialize Bazel workspace (`graph_runtime/WORKSPACE` with `workspace(name = "graph_runtime")`, `graph_runtime/.bazelversion` with `6.5.0`, `graph_runtime/.bazelrc` with platform config aliases)
+- [X] T003 [P] Create root `graph_runtime/BUILD.bazel` with `//:runtime` alias to `//src/public:runtime` and platform `config_setting` entries
+- [X] T004 [P] Create `graph_runtime/platforms/` directory (`graph_runtime/platforms/BUILD` with `config_setting_and_platform` macro for `macos_arm64` and `linux_x86_64`, `graph_runtime/platforms/platforms.bzl` with `graph_runtime_select()`)
+- [X] T005 [P] Create `graph_runtime/graph_runtime_deps.bzl` with `graph_runtime_setup()` macro pulling nlohmann/json, abseil-cpp, and googletest via `http_archive`
 
 ---
 
@@ -84,13 +85,13 @@ Mapping to user stories:
 
 Define the execution flow contracts: how the Scheduler drives Node execution, how Nodes read/write Packets via Streams, and the data flow lifecycle.
 
-- [ ] T006 Define `Packet` interface contract (`src/public/include/graph_runtime/packet.h`): type-erased `std::any` payload, `int64_t` timestamp, `is_empty` marker. Reference: `data-model.md` Packet entity, `contracts/PublicAPI.md`
-- [ ] T007 Define `Stream` interface contract (`src/stream/stream.h`): bounded queue with `Push(Packet)`, `Pop() -> Packet`, `IsClosed()`, max queue size for back-pressure. Reference: `data-model.md` Stream entity
-- [ ] T008 Define `Node` interface with embedded lifecycle (`src/node/node.h`): virtual `Open(GraphContext&) -> absl::Status`, `Process(GraphContext&) -> absl::Status`, `Close(GraphContext&) -> absl::Status`. Name and input/output stream references. `Created → Opened → Processing → Closed` state machine. Reference: `data-model.md` Node entity
-- [ ] T009 Define `GraphContext` (`src/node/graph_context.h`): per-invocation context with `inputs: map<string, Packet&>`, `outputs: map<string, PacketProducer>`, `options: NodeOptions`. Reference: `data-model.md` Node execution model
-- [ ] T010 Define `Scheduler` interface (`src/scheduler/scheduler.h`): `Schedule(Graph&) -> absl::Status`, `Shutdown()`, Phase-2 stubs `AddNode(Node*)`/`RemoveNode(Node*)`. Reference: `contracts/Scheduler.md`, `data-model.md` Scheduler entity
-- [ ] T011 Define `Graph` interface (`src/graph/graph.h`): `Initialize(const GraphConfig&)`, `Start()`, `WaitUntilDone()`, `Shutdown()`, owns Node/Stream/Scheduler. Reference: `data-model.md` Graph entity
-- [ ] T012 Define `NodeFactory` contract (`src/node/node_factory.h`): `Create(const std::string& type_name) -> unique_ptr<Node>`, registration pattern for node types by name from config
+- [ ] T006 Define `Packet` interface contract (`graph_runtime/src/public/include/graph_runtime/packet.h`): type-erased `std::any` payload, `int64_t` timestamp, `is_empty` marker. Reference: `data-model.md` Packet entity, `contracts/PublicAPI.md`
+- [ ] T007 Define `Stream` interface contract (`graph_runtime/src/stream/stream.h`): bounded queue with `Push(Packet)`, `Pop() -> Packet`, `IsClosed()`, max queue size for back-pressure. Reference: `data-model.md` Stream entity
+- [ ] T008 Define `Node` interface with embedded lifecycle (`graph_runtime/src/node/node.h`): virtual `Open(GraphContext&) -> absl::Status`, `Process(GraphContext&) -> absl::Status`, `Close(GraphContext&) -> absl::Status`. Name and input/output stream references. `Created → Opened → Processing → Closed` state machine. Reference: `data-model.md` Node entity
+- [ ] T009 Define `GraphContext` (`graph_runtime/src/node/graph_context.h`): per-invocation context with `inputs: map<string, Packet&>`, `outputs: map<string, PacketProducer>`, `options: NodeOptions`. Reference: `data-model.md` Node execution model
+- [ ] T010 Define `Scheduler` interface (`graph_runtime/src/scheduler/scheduler.h`): `Schedule(Graph&) -> absl::Status`, `Shutdown()`, Phase-2 stubs `AddNode(Node*)`/`RemoveNode(Node*)`. Reference: `contracts/Scheduler.md`, `data-model.md` Scheduler entity
+- [ ] T011 Define `Graph` interface (`graph_runtime/src/graph/graph.h`): `Initialize(const GraphConfig&)`, `Start()`, `WaitUntilDone()`, `Shutdown()`, owns Node/Stream/Scheduler. Reference: `data-model.md` Graph entity
+- [ ] T012 Define `NodeFactory` contract (`graph_runtime/src/node/node_factory.h`): `Create(const std::string& type_name) -> unique_ptr<Node>`, registration pattern for node types by name from config
 
 **Checkpoint (Step 1)**: All scheduling collaboration interfaces are defined. The data flow sequence `Scheduler → Node → Stream → Packet` is fully specified.
 
@@ -98,9 +99,9 @@ Define the execution flow contracts: how the Scheduler drives Node execution, ho
 
 Define the configuration-driven pipeline: how JSON configs are parsed into `GraphConfig`, how `GraphBuilder` consumes `GraphConfig` to produce a `Graph`, and the validation rules.
 
-- [ ] T013 Define `GraphConfig` data structures (`src/config/graph_config.h`): `NodeDef` (name, type, options), `StreamDef` (source_node, source_port, dest_node, dest_port), `GraphConfig` (nodes, streams, version), validation rules (no duplicate names, all refs valid). Reference: `data-model.md` GraphConfig entity
-- [ ] T014 Define `IGraphConfigParser` interface (`src/config/i_graph_config_parser.h`): pure virtual `Parse(const string& file_path) -> GraphConfig`, throws `std::runtime_error` on failure. Reference: `contracts/IGraphConfigParser.md`
-- [ ] T015 Define `GraphBuilder` interface (`src/graph/graph_builder.h`): `Build(const GraphConfig&) -> std::unique_ptr<Graph>`, creates and wires Node/Stream instances from config. Reference: `data-model.md` relationships
+- [ ] T013 Define `GraphConfig` data structures (`graph_runtime/src/config/graph_config.h`): `NodeDef` (name, type, options), `StreamDef` (source_node, source_port, dest_node, dest_port), `GraphConfig` (nodes, streams, version), validation rules (no duplicate names, all refs valid). Reference: `data-model.md` GraphConfig entity
+- [ ] T014 Define `IGraphConfigParser` interface (`graph_runtime/src/config/i_graph_config_parser.h`): pure virtual `Parse(const string& file_path) -> GraphConfig`, throws `std::runtime_error` on failure. Reference: `contracts/IGraphConfigParser.md`
+- [ ] T015 Define `GraphBuilder` interface (`graph_runtime/src/graph/graph_builder.h`): `Build(const GraphConfig&) -> std::unique_ptr<Graph>`, creates and wires Node/Stream instances from config. Reference: `data-model.md` relationships
 
 **Checkpoint (Step 2)**: Config parsing contracts are defined. `GraphConfig → IGraphConfigParser → GraphBuilder → Graph` chain is fully specified.
 
@@ -108,11 +109,11 @@ Define the configuration-driven pipeline: how JSON configs are parsed into `Grap
 
 Define how consumers interact with the library: export visibility macro, type system, and umbrella header layout.
 
-- [ ] T016 Define `GRAPH_RUNTIME_API` export macro (`src/public/include/graph_runtime/graph_runtime_export.h`): `-fvisibility=hidden` + `__attribute__((visibility("default")))` on non-Windows, `__declspec` on Windows. Reference: `contracts/PublicAPI.md`, `research.md`
-- [ ] T017 Define `ErrorCode` enum and base types (`src/public/include/graph_runtime/types.h`): `kOk`, `kFileNotFound`, `kParseError`, `kGraphError`, `kRuntimeError`. Reference: `contracts/PublicAPI.md`
-- [ ] T018 Define umbrella header layout (`src/public/include/graph_runtime/graph_runtime.h`): includes export, types, graph, packet, node headers. Define `src/public/graph_runtime_init.cc` with shared-library init function. Reference: `plan.md` project structure, `contracts/PublicAPI.md`
-- [ ] T019 [P] Create stub `BUILD.bazel` for each module (`src/config/BUILD.bazel`, `src/stream/BUILD.bazel`, `src/node/BUILD.bazel`, `src/graph/BUILD.bazel`, `src/scheduler/BUILD.bazel`, `src/runtime/BUILD.bazel`, `src/examples/BUILD.bazel`, `src/tests/BUILD.bazel`) referencing their respective interface headers
-- [ ] T020 Create `src/public/BUILD` with `cc_library(name = "runtime")` aggregating all module targets and `cc_binary(name = "runtime_shared", linkshared = True, linkstatic = True, alwayslink = 1)`
+- [ ] T016 Define `GRAPH_RUNTIME_API` export macro (`graph_runtime/src/public/include/graph_runtime/graph_runtime_export.h`): `-fvisibility=hidden` + `__attribute__((visibility("default")))` on non-Windows, `__declspec` on Windows. Reference: `contracts/PublicAPI.md`, `research.md`
+- [ ] T017 Define `ErrorCode` enum and base types (`graph_runtime/src/public/include/graph_runtime/types.h`): `kOk`, `kFileNotFound`, `kParseError`, `kGraphError`, `kRuntimeError`. Reference: `contracts/PublicAPI.md`
+- [ ] T018 Define umbrella header layout (`graph_runtime/src/public/include/graph_runtime/graph_runtime.h`): includes export, types, graph, packet, node headers. Define `graph_runtime/src/public/graph_runtime_init.cc` with shared-library init function. Reference: `plan.md` project structure, `contracts/PublicAPI.md`
+- [ ] T019 [P] Create stub `BUILD.bazel` for each module (`graph_runtime/src/config/BUILD.bazel`, `graph_runtime/src/stream/BUILD.bazel`, `graph_runtime/src/node/BUILD.bazel`, `graph_runtime/src/graph/BUILD.bazel`, `graph_runtime/src/scheduler/BUILD.bazel`, `graph_runtime/src/runtime/BUILD.bazel`, `graph_runtime/src/examples/BUILD.bazel`, `graph_runtime/src/tests/BUILD.bazel`) referencing their respective interface headers
+- [ ] T020 Create `graph_runtime/src/public/BUILD` with `cc_library(name = "runtime")` aggregating all module targets and `cc_binary(name = "runtime_shared", linkshared = True, linkstatic = True, alwayslink = 1)`
 
 **Checkpoint (Phase 2 complete)**: All module interfaces and contracts are defined, BUILD targets exist. Foundation is ready — user story implementations can begin.
 
@@ -122,9 +123,9 @@ Define how consumers interact with the library: export visibility macro, type sy
 
 **Goal**: External Bazel projects can depend on `@graph_runtime//src/public:runtime` and build C++ code using the Graph Runtime API.
 
-**Independent Test**: `bazel build //src/public:runtime` succeeds on macOS ARM64 and Linux x86_64; an external project with `@graph_runtime` in `WORKSPACE` and `deps = ["@graph_runtime//src/public:runtime"]` builds and links successfully.
+**Independent Test**: `bazel build //src/public:runtime` succeeds on macOS ARM64 and Linux x86_64; an external project with `@graph_runtime` in `graph_runtime/WORKSPACE` and `deps = ["@graph_runtime//src/public:runtime"]` builds and links successfully.
 
-- [ ] T021 [P] [US1] Wire all module `BUILD.bazel` `deps` correctly so `bazel build //src/public:runtime` resolves all transitive dependencies
+- [ ] T021 [P] [US1] Wire all module `graph_runtime/BUILD.bazel` `deps` correctly so `bazel build //src/public:runtime` resolves all transitive dependencies
 - [ ] T022 [US1] Verify `bazel build //src/...` succeeds; fix any missing `cc_library` deps or header visibility issues
 
 **Checkpoint**: `bazel build //src/public:runtime` succeeds. Library is consumable as a Bazel dependency.
@@ -137,10 +138,10 @@ Define how consumers interact with the library: export visibility macro, type sy
 
 **Independent Test**: Two different JSON configs produce two different `Graph` instances with different node topologies (verified via `config_parser_test.cc`).
 
-- [ ] T023 [US2] Implement `GraphConfig` validation logic (`src/config/graph_config.cc`): duplicate node detection, missing reference checks, schema version enforcement
-- [ ] T024 [US2] Implement `JsonParser` module (`src/config/json/json_parser.h/.cc`): parse JSON into `GraphConfig` using nlohmann/json, handle file-not-found and parse errors. `src/config/json/BUILD.bazel` with nlohmann/json `deps`
-- [ ] T025 [US2] Implement `GraphBuilder` (`src/graph/graph_builder.cc`): `Build(const GraphConfig&)` creates `Node` and `Stream` instances, wires node ports via stream references, returns `unique_ptr<Graph>`. `src/graph/graph.cc`: `Initialize()`, `Start()`, `WaitUntilDone()`, `Shutdown()` implementations
-- [ ] T026 [US2] Create `config_parser_test.cc` in `src/tests/` with GoogleTest cases for valid JSON, invalid JSON, duplicate nodes, missing references
+- [ ] T023 [US2] Implement `GraphConfig` validation logic (`graph_runtime/src/config/graph_config.cc`): duplicate node detection, missing reference checks, schema version enforcement
+- [ ] T024 [US2] Implement `JsonParser` module (`graph_runtime/src/config/json/json_parser.h/.cc`): parse JSON into `GraphConfig` using nlohmann/json, handle file-not-found and parse errors. `graph_runtime/src/config/json/BUILD.bazel` with nlohmann/json `deps`
+- [ ] T025 [US2] Implement `GraphBuilder` (`graph_runtime/src/graph/graph_builder.cc`): `Build(const GraphConfig&)` creates `Node` and `Stream` instances, wires node ports via stream references, returns `unique_ptr<Graph>`. `graph_runtime/src/graph/graph.cc`: `Initialize()`, `Start()`, `WaitUntilDone()`, `Shutdown()` implementations
+- [ ] T026 [US2] Create `config_parser_test.cc` in `graph_runtime/src/tests/` with GoogleTest cases for valid JSON, invalid JSON, duplicate nodes, missing references
 
 **Checkpoint**: `bazel test //src/tests:config_parser_test` passes. Graph construction from JSON works.
 
@@ -152,15 +153,15 @@ Define how consumers interact with the library: export visibility macro, type sy
 
 **Independent Test**: `bazel run //src/examples:string_pipeline` processes input strings through the graph and produces expected output.
 
-- [ ] T027 [P] [US3] Implement `Packet` internal (`src/stream/packet.h/.cc`): `std::any` payload storage, timestamp management, empty-packet semantics for stream boundaries
-- [ ] T028 [P] [US3] Implement `Stream` (`src/stream/stream.cc`): bounded `std::queue<Packet>`, `Push()` with back-pressure check, `Pop()` blocking/non-blocking, `Close()` lifecycle
-- [ ] T029 [P] [US3] Implement `GraphContext` (`src/node/graph_context.h/.cc`): input packet accessors, output packet producers, options storage
-- [ ] T030 [P] [US3] Implement `Node` (`src/node/node.cc`): stream registration, `Open()`→`Process()`→`Close()` lifecycle dispatch, input-ready checking (all input streams have data)
-- [ ] T031 [P] [US3] Implement `NodeFactory` (`src/node/node_factory.cc`): type-name to `Node` subclass mapping, registration API, built-in node type registration
-- [ ] T032 [US3] Implement `Scheduler` (`src/scheduler/scheduler.cc`): topological-layer ordering, single-threaded event loop, marks node ready when all inputs available, drives `Node::Process()` in order
-- [ ] T033 [US3] Implement `Runtime` (`src/runtime/runtime.cc`): `Run(GraphConfig)` workflow — parse config → build graph → initialize scheduler → start → wait → shutdown
-- [ ] T034 [P] [US3] Create String Pipeline example (`src/examples/string_pipeline.cc`): producer `Node` subclass (generates strings), transformer `Node` subclass (uppercase), consumer `Node` subclass (collects output), JSON config file for the pipeline. `src/examples/BUILD.bazel` as `cc_binary`
-- [ ] T035 [US3] Create verification tests (`src/tests/graph_builder_test.cc`, `src/tests/scheduler_test.cc`, `src/tests/integration_test.cc` with end-to-end pipeline test)
+- [ ] T027 [P] [US3] Implement `Packet` internal (`graph_runtime/src/stream/packet.h/.cc`): `std::any` payload storage, timestamp management, empty-packet semantics for stream boundaries
+- [ ] T028 [P] [US3] Implement `Stream` (`graph_runtime/src/stream/stream.cc`): bounded `std::queue<Packet>`, `Push()` with back-pressure check, `Pop()` blocking/non-blocking, `Close()` lifecycle
+- [ ] T029 [P] [US3] Implement `GraphContext` (`graph_runtime/src/node/graph_context.h/.cc`): input packet accessors, output packet producers, options storage
+- [ ] T030 [P] [US3] Implement `Node` (`graph_runtime/src/node/node.cc`): stream registration, `Open()`→`Process()`→`Close()` lifecycle dispatch, input-ready checking (all input streams have data)
+- [ ] T031 [P] [US3] Implement `NodeFactory` (`graph_runtime/src/node/node_factory.cc`): type-name to `Node` subclass mapping, registration API, built-in node type registration
+- [ ] T032 [US3] Implement `Scheduler` (`graph_runtime/src/scheduler/scheduler.cc`): topological-layer ordering, single-threaded event loop, marks node ready when all inputs available, drives `Node::Process()` in order
+- [ ] T033 [US3] Implement `Runtime` (`graph_runtime/src/runtime/runtime.cc`): `Run(GraphConfig)` workflow — parse config → build graph → initialize scheduler → start → wait → shutdown
+- [ ] T034 [P] [US3] Create String Pipeline example (`graph_runtime/src/examples/string_pipeline.cc`): producer `Node` subclass (generates strings), transformer `Node` subclass (uppercase), consumer `Node` subclass (collects output), JSON config file for the pipeline. `graph_runtime/src/examples/BUILD.bazel` as `cc_binary`
+- [ ] T035 [US3] Create verification tests (`graph_runtime/src/tests/graph_builder_test.cc`, `graph_runtime/src/tests/scheduler_test.cc`, `graph_runtime/src/tests/integration_test.cc` with end-to-end pipeline test)
 
 **Checkpoint**: `bazel run //src/examples:string_pipeline` produces correct output. All tests pass.
 
@@ -172,8 +173,8 @@ Define how consumers interact with the library: export visibility macro, type sy
 
 **Independent Test**: A custom scheduler implementing the `Scheduler` interface is plugged into the runtime and used to drive node execution instead of the default.
 
-- [ ] T036 [P] [US4] Create custom scheduler example (`src/examples/custom_scheduler.h/.cc` implementing alternative scheduling strategy)
-- [ ] T037 [P] [US4] Create custom config parser example (`src/examples/custom_parser.h/.cc` implementing `IGraphConfigParser` for an alternative format)
+- [ ] T036 [P] [US4] Create custom scheduler example (`graph_runtime/src/examples/custom_scheduler.h/.cc` implementing alternative scheduling strategy)
+- [ ] T037 [P] [US4] Create custom config parser example (`graph_runtime/src/examples/custom_parser.h/.cc` implementing `IGraphConfigParser` for an alternative format)
 - [ ] T038 [US4] Create interface substitution tests verifying custom scheduler and custom parser integration without runtime modification
 
 **Checkpoint**: Custom scheduler and parser work as drop-in replacements. All tests pass.
@@ -241,7 +242,7 @@ Phase 2: Foundational (DESIGN PHASE — interfaces only)
 
 ### Within Each User Story
 
-- Module BUILD.bazel files before implementation
+- Module `BUILD.bazel` files before implementation
 - Implementation builds against interfaces defined in Phase 2
 - Core implementation before examples
 - Story complete before moving to next priority
@@ -277,17 +278,17 @@ Once Foundational Phase 2 completes:
 
 ```bash
 # Step 1 — all scheduling collaboration interfaces in parallel:
-Task: "Define Packet interface contract in src/public/include/graph_runtime/packet.h"
-Task: "Define Stream interface contract in src/stream/stream.h"
-Task: "Define Node interface with lifecycle in src/node/node.h"
-Task: "Define GraphContext in src/node/graph_context.h"
-Task: "Define Scheduler interface in src/scheduler/scheduler.h"
-Task: "Define Graph interface in src/graph/graph.h"
+Task: "Define Packet interface contract in graph_runtime/src/public/include/graph_runtime/packet.h"
+Task: "Define Stream interface contract in graph_runtime/src/stream/stream.h"
+Task: "Define Node interface with lifecycle in graph_runtime/src/node/node.h"
+Task: "Define GraphContext in graph_runtime/src/node/graph_context.h"
+Task: "Define Scheduler interface in graph_runtime/src/scheduler/scheduler.h"
+Task: "Define Graph interface in graph_runtime/src/graph/graph.h"
 
 # Step 2 — config parsing interfaces in parallel:
-Task: "Define GraphConfig data structures in src/config/graph_config.h"
-Task: "Define IGraphConfigParser interface in src/config/i_graph_config_parser.h"
-Task: "Define GraphBuilder interface in src/graph/graph_builder.h"
+Task: "Define GraphConfig data structures in graph_runtime/src/config/graph_config.h"
+Task: "Define IGraphConfigParser interface in graph_runtime/src/config/i_graph_config_parser.h"
+Task: "Define GraphBuilder interface in graph_runtime/src/graph/graph_builder.h"
 
 # Step 3 — public API surface in parallel:
 Task: "Define GRAPH_RUNTIME_API export macro in graph_runtime_export.h"
@@ -339,6 +340,7 @@ With multiple developers:
 - Phase 2 produces **interface definitions only** (`.h` files); implementation (`.cc` files) happens in user story phases
 - Each user story is independently completable and testable against the Phase 2 contracts
 - All tasks reference exact source paths from `plan.md`
-- Bazel BUILD.bazel files follow single `cc_library` per module convention
+- Bazel `BUILD.bazel` files follow single `cc_library` per module convention
+- All third-party dependencies have dedicated BUILD files under `graph_runtime/third_party/<name>/` — inline `build_file_content` is prohibited
 - Platform support: macOS ARM64 (dev) + Linux x86_64 (deployment)
 - Phase 1 does NOT include: dynamic graph, multi-threaded scheduler, visual editor, distributed execution

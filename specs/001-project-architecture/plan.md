@@ -155,67 +155,75 @@ specs/001-project-architecture/
 └── contracts/           # Phase 1 — public API contracts
 ```
 
-### Source Code (repository root)
+### Source Code (under `graph_runtime/` subdirectory)
 
 ```text
-WORKSPACE                     (workspace(name = "graph_runtime"))
-BUILD.bazel                   (root alias: //:runtime)
-.bazelversion                 (6.5.0)
-.bazelrc
-AGENTS.md
-graph_runtime_deps.bzl        (external dep bootstrap)
-platforms/
-├── BUILD                     (config_setting + platform)
-└── platforms.bzl             (config_setting_and_platform + graph_runtime_select)
-
-src/
-├── public/
-│   ├── BUILD                 (public cc_library + cc_binary shared)
-│   ├── include/
-│   │   └── graph_runtime/
-│   │       ├── graph_runtime.h            (umbrella)
-│   │       ├── graph_runtime_export.h     (GRAPH_RUNTIME_API)
-│   │       ├── graph.h
-│   │       ├── packet.h
-│   │       ├── node.h
-│   │       └── types.h
-│   └── graph_runtime_init.cc
-├── config/
-│   ├── BUILD.bazel
-│   ├── i_graph_config_parser.h
-│   ├── graph_config.h
-│   └── json/
-│       ├── BUILD.bazel
-│       └── json_parser.h / .cc
-├── graph/
-│   ├── BUILD.bazel
-│   ├── graph.h / .cc
-│   └── graph_builder.h / .cc
-├── runtime/
-│   ├── BUILD.bazel
-│   └── runtime.h / .cc
-├── scheduler/
-│   ├── BUILD.bazel
-│   └── scheduler.h / .cc
-├── stream/
-│   ├── BUILD.bazel
-│   └── stream.h / .cc, packet.h / .cc
-├── node/
-│   ├── BUILD.bazel
-│   ├── node.h / .cc
-│   └── calculator_factory.h / .cc
-├── examples/
-│   ├── BUILD.bazel
-│   └── string_pipeline.cc
-└── tests/
-    ├── BUILD.bazel
-    ├── graph_builder_test.cc
-    ├── config_parser_test.cc
-    ├── scheduler_test.cc
-    └── integration_test.cc
+graph_runtime/
+├── WORKSPACE                     (workspace(name = "graph_runtime"))
+├── BUILD.bazel                   (root alias: //:runtime)
+├── .bazelversion                 (6.5.0)
+├── .bazelrc
+├── graph_runtime_deps.bzl        (external dep bootstrap)
+├── third_party/
+│   └── nlohmann_json/
+│       └── BUILD.bazel           (cc_library for nlohmann/json)
+├── platforms/
+│   ├── BUILD                     (config_setting + platform)
+│   └── platforms.bzl             (config_setting_and_platform + graph_runtime_select)
+└── src/
+    ├── public/
+    │   ├── BUILD                 (public cc_library + cc_binary shared)
+    │   ├── include/
+    │   │   └── graph_runtime/
+    │   │       ├── graph_runtime.h            (umbrella)
+    │   │       ├── graph_runtime_export.h     (GRAPH_RUNTIME_API)
+    │   │       ├── graph.h
+    │   │       ├── packet.h
+    │   │       ├── node.h
+    │   │       └── types.h
+    │   └── graph_runtime_init.cc
+    ├── config/
+    │   ├── BUILD.bazel
+    │   ├── i_graph_config_parser.h
+    │   ├── graph_config.h
+    │   └── json/
+    │       ├── BUILD.bazel
+    │       └── json_parser.h / .cc
+    ├── graph/
+    │   ├── BUILD.bazel
+    │   ├── graph.h / .cc
+    │   └── graph_builder.h / .cc
+    ├── runtime/
+    │   ├── BUILD.bazel
+    │   └── runtime.h / .cc
+    ├── scheduler/
+    │   ├── BUILD.bazel
+    │   └── scheduler.h / .cc
+    ├── stream/
+    │   ├── BUILD.bazel
+    │   └── stream.h / .cc, packet.h / .cc
+    ├── node/
+    │   ├── BUILD.bazel
+    │   ├── node.h / .cc
+    │   └── node_factory.h / .cc
+    ├── examples/
+    │   ├── BUILD.bazel
+    │   └── string_pipeline.cc
+    └── tests/
+        ├── BUILD.bazel
+        ├── graph_builder_test.cc
+        ├── config_parser_test.cc
+        ├── scheduler_test.cc
+        └── integration_test.cc
 ```
 
-**Structure Decision**: Single C++ library project, following Atlas layout conventions. All source under `src/`, public API under `src/public/include/graph_runtime/` with `strip_include_prefix`.
+**Structure Decision**: Single C++ library project under `graph_runtime/` subdirectory, following Atlas layout conventions. All source under `graph_runtime/src/`, public API under `graph_runtime/src/public/include/graph_runtime/` with `strip_include_prefix`. Bazel commands run from the `graph_runtime/` directory.
+
+**Build Conventions**:
+- All third-party dependencies MUST declare their `BUILD.bazel` in `third_party/<name>/` — inline `build_file_content` is prohibited.
+- The `graph_runtime_deps.bzl` fetches archives via `http_archive` and references the external `BUILD.bazel` via the `build_file` attribute.
+- Platform definitions live in `platforms/` using `config_setting_and_platform()`.
+- All internal module BUILD files are named `BUILD.bazel` (lowercase, with extension) per Bazel convention.
 
 ## Complexity Tracking
 
