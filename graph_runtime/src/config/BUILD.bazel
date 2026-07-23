@@ -13,11 +13,9 @@ cc_library(
     hdrs = [
         "i_graph_config_parser.h",
         "config_validator.h",
-        "parser_registry.h",
     ],
     srcs = [
         "config_validator.cc",
-        "parser_registry.cc",
     ],
     deps = [
         ":graph_config",

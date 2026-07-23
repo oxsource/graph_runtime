@@ -67,8 +67,8 @@ Phase 2: Foundational
 
 **Purpose**: Implement the zero-dependency abstract interface and shared validation logic.
 
-- [ ] T004 Implement `IGraphConfigParser` abstract interface (`graph_runtime/src/config/i_graph_config_parser.h`): `virtual Parse(file_path) -> StatusOr<GraphConfig>` pure virtual method, virtual destructor
-- [ ] T005 Implement `ConfigValidator` (`graph_runtime/src/config/config_validator.h/.cc`): `ValidateNodeRefs()`, `ValidateUniqueNames()`, `ValidateNoSelfLoops()`, `ValidateUniqueExecutors()`, `Validate()` running all checks
+- [X] T004 Implement `IGraphConfigParser` abstract interface (`graph_runtime/src/config/i_graph_config_parser.h`): `virtual Parse(file_path) -> StatusOr<GraphConfig>` pure virtual method, virtual destructor
+- [X] T005 Implement `ConfigValidator` (`graph_runtime/src/config/config_validator.h/.cc`): `ValidateNodeRefs()`, `ValidateUniqueNames()`, `ValidateNoSelfLoops()`, `ValidateUniqueExecutors()`, `Validate()` running all checks
 
 **Checkpoint**: `//src/config:config` builds successfully. ConfigValidator logic is testable in isolation.
 
