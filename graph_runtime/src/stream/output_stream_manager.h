@@ -37,6 +37,7 @@ class OutputStreamManager {
 
   void Close();
   bool IsClosed() const;
+  void CleanupAfterRun();
   Timestamp NextTimestampBound() const;
 
   void ResetShard(OutputStreamShard* shard);

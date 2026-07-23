@@ -47,6 +47,9 @@ class InputStreamManager {
                              QueueSizeCallback not_full_cb);
   void SetArrivalCallback(PacketArrivalCallback cb);
 
+  void PrepareForRun();
+  void CleanupAfterRun();
+
  private:
   std::string name_;
   std::deque<Packet> queue_;

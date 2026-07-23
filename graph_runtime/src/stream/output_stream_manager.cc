@@ -119,4 +119,12 @@ void OutputStreamManager::ResetShard(OutputStreamShard* shard) {
 
 OutputStreamSpec* OutputStreamManager::Spec() { return &spec_; }
 
+void OutputStreamManager::CleanupAfterRun() {
+  next_timestamp_bound_ = Timestamp::Unset();
+  closed_ = false;
+  num_packets_added_ = 0;
+  spec_.locked_intro_data = false;
+  spec_.header = Packet();
+}
+
 }  // namespace graph::runtime

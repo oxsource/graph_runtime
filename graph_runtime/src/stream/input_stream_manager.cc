@@ -185,4 +185,17 @@ void InputStreamManager::SetArrivalCallback(PacketArrivalCallback cb) {
   arrival_callback_ = std::move(cb);
 }
 
+void InputStreamManager::PrepareForRun() {
+  queue_.clear();
+  num_packets_added_ = 0;
+  next_timestamp_bound_ = Timestamp::PreStream();
+  last_select_timestamp_ = Timestamp::Unstarted();
+  closed_ = false;
+  last_reported_stream_full_ = false;
+}
+
+void InputStreamManager::CleanupAfterRun() {
+  queue_.clear();
+}
+
 }  // namespace graph::runtime

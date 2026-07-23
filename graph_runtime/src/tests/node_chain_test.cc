@@ -71,20 +71,20 @@ TEST(NodeChainTest, NodeLifecycle) {
   InputStreamShardSet inputs;
   OutputStreamShardSet outputs;
   GraphContext ctx("lifecycle_test", 0, "TestNode",
-                   Timestamp::Unstarted(), inputs, outputs, &opts);
+                   Timestamp::Unstarted(), &inputs, &outputs, &opts);
 
   auto status = node->Open(ctx);
   EXPECT_TRUE(status.ok());
   EXPECT_EQ(test_node->open_count_, 1);
 
   GraphContext ctx2("lifecycle_test", 0, "TestNode",
-                    Timestamp(100), inputs, outputs, &opts);
+                    Timestamp(100), &inputs, &outputs, &opts);
   status = node->Process(ctx2);
   EXPECT_TRUE(status.ok());
   EXPECT_EQ(test_node->process_count_, 1);
 
   GraphContext ctx3("lifecycle_test", 0, "TestNode",
-                    Timestamp::Done(), inputs, outputs, &opts);
+                    Timestamp::Done(), &inputs, &outputs, &opts);
   status = node->Close(ctx3);
   EXPECT_TRUE(status.ok());
   EXPECT_EQ(test_node->close_count_, 1);

@@ -288,4 +288,28 @@ TEST(NodeLifecycleTest, FullLifecycleOrder) {
   EXPECT_EQ(n.close_count, 1);
 }
 
+// --- T057: CloseNode idempotency ---
+
+TEST(NodeLifecycleTest, CloseNodeIdempotency) {
+  NodeOptions opts;
+  LifecycleTestNode n("idempotent", opts);
+
+  InputStreamShardSet dummy_i;
+  OutputStreamShardSet dummy_o;
+
+  {
+    GraphContext c("n",1,"T",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts);
+    n.Open(c);
+  }
+  {
+    GraphContext c("n",1,"T",Timestamp::Done(),&dummy_i,&dummy_o,&opts);
+    EXPECT_TRUE(n.Close(c).ok());
+  }
+  // Second Close should also succeed (idempotent)
+  {
+    GraphContext c("n",1,"T",Timestamp::Done(),&dummy_i,&dummy_o,&opts);
+    EXPECT_TRUE(n.Close(c).ok());
+  }
+}
+
 }  // namespace graph::runtime

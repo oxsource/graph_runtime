@@ -189,11 +189,11 @@ Foundational (Phase 2)
 
 **Purpose**: Memory management, thread safety preparation, documentation.
 
-- [ ] T056 [P] Add `CleanupAfterRun()` to all manager classes: InputStreamManager::PrepareForRun/reset queue, OutputStreamManager cleanup, SchedulerQueue cleanup, GraphContextManager::CleanupAfterRun
-- [ ] T057 [P] Verify CloseNode idempotency across stopping_ + in-flight ProcessNode race conditions
-- [ ] T058 Add memory and thread safety documentation: which methods are thread-safe (Executor::Schedule, Scheduler::Shutdown), which are not (Node::Process)
-- [ ] T059 [P] Add DEBUG logging and counter support to Scheduler and SchedulerQueue for performance analysis
-- [ ] T060 Validate against quickstart.md: run build, test, and example commands; verify end-to-end workflow
+- [X] T056 [P] Add `CleanupAfterRun()` to all manager classes: InputStreamManager::PrepareForRun/reset queue, OutputStreamManager cleanup, SchedulerQueue cleanup, GraphContextManager::CleanupAfterRun
+- [X] T057 [P] Verify CloseNode idempotency across stopping_ + in-flight ProcessNode race conditions
+- [X] T058 Add memory and thread safety documentation: which methods are thread-safe (Executor::Schedule, Scheduler::Shutdown), which are not (Node::Process)
+- [X] T059 [P] Add DEBUG logging and counter support to Scheduler and SchedulerQueue for performance analysis
+- [X] T060 Validate against quickstart.md: run build, test, and example commands; verify end-to-end workflow
 
 ---
 

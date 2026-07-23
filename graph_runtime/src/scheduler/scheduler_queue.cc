@@ -18,6 +18,8 @@ void SchedulerQueue::Reset() {
 
 void SchedulerQueue::CleanupAfterRun() {
   Reset();
+  num_pending_tasks_ = 0;
+  running_ = false;
 }
 
 void SchedulerQueue::AddNode(Node* node) {
