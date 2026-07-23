@@ -1,5 +1,10 @@
 package(default_visibility = ["//visibility:public"])
 
+# @nlohmann_json dependency is intentionally restricted to this package.
+# No module outside //src/config/json may depend on nlohmann/json.
+# The IGraphConfigParser interface in //src/config:config fully
+# abstracts format details from the rest of the runtime.
+
 cc_library(
     name = "json_parser",
     srcs = ["json_parser.cc"],

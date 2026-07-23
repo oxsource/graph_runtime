@@ -133,9 +133,9 @@ Phase 2: Foundational
 
 **Purpose**: Lock down the abstraction boundary, ensure no JSON headers leak into runtime.
 
-- [ ] T023 Verify nlohmann/json is NOT accessible from any module outside `//src/config/json` — add `-I` restriction or enforce via BUILD visibility
-- [ ] T024 Add error message format documentation: error messages should include file path + specific failure (e.g., `"pipeline.json: stream 's1': source node 'missing' not found"`)
-- [ ] T025 Validate against quickstart.md: run parse → build → execute end-to-end flow
+- [X] T023 Verify nlohmann/json is NOT accessible from any module outside `//src/config/json` — add `-I` restriction or enforce via BUILD visibility
+- [X] T024 Add error message format documentation: error messages should include file path + specific failure (e.g., `"pipeline.json: stream 's1': source node 'missing' not found"`)
+- [X] T025 Validate against quickstart.md: run parse → build → execute end-to-end flow
 
 ---
 
