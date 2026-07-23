@@ -174,12 +174,12 @@ Foundational (Phase 2)
 
 **Independent Test**: A single Node with lifecycle logging can be driven by a test harness that invokes Open, then multiple Process calls (including error and stop), then Close. The invocation order and count are verified without a full Graph.
 
-- [ ] T050 [P] [US3] Implement source Node lifecycle behavior: zero inputs → schedule initial ProcessNode after Open, reschedule if !stopping_, close on StatusStop or Shutdown
-- [ ] T051 [P] [US3] Implement sink Node lifecycle behavior: zero outputs → Process result discarded, close when all input streams done
-- [ ] T052 [US3] Implement empty graph handling: zero Nodes → Schedule() immediately transitions to kTerminated via HandleIdle
-- [ ] T053 [US3] Implement single-Node graph handling: Node that is both source and sink (zero inputs, zero outputs) — Open → Process loop → Close on Shutdown
-- [ ] T054 [US3] Implement disconnected subgraph support: two independent subgraphs in the same GraphRuntime execute independently, completion waits for both
-- [ ] T055 [US3] Create Node lifecycle test (`graph_runtime/src/tests/node_lifecycle_test.cc`): source/sink/empty/single-node/disconnected subgraphs
+- [X] T050 [P] [US3] Implement source Node lifecycle behavior: zero inputs → schedule initial ProcessNode after Open, reschedule if !stopping_, close on StatusStop or Shutdown
+- [X] T051 [P] [US3] Implement sink Node lifecycle behavior: zero outputs → Process result discarded, close when all input streams done
+- [X] T052 [US3] Implement empty graph handling: zero Nodes → Schedule() immediately transitions to kTerminated via HandleIdle
+- [X] T053 [US3] Implement single-Node graph handling: Node that is both source and sink (zero inputs, zero outputs) — Open → Process loop → Close on Shutdown
+- [X] T054 [US3] Implement disconnected subgraph support: two independent subgraphs in the same GraphRuntime execute independently, completion waits for both
+- [X] T055 [US3] Create Node lifecycle test (`graph_runtime/src/tests/node_lifecycle_test.cc`): source/sink/empty/single-node/disconnected subgraphs
 
 **Checkpoint**: `bazel test //src/tests:node_lifecycle_test` passes.
 
