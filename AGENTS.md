@@ -10,4 +10,10 @@ shell commands, and other important information, read the current plan at
 Key architecture references:
 - MediaPipe: /Users/moks/Develop/docker/ubuntu24/codes/mediapipe (stream scheduler, Calculator, Packet)
 - Atlas: /Users/moks/Develop/docker/ubuntu24/codes/atlas (Bazel build, public API export, platform config)
+
+Dep prefix convention: ALL BUILD.bazel `deps` must use `@graph_runtime//` prefix (not `//`).
+Public headers: `graph_runtime/src/public/include/graph_runtime/` with `strip_include_prefix = "include"`.
+Consumer include path: `#include "graph_runtime/graph_runtime.h"` (umbrella header).
+Shared library: `bazel build //src/public:runtime_shared` → `libruntime_shared.dylib`.
+Consumer demo: `cd graph_runtime/examples/consumer_demo && bazel test //...`.
 <!-- SPECKIT END -->

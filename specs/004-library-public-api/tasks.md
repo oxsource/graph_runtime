@@ -143,9 +143,9 @@ Phase 6: Polish
 
 **Purpose**: Final build verification, documentation updates, edge cases.
 
-- [ ] T028 Run full build: `bazel build //src/...` — verify no BUILD.bazel uses `//src/` (all migrated to `@graph_runtime//`)
-- [ ] T029 Run all tests: `bazel test //src/tests/...` — verify all existing tests still pass after dep prefix migration
-- [ ] T030 Update `AGENTS.md` and any remaining doc references to reflect `@graph_runtime//` dep prefix convention
+- [X] T028 Run full build: `bazel build //src/...` — verify no BUILD.bazel uses `//src/` (all migrated to `@graph_runtime//`)
+- [X] T029 Run all tests: `bazel test //src/tests/...` — 11/12 pass (1 pre-existing build_validation_test failure)
+- [X] T030 Update `AGENTS.md` and any remaining doc references to reflect `@graph_runtime//` dep prefix convention
 
 ---
 

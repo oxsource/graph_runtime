@@ -10,7 +10,7 @@ cc_library(
     srcs = ["json_parser.cc"],
     hdrs = ["json_parser.h"],
     deps = [
-        "//src/config:config",
+        "@graph_runtime//src/config:config",
         "@nlohmann_json//:json",
     ],
 )
@@ -18,5 +18,5 @@ cc_library(
 filegroup(
     name = "testdata",
     srcs = glob(["testdata/*.json"]),
-    visibility = ["//src/tests:__pkg__"],
+    visibility = ["@graph_runtime//src/tests:__pkg__"],
 )
