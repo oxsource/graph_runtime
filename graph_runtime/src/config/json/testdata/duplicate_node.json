@@ -1,0 +1,6 @@
+{
+  "nodes": [
+    { "name": "same", "type": "X" },
+    { "name": "same", "type": "Y" }
+  ]
+}

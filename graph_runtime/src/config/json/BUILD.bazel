@@ -9,3 +9,9 @@ cc_library(
         "@nlohmann_json//:json",
     ],
 )
+
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/*.json"]),
+    visibility = ["//src/tests:__pkg__"],
+)

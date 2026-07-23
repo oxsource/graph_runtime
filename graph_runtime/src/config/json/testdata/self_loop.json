@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    { "name": "loop", "type": "L" }
+  ],
+  "streams": [
+    {
+      "name": "self",
+      "source_node": "loop",
+      "source_port": "out",
+      "dest_node": "loop",
+      "dest_port": "in"
+    }
+  ]
+}

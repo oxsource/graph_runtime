@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    { "name": "producer", "type": "StringProducer" }
+  ],
+  "streams": [
+    {
+      "name": "s1",
+      "source_node": "producer",
+      "source_port": "output",
+      "dest_node": "nonexistent",
+      "dest_port": "input"
+    }
+  ]
+}

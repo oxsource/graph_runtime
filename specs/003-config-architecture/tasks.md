@@ -82,21 +82,21 @@ Phase 2: Foundational
 
 ### Sub-phase 3a — JsonParser Implementation
 
-- [ ] T006 [US1] Implement `JsonParser` (`graph_runtime/src/config/json/json_parser.h/.cc`): implements IGraphConfigParser, parses JSON into GraphConfig using nlohmann/json, validates required fields, calls ConfigValidator
-- [ ] T007 [P] [US1] Create JSON testdata — valid config (`graph_runtime/src/config/json/testdata/string_pipeline.json`): 3-Node pipeline with producer → transformer → consumer, 2 streams
-- [ ] T008 [P] [US1] Create JSON testdata — missing node reference (`graph_runtime/src/config/json/testdata/missing_node.json`): stream references non-existent node
-- [ ] T009 [P] [US1] Create JSON testdata — duplicate stream (`graph_runtime/src/config/json/testdata/duplicate_stream.json`): two streams with same name
-- [ ] T010 [P] [US1] Create JSON testdata — empty config (`graph_runtime/src/config/json/testdata/empty.json`): zero nodes, zero streams (valid)
-- [ ] T011 [P] [US1] Create JSON testdata — self-loop (`graph_runtime/src/config/json/testdata/self_loop.json`): stream connecting node to itself
-- [ ] T012 [P] [US1] Create JSON testdata — duplicate node (`graph_runtime/src/config/json/testdata/duplicate_node.json`): two nodes with same name
-- [ ] T013 [US1] Create config parser test (`graph_runtime/src/tests/config_parser_test.cc`): valid parse, missing node error, duplicate stream error, empty config, self-loop error, file not found error
+- [X] - [ ] T006 [US1] Implement `JsonParser` (`graph_runtime/src/config/json/json_parser.h/.cc`): implements IGraphConfigParser, parses JSON into GraphConfig using nlohmann/json, validates required fields, calls ConfigValidator
+- [X] - [ ] T007 [P] [US1] Create JSON testdata — valid config (`graph_runtime/src/config/json/testdata/string_pipeline.json`): 3-Node pipeline with producer → transformer → consumer, 2 streams
+- [X] - [ ] T008 [P] [US1] Create JSON testdata — missing node reference (`graph_runtime/src/config/json/testdata/missing_node.json`): stream references non-existent node
+- [X] - [ ] T009 [P] [US1] Create JSON testdata — duplicate stream (`graph_runtime/src/config/json/testdata/duplicate_stream.json`): two streams with same name
+- [X] - [ ] T010 [P] [US1] Create JSON testdata — empty config (`graph_runtime/src/config/json/testdata/empty.json`): zero nodes, zero streams (valid)
+- [X] - [ ] T011 [P] [US1] Create JSON testdata — self-loop (`graph_runtime/src/config/json/testdata/self_loop.json`): stream connecting node to itself
+- [X] - [ ] T012 [P] [US1] Create JSON testdata — duplicate node (`graph_runtime/src/config/json/testdata/duplicate_node.json`): two nodes with same name
+- [X] - [ ] T013 [US1] Create config parser test (`graph_runtime/src/tests/config_parser_test.cc`): valid parse, missing node error, duplicate stream error, empty config, self-loop error, file not found error
 
 ### Sub-phase 3b — GraphRuntime Integration
 
-- [ ] T014 [US1] Add file-based `Initialize()` overload to `GraphRuntime` (`graph_runtime/src/public/graph_runtime.h/.cc`): `Initialize(const std::string& file_path)` that auto-detects format and parses config
-- [ ] T015 [US1] Add `ParserRegistry` (`graph_runtime/src/config/parser_registry.h/.cc`): `Register(ext, factory)`, `CreateForFile(path)`, `IsFormatSupported(path)`, `GRAPH_RUNTIME_REGISTER_PARSER` macro
-- [ ] T016 [US1] Update `GraphRuntime::Initialize()` to validate missing side packets against GraphConfig declarations
-- [ ] T017 [US1] Create integration test with JSON config (`graph_runtime/src/tests/integration_test.cc`): load string_pipeline.json → Build → Start → WaitUntilDone
+- [X] - [ ] T014 [US1] Add file-based `Initialize()` overload to `GraphRuntime` (`graph_runtime/src/public/graph_runtime.h/.cc`): `Initialize(const std::string& file_path)` that auto-detects format and parses config
+- [X] - [ ] T015 [US1] Add `ParserRegistry` (`graph_runtime/src/config/parser_registry.h/.cc`): `Register(ext, factory)`, `CreateForFile(path)`, `IsFormatSupported(path)`, `GRAPH_RUNTIME_REGISTER_PARSER` macro
+- [X] - [ ] T016 [US1] Update `GraphRuntime::Initialize()` to validate missing side packets against GraphConfig declarations
+- [X] - [ ] T017 [US1] Create integration test with JSON config (`graph_runtime/src/tests/integration_test.cc`): load string_pipeline.json → Build → Start → WaitUntilDone
 
 **Checkpoint**: `bazel test //src/tests:config_parser_test && bazel test //src/tests:integration_test` passes with config-driven pipeline.
 
