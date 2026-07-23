@@ -95,12 +95,12 @@ Phase 6: Polish
 
 **Independent Test**: A source file with `#include "graph_runtime/graph_runtime.h"` compiles against `//src/public:runtime` without referencing any internal headers.
 
-- [ ] T011 [US1] Create `timestamp.h` re-export (`graph_runtime/src/public/include/graph_runtime/timestamp.h`): `#include "src/stream/timestamp.h"` wrapped with `graph_runtime_export.h` include guard
-- [ ] T012 [P] [US1] Create `packet.h` re-export (`graph_runtime/src/public/include/graph_runtime/packet.h`): `#include "src/stream/packet.h"` — GRAPH_RUNTIME_API context
-- [ ] T013 [P] [US1] Create `graph_config.h` re-export (`graph_runtime/src/public/include/graph_runtime/graph_config.h`): `#include "src/config/graph_config.h"` — GRAPH_RUNTIME_API context
-- [ ] T014 [P] [US1] Create `side_packet.h` re-export (`graph_runtime/src/public/include/graph_runtime/side_packet.h`): `#include "src/public/side_packet.h"` — GRAPH_RUNTIME_API context
-- [ ] T015 [US1] Create umbrella header (`graph_runtime/src/public/include/graph_runtime/graph_runtime.h`): includes all public sub-headers via `#include "graph_runtime/..."` paths, ORDER: export → types → timestamp → packet → graph_config → side_packet
-- [ ] T016 [US1] Create linker anchor (`graph_runtime/src/public/graph_runtime_init.cc`): references `NodeFactoryRegistry::RegisteredTypes()` and `ParserRegistry::IsRegistered()` to prevent linker stripping
+- [X] T011 [US1] Create `timestamp.h` re-export (`graph_runtime/src/public/include/graph_runtime/timestamp.h`): `#include "src/stream/timestamp.h"` wrapped with `graph_runtime_export.h` include guard
+- [X] T012 [P] [US1] Create `packet.h` re-export (`graph_runtime/src/public/include/graph_runtime/packet.h`): `#include "src/stream/packet.h"` — GRAPH_RUNTIME_API context
+- [X] T013 [P] [US1] Create `graph_config.h` re-export (`graph_runtime/src/public/include/graph_runtime/graph_config.h`): `#include "src/config/graph_config.h"` — GRAPH_RUNTIME_API context
+- [X] T014 [P] [US1] Create `side_packet.h` re-export (`graph_runtime/src/public/include/graph_runtime/side_packet.h`): `#include "src/public/side_packet.h"` — GRAPH_RUNTIME_API context
+- [X] T015 [US1] Create umbrella header (`graph_runtime/src/public/include/graph_runtime/graph_runtime.h`): includes all public sub-headers via `#include "graph_runtime/..."` paths, ORDER: export → types → timestamp → packet → graph_config → side_packet
+- [X] T016 [US1] Create linker anchor (`graph_runtime/src/public/graph_runtime_init.cc`): references `NodeFactoryRegistry::RegisteredTypes()` and `ParserRegistry::CreateForFile("")` to prevent linker stripping
 
 **Checkpoint**: `bazel build //src/public:runtime` succeeds with new header layout.
 

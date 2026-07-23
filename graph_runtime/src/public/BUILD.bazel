@@ -53,7 +53,20 @@ cc_library(
 
 cc_library(
     name = "runtime",
-    srcs = ["graph_runtime.cc"],
+    srcs = [
+        "graph_runtime.cc",
+        "graph_runtime_init.cc",
+    ],
+    hdrs = [
+        "include/graph_runtime/graph_runtime.h",
+        "include/graph_runtime/graph_runtime_export.h",
+        "include/graph_runtime/types.h",
+        "include/graph_runtime/timestamp.h",
+        "include/graph_runtime/packet.h",
+        "include/graph_runtime/graph_config.h",
+        "include/graph_runtime/side_packet.h",
+    ],
+    strip_include_prefix = "include",
     copts = [
         "-fvisibility=hidden",
         "-fvisibility-inlines-hidden",
