@@ -108,8 +108,8 @@ Phase 2: Foundational
 
 **Independent Test**: Each invalid config (missing node, duplicate name, self-loop) produces a specific error during `GraphBuilder::Build()`, before any runtime state is created.
 
-- [ ] T018 [US3] Integrate `ConfigValidator` into `GraphBuilder::Build()` (`graph_runtime/src/public/graph_builder.cc`): call `ConfigValidator::Validate()` as first step in Build pipeline
-- [ ] T019 [US3] Create build validation test (`graph_runtime/src/tests/build_validation_test.cc`): verify each invalid config produces correct error at Build() time
+- [X] - [ ] T018 [US3] Integrate `ConfigValidator` into `GraphBuilder::Build()` (`graph_runtime/src/public/graph_builder.cc`): call `ConfigValidator::Validate()` as first step in Build pipeline
+- [X] - [ ] T019 [US3] Create build validation test (`graph_runtime/src/tests/build_validation_test.cc`): verify each invalid config produces correct error at Build() time
 
 **Checkpoint**: `bazel test //src/tests:build_validation_test` passes.
 

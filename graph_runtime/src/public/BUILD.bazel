@@ -23,6 +23,7 @@ cc_library(
     hdrs = ["graph_builder.h"],
     deps = [
         ":runtime_shared",
+        "//src/config:config",
         "//src/config:graph_config",
         "//src/scheduler:scheduler",
         "//src/scheduler:thread_pool_executor",

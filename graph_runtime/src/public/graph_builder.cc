@@ -1,6 +1,7 @@
 #include "src/public/graph_builder.h"
 #include "src/public/graph_runtime.h"
 
+#include "src/config/config_validator.h"
 #include "src/scheduler/scheduler.h"
 #include "src/scheduler/thread_pool_executor.h"
 #include "src/node/node_registry.h"
@@ -9,6 +10,10 @@ namespace graph::runtime {
 
 absl::StatusOr<std::unique_ptr<GraphRuntime>> GraphBuilder::Build(
     const GraphConfig& config) {
+  // Validate config before any construction
+  auto validation_status = ConfigValidator::Validate(config);
+  if (!validation_status.ok()) return validation_status;
+
   auto runtime = absl::WrapUnique(new GraphRuntime());
   runtime->config_ = config;
 
