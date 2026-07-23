@@ -44,4 +44,4 @@ class GraphContext {
 - `outputs` contains one PacketProducer per output port; Node calls `Send()` to write output.
 - After `Process()` returns, Scheduler collects all sent Packets and pushes them to output Streams.
 - `NodeOptions` is a generic key-value map — specific keys depend on the Node subclass.
-- `PacketProducer::Close()` sends an end-of-stream marker on that output port.
+- `PacketProducer::Close()` sends a Packet with `Timestamp::Done()` on that output port, signaling end-of-stream to downstream consumers.

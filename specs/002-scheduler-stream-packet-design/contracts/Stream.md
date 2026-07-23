@@ -34,7 +34,8 @@ class Stream {
 **Semantics**:
 - `Push()` enqueues a Packet. Returns `FailedPreconditionError` if stream is closed; `ResourceExhaustedError` if queue is full (back-pressure).
 - `Pop()` dequeues a Packet. Returns `OutOfRangeError` if queue is empty AND stream is closed (drained).
-- `Close()` marks end-of-stream. After close, remaining packets can still be popped until drained.
+- `Close()` marks end-of-stream by pushing a Packet with `Timestamp::Done()`. After close, remaining packets can still be popped until drained.
+- The consumer detects end-of-stream by checking `popped_packet.timestamp().IsDone()` — **no separate `is_empty` boolean needed**.
 - `queue_size()` enables the Scheduler to check readiness without popping.
 - Stream is single-producer, single-consumer in Phase 1 (no thread safety needed).
 

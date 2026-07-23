@@ -125,7 +125,22 @@
 - `non_idle_queue_count_` aggregation with reentrancy guard prevents both missed idle signals and stack overflow from recursive idle handlers.
 - Source Nodes reuse a single default GraphContext — enforced by design since `max_in_flight` is always 1 for sources.
 
-### 11. Source Layering (Deferred to Phase 2)
+### 11. Packet & Timestamp Alignment with MediaPipe
+
+**Decision**: Align Packet and Timestamp designs with MediaPipe:
+- `Timestamp` is a standalone class with special values encoded in int64_t extremes. `Done()` signals end-of-stream — no separate `is_empty` boolean.
+- `Packet` uses shallow-copy semantics via `shared_ptr<HolderBase>`. Factory methods `MakePacket<T>()` and `Adopt<T>()`.
+- Payload access via `Get<T>()` (non-FATAL, returns `StatusOr`), `ValidateAsType<T>()`, and `Share<T>()`.
+- Phase 1 uses `std::any` internally; Phase 2 upgrades to custom `Holder<T>` with `TypeId` for proto support and better performance.
+
+**Rationale**:
+- MediaPipe's Timestamp special-value model unifies lifecycle signalling and timestamp ordering — `Done()` replaces `is_empty`.
+- `is_empty` as a separate boolean creates redundancy: every Packet has both a timestamp and an empty flag. MediaPipe's model is cleaner: a Packet with `Timestamp::Done()` IS the end-of-stream signal.
+- Shallow copy via shared_ptr is the proven approach for zero-copy packet forwarding in pipelines.
+
+**Phase 1 behavior**: `Packet::IsEmpty()` returns true when `holder_ == nullptr`. End-of-stream is detected via `packet.timestamp().IsDone()`. The `is_empty` boolean field from earlier design is removed.
+
+### 12. Source Layering (Deferred to Phase 2)
 
 **Decision**: `source_layer` field on Source Nodes (default 0). All sources in layer N must close before layer N+1 sources activate. Not enforced in Phase 1 — all sources activate concurrently.
 
@@ -153,7 +168,9 @@
 | Activation model | Event-driven: Stream events → InputStreamHandler → Executor | No central polling, reactive, scales to multi-thread |
 | Schedule() mode | Non-blocking — installs event observers, returns | WaitUntilDone() blocks for completion |
 | Node blocking | Non-blocking required | Single-thread constraint |
-| Packet ownership | Value semantics via std::any | Simple ownership, no shared_ptr |
+| Timestamp model | Standalone Timestamp class with special-value encoding | Aligns with MediaPipe; Done() replaces is_empty |
+| Packet semantics | Shallow copy via shared_ptr; MakePacket/Adopt/Get/ValidateAsType/Share | Zero-copy forwarding, non-FATAL type checking |
+| Packet storage | Phase 1: std::any; Phase 2: custom Holder<T> with TypeId | std::any for quick start, upgrade path for perf |
 | Error propagation | Fail-fast, abort graph | Predictable, simple |
 | Scheduler topology | Layer-based topological order | Matches Phase 1 simplicity |
 | Input readiness | DefaultInputStreamHandler (all-inputs barrier) | Safe default; pluggable via interface |

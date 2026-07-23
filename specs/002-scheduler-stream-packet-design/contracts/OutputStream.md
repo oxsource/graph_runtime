@@ -33,5 +33,5 @@ class OutputStream {
 - Represents one output port of a Node. May fan-out to multiple downstream Streams.
 - `AddDownstreamStream()` is called by GraphBuilder during initialization to register each downstream consumer.
 - `Send(Packet)` writes the Packet to every downstream Stream via `Stream::Push()`. Returns the first error encountered (e.g., `ResourceExhaustedError` if any downstream Stream is full).
-- `Close()` closes all downstream Streams (end-of-stream propagation).
+- `Close()` pushes a `Packet` with `Timestamp::Done()` on each downstream Stream, then marks the Stream closed. Consumers detect end-of-stream via `popped_packet.timestamp().IsDone()`.
 - `SetNextTimestampBound()` broadcasts the timestamp bound to all downstream Streams, enabling timestamp-based synchronization.

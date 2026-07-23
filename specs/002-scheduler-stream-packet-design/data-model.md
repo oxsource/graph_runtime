@@ -2,22 +2,50 @@
 
 ## Entities
 
+### Timestamp
+
+Timestamp class with special values encoded in the int64_t range extremes.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp_` | `int64_t` | Raw timestamp value; special values at extremes |
+
+**Special values**:
+
+| Constant | Internal Value | Semantics |
+|----------|---------------|-----------|
+| `Unset()` | `INT64_MIN` | Default-constructed Packet, not valid for stream use |
+| `Unstarted()` | `INT64_MIN + 1` | Input timestamp during `Open()` |
+| `PreStream()` | `INT64_MIN + 2` | Header data (sole packet on stream) |
+| `Min()` | `INT64_MIN + 3` | Minimum range timestamp |
+| `Max()` | `INT64_MAX - 3` | Maximum range timestamp |
+| `PostStream()` | `INT64_MAX - 2` | Stream summary (sole packet on stream) |
+| `OneOverPostStream()` | `INT64_MAX - 1` | Internal use only |
+| `Done()` | `INT64_MAX` | Input during `Close()`; end-of-stream signal |
+
+**Validation rules**:
+- `int64_t` constructor CHECK-fails if called with a special value.
+- End-of-stream is detected by `timestamp() == Timestamp::Done()`, not by a separate boolean.
+- `IsEmpty()` returns true only for `Unset()`.
+
+---
+
 ### Packet
 
 Atomic data unit flowing through the graph.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `payload` | type-erased value | The data carried by this packet |
-| `timestamp` | `int64_t` | Monotonic timestamp for ordering |
-| `is_empty` | `bool` | End-of-stream / flush signal marker |
+| `holder_` | `shared_ptr<HolderBase>` | Type-erased payload (custom Holder<T> or std::any) |
+| `timestamp_` | `Timestamp` | Monotonic timestamp for ordering, plus lifecycle signalling |
 
 **Validation rules**:
 - Timestamp MUST be monotonically non-decreasing within a single Stream.
-- Empty packets (`is_empty = true`) signal stream boundaries — used to indicate end-of-stream.
-- Payload type is checked at read time; mismatched type reads produce an error.
+- Payload type is checked via `ValidateAsType<T>()` or `Get<T>()` at read time.
+- End-of-stream is signaled by `Timestamp::Done()`, not by `is_empty`.
+- `IsEmpty()` returns true when `holder_ == nullptr` (default-constructed or moved-from).
 
-**Ownership**: Value semantics — copyable and movable. Stream transfers ownership via `Pop()` returning by value.
+**Ownership**: Shallow-copy semantics — copy increments shared_ptr refcount (O(1)). Source is never deep-copied.
 
 ---
 
@@ -34,7 +62,7 @@ Unidirectional data conduit between a single Node output port and a single Node 
 
 **States**:
 ```
-Open ──► Active (first packet enqueued) ──► Closed (end-of-stream packet received)
+Open ──► Active (first packet enqueued) ──► Closed (Close() called, Done() packet enqueued)
 ```
 
 **Boundaries**:
@@ -45,8 +73,9 @@ Open ──► Active (first packet enqueued) ──► Closed (end-of-stream pa
 **Validation rules**:
 - `Push()` returns error status if queue is full (back-pressure).
 - `Pop()` returns error status if queue is empty.
-- `Close()` sets a flag; subsequent `Push()` calls fail.
-- After `Close()`, `Pop()` continues until queue is drained, then returns end-of-stream.
+- `Close()` pushes a Packet with `Timestamp::Done()`; subsequent `Push()` calls fail.
+- After `Close()`, `Pop()` continues until queue is drained, then returns `OutOfRangeError`.
+- Consumer detects end-of-stream by checking `popped_packet.timestamp().IsDone()`. No separate boolean needed.
 
 ---
 
