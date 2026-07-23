@@ -18,6 +18,12 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
   auto built = std::move(*result);
   scheduler_ = std::move(built->scheduler_);
   all_nodes_ = std::move(built->all_nodes_);
+  // Transfer nodes to scheduler
+  std::vector<Node*> node_ptrs;
+  for (auto& node : all_nodes_) {
+    node_ptrs.push_back(node.get());
+  }
+  scheduler_->SetNodes(node_ptrs);
   return absl::OkStatus();
 }
 
@@ -25,14 +31,12 @@ absl::Status GraphRuntime::Start() {
   if (!scheduler_) {
     return absl::FailedPreconditionError("Graph not initialized");
   }
+  // Schedule() is synchronous — runs the entire pipeline
   return scheduler_->Schedule();
 }
 
 absl::Status GraphRuntime::WaitUntilDone() {
-  if (!scheduler_) {
-    return absl::FailedPreconditionError("Graph not initialized");
-  }
-  return scheduler_->WaitUntilDone();
+  return absl::OkStatus();
 }
 
 void GraphRuntime::Shutdown() {

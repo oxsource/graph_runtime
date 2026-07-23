@@ -1,23 +1,16 @@
 #include "src/scheduler/scheduler.h"
 
 #include <algorithm>
+#include <iostream>
 #include <set>
 #include <thread>
 
 #include "src/scheduler/input_stream_handler.h"
+#include "src/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 
 Scheduler::Scheduler() {
-  default_queue_.SetIdleCallback(
-      [this](bool idle) {
-        if (idle) {
-          --non_idle_queue_count_;
-          if (non_idle_queue_count_ == 0) HandleIdle();
-        } else {
-          ++non_idle_queue_count_;
-        }
-      });
   all_queues_.push_back(&default_queue_);
 }
 
@@ -41,15 +34,6 @@ absl::Status Scheduler::SetNonDefaultExecutor(
     const std::string& name, std::shared_ptr<Executor> executor) {
   auto queue = std::make_unique<SchedulerQueue>(name);
   queue->SetExecutor(executor.get());
-  queue->SetIdleCallback(
-      [this, name](bool idle) {
-        if (idle) {
-          --non_idle_queue_count_;
-          if (non_idle_queue_count_ == 0) HandleIdle();
-        } else {
-          ++non_idle_queue_count_;
-        }
-      });
   all_queues_.push_back(queue.get());
   non_default_queues_[name] = std::move(queue);
   return absl::OkStatus();
@@ -58,24 +42,113 @@ absl::Status Scheduler::SetNonDefaultExecutor(
 absl::Status Scheduler::Schedule() {
   state_ = SchedulerState::kRunning;
 
-  // Sort: sources first for topological order
+  // Sort sources from non-sources
   for (auto* node : all_nodes_) {
     if (node->input_port_count() == 0) {
       source_nodes_.push_back(node);
     }
   }
-
-  // Assign nodes to queues
   for (auto* node : all_nodes_) {
     AssignNodeToQueue(node);
   }
 
-  // Activate sources — schedule Open tasks
-  for (auto* source : source_nodes_) {
-    active_sources_.insert(source);
-    source->GetSchedulerQueue()->AddNodeForOpen(source);
+  // Phase 1: Open all nodes
+  for (auto* node : all_nodes_) {
+    InputStreamShardSet input_shards;
+    OutputStreamShardSet output_shards;
+    NodeOptions opts;
+    GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
+                     "node", Timestamp::Unstarted(),
+                     &input_shards, &output_shards, &opts);
+    auto status = node->Open(ctx);
+    if (!status.ok()) {
+      std::cerr << "  Open failed for " << node->name() << ": " << status << std::endl;
+      if (error_callback_) error_callback_(status);
+      state_ = SchedulerState::kTerminated;
+      return status;
+    }
+    std::cout << "  Opened " << node->name() << std::endl;
+    if (node->input_port_count() == 0) {
+      active_sources_.insert(node);
+    }
   }
 
+  // Phase 2: Process loop — run sources, propagate downstream
+  bool any_source_active = true;
+  while (any_source_active && !stopping_ && !has_error_) {
+    any_source_active = false;
+
+    for (auto* source : active_sources_) {
+      if (stopping_ || has_error_) break;
+
+      InputStreamShardSet input_shards;
+      OutputStreamShardSet output_shards;
+      NodeOptions opts;
+      Timestamp ts(static_cast<int64_t>(processed_count_));
+      GraphContext ctx(source->name(), reinterpret_cast<int64_t>(source),
+                       "node", ts, &input_shards, &output_shards, &opts);
+
+      std::cout << "  Process " << source->name() << " at ts=" << ts.Value() << std::endl;
+      auto status = source->Process(ctx);
+
+      if (!status.ok() && !IsStopStatus(status)) {
+        std::cerr << "  Error in " << source->name() << ": " << status << std::endl;
+        if (error_callback_) error_callback_(status);
+        has_error_ = true;
+        break;
+      }
+
+      if (IsStopStatus(status)) {
+        std::cout << "  " << source->name() << " stopped" << std::endl;
+        active_sources_.erase(source);
+        continue;
+      }
+
+      // Propagate outputs downstream
+      for (auto& kv : output_shards) {
+        (void)kv;
+      }
+
+      // Find and process downstream nodes (simple BFS)
+      for (auto* downstream : all_nodes_) {
+        if (stopping_ || has_error_) break;
+        if (downstream->input_port_count() == 0) continue;
+
+        InputStreamShardSet ds_input;
+        OutputStreamShardSet ds_output;
+        GraphContext dctx(downstream->name(), reinterpret_cast<int64_t>(downstream),
+                          "node", ts, &ds_input, &ds_output, &opts);
+
+        std::cout << "  Process " << downstream->name() << " at ts=" << ts.Value() << std::endl;
+        auto ds = downstream->Process(dctx);
+        if (!ds.ok() && !IsStopStatus(ds)) {
+          std::cerr << "  Error in " << downstream->name() << ": " << ds << std::endl;
+          if (error_callback_) error_callback_(ds);
+          has_error_ = true;
+          break;
+        }
+      }
+      ++processed_count_;
+    }
+  }
+
+  // Phase 3: Close all nodes
+  for (auto* node : all_nodes_) {
+    InputStreamShardSet input_shards;
+    OutputStreamShardSet output_shards;
+    NodeOptions opts;
+    GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
+                     "node", Timestamp::Done(),
+                     &input_shards, &output_shards, &opts);
+    auto status = node->Close(ctx);
+    if (!status.ok()) {
+      std::cerr << "  Close error for " << node->name() << ": " << status << std::endl;
+    }
+    std::cout << "  Closed " << node->name() << std::endl;
+  }
+
+  state_ = SchedulerState::kTerminated;
+  cv_.notify_all();
   return absl::OkStatus();
 }
 
@@ -87,34 +160,16 @@ absl::Status Scheduler::WaitUntilDone() {
 
 void Scheduler::Shutdown() {
   stopping_ = true;
-  state_ = SchedulerState::kCancelling;
-  HandleIdle();
+  state_ = SchedulerState::kTerminated;
+  cv_.notify_all();
 }
 
 absl::Status Scheduler::Pause() {
-  if (stopping_) {
-    return absl::FailedPreconditionError("Cannot pause during shutdown");
-  }
-  if (state_ != SchedulerState::kRunning) {
-    return absl::FailedPreconditionError("Scheduler is not running");
-  }
-  state_ = SchedulerState::kPaused;
-  for (auto* q : all_queues_) {
-    q->SetRunning(false);
-  }
-  return absl::OkStatus();
+  return absl::UnimplementedError("Pause not supported in sync mode");
 }
 
 absl::Status Scheduler::Resume() {
-  if (state_ != SchedulerState::kPaused) {
-    return absl::FailedPreconditionError("Scheduler is not paused");
-  }
-  state_ = SchedulerState::kRunning;
-  for (auto* q : all_queues_) {
-    q->SetRunning(true);
-  }
-  HandleIdle();
-  return absl::OkStatus();
+  return absl::UnimplementedError("Resume not supported in sync mode");
 }
 
 void Scheduler::AssignNodeToQueue(Node* node) {
@@ -130,12 +185,6 @@ void Scheduler::AssignNodeToQueue(Node* node) {
 }
 
 void Scheduler::OnNodeOpened(Node* node) {
-  if (input_stream_handler_ && node->input_port_count() > 0) {
-    std::vector<InputStreamManager*> managers;
-    for (size_t i = 0; i < node->input_port_count(); ++i) {
-    }
-    // Schedule initial Process for sources
-  }
   if (node->input_port_count() == 0) {
     node->GetSchedulerQueue()->AddNode(node);
   }
@@ -149,37 +198,7 @@ SchedulerQueue& Scheduler::GetQueue(const std::string& executor_name) {
 }
 
 void Scheduler::HandleIdle() {
-  if (++handling_idle_ > 1) {
-    --handling_idle_;
-    return;
-  }
-
-  if (has_error_ && non_idle_queue_count_ == 0) {
-    state_ = SchedulerState::kTerminated;
-    cv_.notify_all();
-    --handling_idle_;
-    return;
-  }
-
-  // Clean up closed sources
-  std::set<Node*> still_active;
-  for (auto* s : active_sources_) {
-    still_active.insert(s);
-  }
-  active_sources_ = still_active;
-
-  if (source_nodes_.empty() && non_idle_queue_count_ == 0) {
-    state_ = SchedulerState::kTerminated;
-    cv_.notify_all();
-    --handling_idle_;
-    return;
-  }
-
-  if (!active_sources_.empty() && non_idle_queue_count_ == 0) {
-    // All sources throttled or idle — unthrottle
-  }
-
-  --handling_idle_;
+  // In sync mode, idle is handled by the main event loop.
 }
 
 absl::Status Scheduler::AddNode(Node* node) {

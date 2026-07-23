@@ -111,15 +111,34 @@ class GraphContext {
       int node_id,
       const std::string& calculator_type,
       Timestamp input_timestamp,
-      InputStreamShardSet inputs,
-      OutputStreamShardSet outputs,
+      InputStreamShardSet* inputs,
+      OutputStreamShardSet* outputs,
       const NodeOptions* options)
       : node_name_(node_name),
         node_id_(node_id),
         calculator_type_(calculator_type),
         input_timestamp_(input_timestamp),
-        inputs_(std::move(inputs)),
-        outputs_(std::move(outputs)),
+        inputs_ptr_(inputs),
+        outputs_ptr_(outputs),
+        options_(options) {}
+
+  // Compatibility constructor — takes sets by value and stores pointers
+  GraphContext(
+      const std::string& node_name,
+      int node_id,
+      const std::string& calculator_type,
+      Timestamp input_timestamp,
+      InputStreamShardSet&& inputs,
+      OutputStreamShardSet&& outputs,
+      const NodeOptions* options)
+      : node_name_(node_name),
+        node_id_(node_id),
+        calculator_type_(calculator_type),
+        input_timestamp_(input_timestamp),
+        owned_inputs_(std::move(inputs)),
+        owned_outputs_(std::move(outputs)),
+        inputs_ptr_(&owned_inputs_),
+        outputs_ptr_(&owned_outputs_),
         options_(options) {}
 
   const std::string& NodeName() const { return node_name_; }
@@ -127,10 +146,10 @@ class GraphContext {
   const std::string& CalculatorType() const { return calculator_type_; }
   Timestamp InputTimestamp() const { return input_timestamp_; }
 
-  InputStreamShardSet& Inputs() { return inputs_; }
-  const InputStreamShardSet& Inputs() const { return inputs_; }
-  OutputStreamShardSet& Outputs() { return outputs_; }
-  const OutputStreamShardSet& Outputs() const { return outputs_; }
+  InputStreamShardSet& Inputs() { return *inputs_ptr_; }
+  const InputStreamShardSet& Inputs() const { return *inputs_ptr_; }
+  OutputStreamShardSet& Outputs() { return *outputs_ptr_; }
+  const OutputStreamShardSet& Outputs() const { return *outputs_ptr_; }
 
   const PacketSet& InputSidePackets() const { return input_side_packets_; }
   OutputSidePacketSet& OutputSidePackets() { return output_side_packets_; }
@@ -139,7 +158,7 @@ class GraphContext {
   const NodeOptions& Options() const { return *options_; }
 
   void SetOffset(TimestampDiff offset) {
-    for (auto& kv : outputs_.shards_) {
+    for (auto& kv : outputs_ptr_->shards_) {
       kv.second.SetOffset(offset);
     }
   }
@@ -149,8 +168,10 @@ class GraphContext {
   int node_id_;
   std::string calculator_type_;
   Timestamp input_timestamp_;
-  InputStreamShardSet inputs_;
-  OutputStreamShardSet outputs_;
+  InputStreamShardSet owned_inputs_;
+  OutputStreamShardSet owned_outputs_;
+  InputStreamShardSet* inputs_ptr_;
+  OutputStreamShardSet* outputs_ptr_;
   PacketSet input_side_packets_;
   OutputSidePacketSet output_side_packets_;
   const NodeOptions* options_;

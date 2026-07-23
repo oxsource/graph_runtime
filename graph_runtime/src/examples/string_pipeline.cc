@@ -3,131 +3,77 @@
 #include <string>
 #include <vector>
 
-#include "src/public/graph_runtime.h"
-#include "src/public/graph_builder.h"
-#include "src/public/types.h"
+#include "src/stream/packet.h"
+#include "src/stream/timestamp.h"
 #include "src/node/node.h"
 #include "src/node/node_contract.h"
-#include "src/node/node_factory.h"
-#include "src/node/node_registry.h"
 #include "src/node/graph_context.h"
 
 namespace graph::runtime {
 
-// --- Producer: generates strings numbered 0..99 ---
 class StringProducer : public Node {
  public:
-  StringProducer(const std::string& name, const NodeOptions& options)
-      : Node(name) {}
-
-  static absl::Status GetContract(NodeContract* contract) {
-    contract->Outputs().Get("output").Set<std::string>();
-    return absl::OkStatus();
+  StringProducer(const std::string& n, const NodeOptions&) : Node(n) {}
+  static absl::Status GetContract(NodeContract* c) {
+    c->Outputs().Get("output").Set<std::string>(); return absl::OkStatus();
   }
-
-  absl::Status Open(GraphContext& context) override {
-    counter_ = 0;
-    return absl::OkStatus();
+  absl::Status Open(GraphContext&) override { std::cout<<"  [PRODUCER] Open\n"; return {}; }
+  absl::Status Process(GraphContext& ctx) override {
+    if (sent_ >= total_) { std::cout<<"  [PRODUCER] Done\n"; return StatusStop(); }
+    auto payload = "hello_" + std::to_string(sent_);
+    auto pkt = Packet::MakePacket<std::string>(payload).At(ctx.InputTimestamp());
+    ctx.Outputs().Get("output").AddPacket(std::move(pkt));
+    std::cout<<"  [PRODUCER] Sent \""<<payload<<"\"\n";
+    ++sent_; return {};
   }
-
-  absl::Status Process(GraphContext& context) override {
-    if (counter_ >= 100) {
-      return StatusStop();
-    }
-    auto packet = Packet::MakePacket<std::string>(
-        "hello_" + std::to_string(counter_));
-    packet = packet.At(Timestamp(counter_));
-    context.Outputs().Get("output").AddPacket(std::move(packet));
-    ++counter_;
-    return absl::OkStatus();
+  absl::Status Close(GraphContext&) override {
+    std::cout<<"  [PRODUCER] Close, sent="<<sent_<<"\n"; return {};
   }
-
-  absl::Status Close(GraphContext& context) override {
-    return absl::OkStatus();
-  }
-
  private:
-  int counter_ = 0;
+  int sent_ = 0, total_ = 5;
 };
 
-// --- Transformer: uppercases input strings ---
 class StringUppercase : public Node {
  public:
-  StringUppercase(const std::string& name, const NodeOptions& options)
-      : Node(name) {}
-
-  static absl::Status GetContract(NodeContract* contract) {
-    contract->Inputs().Get("input").Set<std::string>();
-    contract->Outputs().Get("output").Set<std::string>();
-    return absl::OkStatus();
+  StringUppercase(const std::string& n, const NodeOptions&) : Node(n) {}
+  static absl::Status GetContract(NodeContract* c) {
+    c->Inputs().Get("input").Set<std::string>();
+    c->Outputs().Get("output").Set<std::string>(); return {};
   }
-
-  absl::Status Open(GraphContext& context) override {
-    return absl::OkStatus();
+  absl::Status Open(GraphContext&) override { std::cout<<"  [TRANSFORMER] Open\n"; return {}; }
+  absl::Status Process(GraphContext& ctx) override {
+    auto& shard = ctx.Inputs().Get("input");
+    if (shard.IsEmpty()) return {};
+    auto r = shard.Get<std::string>(); if (!r.ok()) return {};
+    std::string u;
+    for (char c : *r) u += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    ctx.Outputs().Get("output").AddPacket(Packet::MakePacket<std::string>(u).At(ctx.InputTimestamp()));
+    std::cout<<"  [TRANSFORMER] \""<<*r<<"\" -> \""<<u<<"\"\n";
+    return {};
   }
-
-  absl::Status Process(GraphContext& context) override {
-    auto& input = context.Inputs().Get("input");
-    if (input.IsEmpty()) {
-      return absl::OkStatus();
-    }
-    auto msg_result = input.Get<std::string>();
-    if (!msg_result.ok()) return absl::OkStatus();
-    const auto& msg = *msg_result;
-    std::string upper;
-    upper.reserve(msg.size());
-    for (char c : msg) {
-      upper += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-    }
-    auto packet = Packet::MakePacket<std::string>(upper);
-    packet = packet.At(context.InputTimestamp());
-    context.Outputs().Get("output").AddPacket(std::move(packet));
-    return absl::OkStatus();
-  }
-
-  absl::Status Close(GraphContext& context) override {
-    return absl::OkStatus();
-  }
+  absl::Status Close(GraphContext&) override { std::cout<<"  [TRANSFORMER] Close\n"; return {}; }
 };
 
-// --- Consumer: collects and prints output strings ---
 class StringConsumer : public Node {
  public:
-  StringConsumer(const std::string& name, const NodeOptions& options)
-      : Node(name) {}
-
-  static absl::Status GetContract(NodeContract* contract) {
-    contract->Inputs().Get("input").Set<std::string>();
-    return absl::OkStatus();
+  StringConsumer(const std::string& n, const NodeOptions&) : Node(n) {}
+  static absl::Status GetContract(NodeContract* c) {
+    c->Inputs().Get("input").Set<std::string>(); return {};
   }
-
-  absl::Status Open(GraphContext& context) override {
-    return absl::OkStatus();
+  absl::Status Open(GraphContext&) override { std::cout<<"  [CONSUMER] Open\n"; return {}; }
+  absl::Status Process(GraphContext& ctx) override {
+    auto& shard = ctx.Inputs().Get("input");
+    if (shard.IsEmpty()) return {};
+    auto r = shard.Get<std::string>(); if (!r.ok()) return {};
+    result_.push_back(*r);
+    std::cout<<"  [CONSUMER] Received \""<<*r<<"\"\n";
+    return {};
   }
-
-  absl::Status Process(GraphContext& context) override {
-    auto& input = context.Inputs().Get("input");
-    if (input.IsEmpty()) {
-      return absl::OkStatus();
-    }
-    auto msg_result = input.Get<std::string>();
-    if (!msg_result.ok()) return absl::OkStatus();
-    const auto& msg = *msg_result;
-    result_.push_back(msg);
-    return absl::OkStatus();
+  absl::Status Close(GraphContext&) override {
+    std::cout<<"  [CONSUMER] Close, received="<<result_.size()<<"\n";
+    for (auto& s : result_) std::cout<<"    \""<<s<<"\"\n";
+    return {};
   }
-
-  absl::Status Close(GraphContext& context) override {
-    std::cout << "StringConsumer received " << result_.size() << " packets"
-              << std::endl;
-    for (const auto& s : result_) {
-      std::cout << "  " << s << std::endl;
-    }
-    return absl::OkStatus();
-  }
-
-  const std::vector<std::string>& result() const { return result_; }
-
  private:
   std::vector<std::string> result_;
 };
@@ -136,70 +82,60 @@ class StringConsumer : public Node {
 
 int main() {
   using namespace graph::runtime;
+  std::cout << "=== String Pipeline (RunOnce) ===\n";
 
-  // Register node types
-  GRAPH_RUNTIME_REGISTER_NODE("StringProducer", StringProducer);
-  GRAPH_RUNTIME_REGISTER_NODE("StringUppercase", StringUppercase);
-  GRAPH_RUNTIME_REGISTER_NODE("StringConsumer", StringConsumer);
+  NodeOptions opts;
+  auto producer = std::make_unique<StringProducer>("producer", opts);
+  auto transformer = std::make_unique<StringUppercase>("transformer", opts);
+  auto consumer = std::make_unique<StringConsumer>("consumer", opts);
 
-  // Build graph config programmatically
-  GraphConfig config;
-  config.max_queue_size = 100;
+  InputStreamShardSet dummy_i;
+  OutputStreamShardSet dummy_o;
 
-  GraphConfig::NodeDef producer;
-  producer.name = "producer";
-  producer.type = "StringProducer";
-  producer.output_streams = {"output:producer_to_upper"};
-  config.nodes.push_back(std::move(producer));
+  // Open
+  std::cout << "\n--- Open ---\n";
+  { GraphContext ctx("p",1,"SP",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); producer->Open(ctx); }
+  { GraphContext ctx("t",2,"SU",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); transformer->Open(ctx); }
+  { GraphContext ctx("c",3,"SC",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); consumer->Open(ctx); }
 
-  GraphConfig::NodeDef transformer;
-  transformer.name = "transformer";
-  transformer.type = "StringUppercase";
-  transformer.input_streams = {"input:producer_to_upper"};
-  transformer.output_streams = {"output:upper_to_consumer"};
-  config.nodes.push_back(std::move(transformer));
+  // Process loop
+  std::cout << "\n--- Process ---\n";
+  for (int i = 0; i < 10; ++i) {
+    Timestamp ts(i);
 
-  GraphConfig::NodeDef consumer;
-  consumer.name = "consumer";
-  consumer.type = "StringConsumer";
-  consumer.input_streams = {"input:upper_to_consumer"};
-  config.nodes.push_back(std::move(consumer));
+    // Producer
+    InputStreamShardSet pi; OutputStreamShardSet po;
+    absl::Status status;
+    { GraphContext ctx("p",1,"SP",ts,&pi,&po,&opts); status = producer->Process(ctx); }
+    if (IsStopStatus(status)) break;
 
-  GraphConfig::StreamDef s1;
-  s1.name = "producer_to_upper";
-  s1.source_node = "producer";
-  s1.source_port = "output";
-  s1.dest_node = "transformer";
-  s1.dest_port = "input";
-  config.streams.push_back(std::move(s1));
+    Packet pkt;
+    auto& pq = po.Get("output").OutputQueue();
+    if (!pq.empty()) { pkt = std::move(pq.front()); pq.pop_front(); }
+    if (pkt.IsEmpty()) break;
 
-  GraphConfig::StreamDef s2;
-  s2.name = "upper_to_consumer";
-  s2.source_node = "transformer";
-  s2.source_port = "output";
-  s2.dest_node = "consumer";
-  s2.dest_port = "input";
-  config.streams.push_back(std::move(s2));
+    // Transformer
+    InputStreamShardSet ti; ti.Get("input").PushPacket(std::move(pkt));
+    OutputStreamShardSet to;
+    { GraphContext ctx("t",2,"SU",ts,&ti,&to,&opts); transformer->Process(ctx); }
 
-  // Build and run
-  auto runtime = GraphBuilder::Build(config);
-  if (!runtime.ok()) {
-    std::cerr << "Build failed: " << runtime.status() << std::endl;
-    return 1;
+    Packet tp;
+    auto& tq = to.Get("output").OutputQueue();
+    if (!tq.empty()) { tp = std::move(tq.front()); tq.pop_front(); }
+    if (tp.IsEmpty()) continue;
+
+    // Consumer
+    InputStreamShardSet ci; ci.Get("input").PushPacket(std::move(tp));
+    OutputStreamShardSet co;
+    { GraphContext ctx("c",3,"SC",ts,&ci,&co,&opts); consumer->Process(ctx); }
   }
 
-  auto status = (*runtime)->Start();
-  if (!status.ok()) {
-    std::cerr << "Start failed: " << status << std::endl;
-    return 1;
-  }
+  // Close
+  std::cout << "\n--- Close ---\n";
+  { GraphContext ctx("p",1,"SP",Timestamp::Done(),&dummy_i,&dummy_o,&opts); producer->Close(ctx); }
+  { GraphContext ctx("t",2,"SU",Timestamp::Done(),&dummy_i,&dummy_o,&opts); transformer->Close(ctx); }
+  { GraphContext ctx("c",3,"SC",Timestamp::Done(),&dummy_i,&dummy_o,&opts); consumer->Close(ctx); }
 
-  status = (*runtime)->WaitUntilDone();
-  if (!status.ok()) {
-    std::cerr << "Execution failed: " << status << std::endl;
-    return 1;
-  }
-
-  std::cout << "Pipeline completed successfully." << std::endl;
+  std::cout << "\n=== Done ===\n";
   return 0;
 }

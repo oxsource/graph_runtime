@@ -55,6 +55,8 @@ class Scheduler {
 
   void AssignNodeToQueue(Node* node);
 
+  void SetNodes(const std::vector<Node*>& nodes) { all_nodes_ = nodes; }
+
   virtual absl::Status AddNode(Node* node);
   virtual absl::Status RemoveNode(Node* node);
 
@@ -80,6 +82,7 @@ class Scheduler {
   ErrorCallback error_callback_;
   std::vector<Node*> all_nodes_;
   std::vector<Node*> source_nodes_;
+  int processed_count_ = 0;
 
   std::mutex mutex_;
   std::condition_variable cv_;
