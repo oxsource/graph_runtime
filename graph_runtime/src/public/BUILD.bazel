@@ -1,0 +1,59 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "types",
+    hdrs = ["types.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_library(
+    name = "side_packet",
+    hdrs = ["side_packet.h"],
+    deps = [
+        "//src/stream:packet",
+        "//src/public:types",
+    ],
+)
+
+cc_library(
+    name = "graph_config",
+    hdrs = ["graph_config.h"],
+    deps = [
+        "//src/node:node_options",
+    ],
+)
+
+cc_library(
+    name = "graph_builder",
+    srcs = ["graph_builder.cc"],
+    hdrs = ["graph_builder.h"],
+    deps = [
+        "//src/scheduler:scheduler",
+        ":graph_config",
+        "//src/node:node_factory_registry",
+        "//src/node:node_base",
+    ],
+)
+
+cc_library(
+    name = "runtime",
+    srcs = ["graph_runtime.cc"],
+    hdrs = [
+        "graph_runtime.h",
+        "graph_builder.h",
+        "graph_config.h",
+        "side_packet.h",
+        "types.h",
+    ],
+    deps = [
+        "//src/scheduler:scheduler",
+        "//src/node:node_factory_registry",
+        "//src/node:graph_context",
+        ":graph_builder",
+        ":graph_config",
+        ":side_packet",
+        ":types",
+    ],
+)

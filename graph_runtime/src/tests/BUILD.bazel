@@ -1,0 +1,88 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_test(
+    name = "foundational_test",
+    srcs = ["foundational_test.cc"],
+    deps = [
+        "//src/stream:timestamp",
+        "//src/stream:packet",
+        "//src/node:node_options",
+        "//src/node:options_registry",
+        "//src/public:types",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "input_chain_test",
+    srcs = ["input_chain_test.cc"],
+    deps = [
+        "//src/stream:input_stream_manager",
+        "//src/stream:input_stream",
+        "//src/stream:packet",
+        "//src/scheduler:executor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "output_chain_test",
+    srcs = ["output_chain_test.cc"],
+    deps = [
+        "//src/stream:output_stream_manager",
+        "//src/stream:output_stream_shard",
+        "//src/stream:output_stream_handler",
+        "//src/stream:packet",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "node_chain_test",
+    srcs = ["node_chain_test.cc"],
+    deps = [
+        "//src/node:node_factory_registry",
+        "//src/node:node_factory",
+        "//src/node:graph_context",
+        "//src/stream:packet",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "execution_infra_test",
+    srcs = ["execution_infra_test.cc"],
+    deps = [
+        "//src/scheduler:scheduler_queue",
+        "//src/scheduler:thread_pool_executor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "scheduler_test",
+    srcs = ["scheduler_test.cc"],
+    deps = [
+        "//src/scheduler:scheduler",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "node_lifecycle_test",
+    srcs = ["node_lifecycle_test.cc"],
+    deps = [
+        "//src/node:node_factory_registry",
+        "//src/node:graph_context",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "integration_test",
+    srcs = ["integration_test.cc"],
+    deps = [
+        "//src/public:runtime",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

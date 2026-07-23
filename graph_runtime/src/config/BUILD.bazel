@@ -1,0 +1,9 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "graph_config",
+    hdrs = ["graph_config.h"],
+    deps = [
+        "//src/node:node_options",
+    ],
+)

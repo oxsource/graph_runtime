@@ -1,0 +1,42 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "executor",
+    hdrs = ["executor.h"],
+)
+
+cc_library(
+    name = "thread_pool_executor",
+    srcs = ["thread_pool_executor.cc"],
+    hdrs = ["thread_pool_executor.h"],
+    deps = [
+        ":executor",
+    ],
+)
+
+cc_library(
+    name = "scheduler_queue",
+    srcs = ["scheduler_queue.cc"],
+    hdrs = ["scheduler_queue.h"],
+    deps = [
+        ":executor",
+        "//src/node:node_base",
+    ],
+)
+
+cc_library(
+    name = "scheduler",
+    srcs = ["scheduler.cc"],
+    hdrs = ["scheduler.h"],
+    deps = [
+        ":executor",
+        ":scheduler_queue",
+        ":thread_pool_executor",
+        "//src/stream:input_stream_manager",
+        "//src/stream:input_stream",
+        "//src/stream:output_stream_handler",
+        "//src/node:graph_context",
+        "//src/node:node_factory_registry",
+        "//src/node:node_base",
+    ],
+)

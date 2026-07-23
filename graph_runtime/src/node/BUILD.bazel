@@ -1,0 +1,71 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "node_options",
+    srcs = ["node_options.cc"],
+    hdrs = ["node_options.h"],
+)
+
+cc_library(
+    name = "options_registry",
+    srcs = ["options_registry.cc"],
+    hdrs = ["options_registry.h"],
+    deps = [
+        ":node_options",
+    ],
+)
+
+cc_library(
+    name = "node_contract",
+    srcs = ["node_contract.cc"],
+    hdrs = ["node_contract.h"],
+    deps = [
+        "//src/stream:packet",
+        "//src/public:types",
+    ],
+)
+
+cc_library(
+    name = "node_base",
+    srcs = ["node.cc"],
+    hdrs = ["node.h"],
+    deps = [
+        ":node_contract",
+        ":node_options",
+        "//src/stream:input_stream_manager",
+        "//src/stream:output_stream",
+    ],
+)
+
+cc_library(
+    name = "node_factory",
+    srcs = ["node_factory.cc"],
+    hdrs = ["node_factory.h"],
+    deps = [
+        ":node_base",
+        ":node_contract",
+    ],
+)
+
+cc_library(
+    name = "node_factory_registry",
+    srcs = ["node_registry.cc"],
+    hdrs = ["node_registry.h"],
+    deps = [
+        ":node_factory",
+    ],
+)
+
+cc_library(
+    name = "graph_context",
+    srcs = ["graph_context.cc"],
+    hdrs = ["graph_context.h"],
+    deps = [
+        ":node_base",
+        ":node_options",
+        "//src/stream:input_stream",
+        "//src/stream:output_stream_shard",
+        "//src/public:side_packet",
+        "//src/stream:packet",
+    ],
+)

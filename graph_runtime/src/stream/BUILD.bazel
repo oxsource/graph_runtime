@@ -1,0 +1,81 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "timestamp",
+    srcs = ["timestamp.cc"],
+    hdrs = ["timestamp.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_library(
+    name = "packet",
+    srcs = ["packet.cc"],
+    hdrs = ["packet.h"],
+    deps = [
+        ":timestamp",
+    ],
+)
+
+cc_library(
+    name = "input_stream",
+    hdrs = ["input_stream.h"],
+    deps = [
+        ":packet",
+    ],
+)
+
+cc_library(
+    name = "input_stream_manager",
+    srcs = ["input_stream_manager.cc"],
+    hdrs = ["input_stream_manager.h"],
+    deps = [
+        ":packet",
+        ":timestamp",
+    ],
+)
+
+cc_library(
+    name = "output_stream",
+    hdrs = ["output_stream.h"],
+    deps = [
+        ":packet",
+        ":timestamp",
+    ],
+)
+
+cc_library(
+    name = "output_stream_shard",
+    srcs = ["output_stream_shard.cc"],
+    hdrs = ["output_stream_shard.h"],
+    deps = [
+        ":output_stream",
+        ":packet",
+        ":timestamp",
+    ],
+)
+
+cc_library(
+    name = "output_stream_manager",
+    srcs = ["output_stream_manager.cc"],
+    hdrs = ["output_stream_manager.h"],
+    deps = [
+        ":output_stream_shard",
+        ":packet",
+        ":timestamp",
+        "//src/scheduler:executor",
+    ],
+)
+
+cc_library(
+    name = "output_stream_handler",
+    srcs = ["output_stream_handler.cc"],
+    hdrs = ["output_stream_handler.h"],
+    deps = [
+        ":output_stream_manager",
+        ":output_stream_shard",
+        ":packet",
+        ":timestamp",
+    ],
+)

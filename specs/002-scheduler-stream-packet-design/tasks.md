@@ -66,13 +66,13 @@ Foundational (Phase 2)
 
 **Purpose**: Create directory structure and BUILD.bazel files for all modules.
 
-- [ ] T001 Create directory structure per plan.md (`graph_runtime/src/stream/`, `graph_runtime/src/node/`, `graph_runtime/src/scheduler/`, `graph_runtime/src/public/`, `graph_runtime/src/config/`, `graph_runtime/src/tests/`)
-- [ ] T002 [P] Create BUILD.bazel for stream module (`graph_runtime/src/stream/BUILD.bazel`) with cc_library targets for Timestamp, Packet, InputStreamManager, InputStream, OutputStream, OutputStreamShard, OutputStreamManager, OutputStreamHandler
-- [ ] T003 [P] Create BUILD.bazel for node module (`graph_runtime/src/node/BUILD.bazel`) with cc_library targets for Node, NodeContract, NodeFactory, NodeFactoryRegistry, NodeOptions, OptionsRegistry, GraphContext, GraphContextManager
-- [ ] T004 [P] Create BUILD.bazel for scheduler module (`graph_runtime/src/scheduler/BUILD.bazel`) with cc_library targets for Scheduler, SchedulerQueue, Executor, ThreadPoolExecutor
-- [ ] T005 [P] Create BUILD.bazel for public module (`graph_runtime/src/public/BUILD.bazel`) with cc_library for runtime aggregating all modules
-- [ ] T006 [P] Create BUILD.bazel for config module (`graph_runtime/src/config/BUILD.bazel`) with GraphConfig
-- [ ] T007 Create BUILD.bazel for tests (`graph_runtime/src/tests/BUILD.bazel`) with cc_test targets
+- [X] T001 Create directory structure per plan.md (`graph_runtime/src/stream/`, `graph_runtime/src/node/`, `graph_runtime/src/scheduler/`, `graph_runtime/src/public/`, `graph_runtime/src/config/`, `graph_runtime/src/tests/`)
+- [X] T002 [P] Create BUILD.bazel for stream module (`graph_runtime/src/stream/BUILD.bazel`) with cc_library targets for Timestamp, Packet, InputStreamManager, InputStream, OutputStream, OutputStreamShard, OutputStreamManager, OutputStreamHandler
+- [X] T003 [P] Create BUILD.bazel for node module (`graph_runtime/src/node/BUILD.bazel`) with cc_library targets for Node, NodeContract, NodeFactory, NodeFactoryRegistry, NodeOptions, OptionsRegistry, GraphContext, GraphContextManager
+- [X] T004 [P] Create BUILD.bazel for scheduler module (`graph_runtime/src/scheduler/BUILD.bazel`) with cc_library targets for Scheduler, SchedulerQueue, Executor, ThreadPoolExecutor
+- [X] T005 [P] Create BUILD.bazel for public module (`graph_runtime/src/public/BUILD.bazel`) with cc_library for runtime aggregating all modules
+- [X] T006 [P] Create BUILD.bazel for config module (`graph_runtime/src/config/BUILD.bazel`) with GraphConfig
+- [X] T007 Create BUILD.bazel for tests (`graph_runtime/src/tests/BUILD.bazel`) with cc_test targets
 
 ---
 
