@@ -232,3 +232,7 @@
 | InputStreamHandler | ScheduleInvocations(max_allowance) loop + SyncSet + SetNextTimestampBound | MediaPipe ScheduleInvocations pattern; decouples readiness from scheduling |
 | SyncSet | Inner class: GetReadiness (min_packet vs min_bound) + FillInputSet | Single sync set in Phase 1; multiple sets for advanced handlers in Phase 2 |
 | InputStreamManager | Matches MediaPipe — deque + bound + callbacks + PopPacketAtTimestamp | Added num_packets_added for lifetime tracking |
+| OutputStream interface | Pure abstract — AddPacket/Close/SetOffset/SetHeader (Calculator-facing) | Calculator never sees Manager or Handler; matches MediaPipe OutputStream |
+| OutputStreamShard | Per-invocation buffer implementing OutputStream — output_queue_, Reset, friend of Manager | One per Process() call; drained by Manager::PropagateUpdatesToMirrors |
+| OutputStreamManager | Per-stream persistent state — mirrors_, bound, closed, ComputeOutputTimestampBound, PropagateUpdatesToMirrors | Persists across invocations; zero-copy last-mirror move |
+| OutputStreamHandler | Per-Node orchestrator — PrepareOutputs, PostProcess, Close | MediaPipe InOrderOutputStreamHandler; Phase 1 sequential, Phase 2 parallel PropagationLoop |

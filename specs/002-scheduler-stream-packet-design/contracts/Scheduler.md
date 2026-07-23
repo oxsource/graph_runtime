@@ -114,10 +114,15 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
 ```
 --- OpenNode task runs ---
-  // Create GraphContext for Open (InputTimestamp = Unstarted)
+  // Prepare output shards, then call Open
+  OutputStreamShardSet output_shards;     // initialized via OutputStreamHandler
+  output_stream_handler_->SetupOutputShards(&output_shards);
+
   GraphContext context(node->name(), node->id(), node->CalculatorType(),
                        Timestamp::Unstarted(), input_shards, output_shards, &options)
   Node::Open(context)
+  output_stream_handler_->Open(&output_shards);   // propagate headers, lock intro data
+
   After Open → Scheduler fires OnNodeOpened(node):
     if Source: schedule initial ProcessNode via node->GetSchedulerQueue()
     if non-source: register InputStreamManagers
@@ -126,9 +131,9 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
   [if stopping_=true AND node is Source]
     → schedule CloseNode, skip Process
 
-  // Create GraphContext for Process (InputTimestamp = scheduled_ts)
-  InputStreamShardSet input_shards;      // initialized per port
-  OutputStreamShardSet output_shards;    // initialized per port
+  // Prepare output shards (reset to manager's current state)
+  output_stream_handler_->PrepareOutputs(scheduled_timestamp, &output_shards);
+
   GraphContext context(node->name(), node->id(), node->CalculatorType(),
                        scheduled_timestamp, input_shards, output_shards, &options)
 
@@ -139,22 +144,18 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
   status = Node::Process(context)
 
-  // Output propagation: drain OutputStreamShards → OutputStream::Send()
-  for each OutputStreamShard& shard in context.Outputs():
-    if shard.IsEmpty(): continue
-    auto* output_stream = node->GetOutputPort(shard.Name())
-    for each packet in shard.output_queue_ (move):
-      output_stream->Send(packet)
-    if shard.IsClosed():
-      output_stream->Close()
+  // Output propagation via OutputStreamHandler
+  output_stream_handler_->PostProcess(scheduled_timestamp, &output_shards);
 
   // Source rescheduling via node->GetSchedulerQueue()->AddNode(node)
 
 --- CloseNode task runs ---
-  // Create GraphContext for Close (InputTimestamp = Done)
+  output_stream_handler_->PrepareOutputs(Timestamp::Done(), &output_shards);
+
   GraphContext context(node->name(), node->id(), node->CalculatorType(),
                        Timestamp::Done(), input_shards, output_shards, &options)
   Node::Close(context)
+  output_stream_handler_->Close(&output_shards);
 
 --- Queue idle state change ---
   idle_callback_(true) → QueueIdleStateChanged

@@ -5,56 +5,40 @@
 ```cpp
 namespace graph::runtime {
 
-class InputStreamManager;
-
+// Pure abstract interface — the only class that Calculator code sees.
+// Implemented by OutputStreamShard (per-invocation buffer).
 class OutputStream {
  public:
-  explicit OutputStream(std::string name);
+  virtual ~OutputStream() = default;
 
-  const std::string& name() const;
+  virtual const std::string& Name() const = 0;
 
-  // --- Graph construction (called by GraphBuilder) ---
-  void AddMirror(InputStreamManager* downstream_mgr);
+  // Add data packets
+  virtual void AddPacket(const Packet& packet) = 0;
+  virtual void AddPacket(Packet&& packet) = 0;
 
-  // --- Producer interface (called by Node via PacketProducer) ---
-  absl::Status Send(Packet packet);
-  void Close();
+  // Timestamp bound
+  virtual void SetNextTimestampBound(Timestamp timestamp) = 0;
+  virtual Timestamp NextTimestampBound() const = 0;
 
-  // --- Timestamp bound propagation ---
-  void SetNextTimestampBound(Timestamp bound);
+  // Lifecycle
+  virtual void Close() = 0;
+  virtual bool IsClosed() const = 0;
 
-  // --- State ---
-  bool IsClosed() const;
-
- private:
-  std::string name_;
-  bool closed_ = false;
-
-  struct Mirror {
-    InputStreamManager* manager;
-  };
-  std::vector<Mirror> mirrors_;
-  Timestamp next_timestamp_bound_{Timestamp::Unset()};
+  // Open() only — configure offset and header before any Process call
+  virtual void SetOffset(TimestampDiff offset) = 0;
+  virtual bool OffsetEnabled() const = 0;
+  virtual TimestampDiff Offset() const = 0;
+  virtual void SetHeader(const Packet& packet) = 0;
+  virtual const Packet& Header() const = 0;
 };
 
 }  // namespace graph::runtime
 ```
 
 **Semantics**:
-- Represents one output port of a Node. Packets are sent directly to downstream `InputStreamManager` instances via `mirrors_`. **No intermediate Stream component exists.**
-- `AddMirror()` registers a downstream `InputStreamManager`. Called by `GraphBuilder` during initialization to wire the output port to its consumer(s).
-- `Send(Packet)` writes the Packet to **all** downstream `InputStreamManager` instances:
-  - The **last** mirror receives a **move** (`MovePackets` — zero-copy).
-  - All earlier mirrors receive a **copy** (`AddPackets` — shared_ptr bump).
-  - After each mirror's `AddPackets`/`MovePackets`, if `*notify` is true, the mirror's `arrival_callback_` fires (→ `InputStreamHandler::NotifyPacketArrival()`).
-  - Returns the first error encountered. In Phase 1 errors are exceptional (queue not rejecting packets — back-pressure is managed via callbacks).
-- `Close()` sets `closed_ = true` and calls `SetNextTimestampBound(Timestamp::Done())` on all mirrors. `Close()` does NOT push a sentinel Done packet — end-of-stream is signaled by bound propagation alone.
-- `SetNextTimestampBound(bound)` propagates the bound to all mirrors via `InputStreamManager::SetNextTimestampBound()`. This is how timestamp bounds advance without sending data.
-- The Scheduler's task runner calls `Send()` during output propagation (no separate `OutputStreamHandler` — post-process is inlined in the task runner).
-
-**Relationship with OutputStreamShard**:
-- `OutputStreamShard` (in `GraphContext`) is the per-invocation write buffer — the Node writes packets to shards during `Process()`.
-- After `Process()` returns, the Scheduler's task runner reads each `OutputStreamShard`'s `output_queue_` and calls `OutputStream::Send()` to propagate to downstream.
-- One `OutputStream` per output port persists across invocations. One `OutputStreamShard` per output port is created fresh per `GraphContext` invocation.
-- The shard accumulates packets during a single `Process()` call; `OutputStream` fans them out to all mirrors.
-- `SetOffset()` and `SetHeader()` on the shard configure the underlying `OutputStreamSpec` — only valid during `Open()`.
+- This is the **only interface calculators interact with** when writing output. The concrete implementation is `OutputStreamShard` (per-invocation buffer).
+- `AddPacket()` enqueues a data packet. Timestamp and type are validated. On error, the error callback is triggered (graph termination).
+- `SetNextTimestampBound(bound)` advances the output timestamp bound without sending data. This signals downstream that no packet will arrive before `bound`.
+- `Close()` marks the stream as closed. Sets bound to `Timestamp::Done()`.
+- `SetOffset(offset)` and `SetHeader(header)` are only valid during `Open()`. After `Open()`, the spec is locked via `LockIntroData()`.

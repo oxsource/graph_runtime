@@ -265,19 +265,61 @@ Owns the `std::deque<Packet>` for one downstream Node input port. Data is writte
 
 ### OutputStream
 
-Output port abstraction. Writes directly to downstream `InputStreamManager` deques via mirrors. No intermediate Stream.
+Pure abstract interface seen by Calculator code. No mirrors or propagation logic.
+
+| Method | Description |
+|--------|-------------|
+| `Name()` | Port name |
+| `AddPacket(Packet)` | Enqueue a data packet |
+| `SetNextTimestampBound(Timestamp)` | Advance bound without data |
+| `Close()` | Mark stream closed, bound=Done |
+| `SetOffset(TimestampDiff)` | Set output timestamp offset (Open only) |
+| `SetHeader(Packet)` | Set stream header (Open only) |
+
+---
+
+### OutputStreamShard
+
+Per-invocation write buffer. Implements `OutputStream`. Drained by `OutputStreamManager` after `Process()`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name_` | `std::string` | Port name matching the GraphConfig |
-| `mirrors_` | `vector<InputStreamManager*>` | All downstream managers this port writes to |
+| `output_queue_` | `std::list<Packet>` | Packets added during this Process() call |
+| `next_timestamp_bound_` | `Timestamp` | Advanced on each AddPacket/SetNextBound |
+| `updated_next_timestamp_bound_` | `Timestamp` | Only set by explicit SetNextBound (not by Reset) |
+| `spec_` | `OutputStreamSpec*` | Shared metadata (offset, header, name) |
 
-**Boundaries**:
-- One per Node output port, created during Scheduler initialization.
-- Mirrors are populated by GraphBuilder when wiring graph connectivity.
-- `Send(Packet)` writes to each mirror via `InputStreamManager::AddPackets()` (copy) or `MovePackets()` (move, last mirror only).
-- `Close()` sets `Timestamp::Done()` bound on all mirrors — no sentinel Done packet is pushed.
-- Fan-in (multiple upstream → one downstream) is handled by multiple OutputStreams each writing to the same InputStreamManager.
+---
+
+### OutputStreamManager
+
+Persistent per-stream state. Owns mirrors and handles propagation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `spec_` | `OutputStreamSpec` | name, offset, header, locked_intro_data |
+| `mirrors_` | `vector<Mirror>` | Downstream (InputStreamHandler*, CollectionItemId) |
+| `next_timestamp_bound_` | `Timestamp` | Current output bound |
+| `closed_` | `bool` | Stream closed |
+
+**Methods**: `ComputeOutputTimestampBound()` / `PropagateUpdatesToMirrors()` / `ResetShard()` / `Close()` / `PropagateHeader()` / `LockIntroData()`
+
+---
+
+### OutputStreamHandler
+
+Per-Node orchestrator for all output streams.
+
+| Method | Description |
+|--------|-------------|
+| `InitializeOutputStreamManagers(flat*)` | Wire to flat manager array |
+| `SetupOutputShards(shards*)` | Assign spec ptrs to shards |
+| `Open(shards*)` | Propagate headers, lock intro data |
+| `PrepareOutputs(ts, shards*)` | ResetShard for each manager |
+| `PostProcess(ts, shards*)` | Compute bound + propagate to mirrors |
+| `Close(shards*)` | Propagate remaining, close all managers |
+
+**Default**: `InOrderOutputStreamHandler` — Phase 1 sequential path (direct PropagateOutputPackets).
 
 ---
 

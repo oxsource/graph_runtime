@@ -44,39 +44,8 @@ class InputStreamShardSet {
   iterator end();
 };
 
-// --- OutputStreamShard (per output port, per invocation) ---
-
-class OutputStreamShard {
- public:
-  // Add packets
-  void AddPacket(const Packet& packet);   // copy
-  void AddPacket(Packet&& packet);        // move
-  template <typename T>
-  void Add(T* ptr, Timestamp timestamp);  // sugar: Adopt(ptr).At(timestamp)
-
-  // Timestamp control
-  void SetNextTimestampBound(Timestamp bound);
-  Timestamp NextTimestampBound() const;
-  void SetOffset(TimestampDiff offset);   // output ts = input ts + offset (Open only)
-
-  // Lifecycle
-  void Close();                           // sends Done bound
-  bool IsClosed() const;
-
-  // Header (Open only)
-  void SetHeader(const Packet& packet);
-  Packet Header() const;
-
-  // State
-  bool IsEmpty() const;
-  const std::string& Name() const;
-
- private:
-  std::list<Packet> output_queue_;
-  bool closed_ = false;
-  Timestamp next_timestamp_bound_{Timestamp::Unset()};
-  Timestamp updated_next_timestamp_bound_{Timestamp::Unset()};
-};
+// --- OutputStreamShard (see separate contract at OutputStreamShard.md) ---
+// #include "graph_runtime/stream/output_stream_shard.h"
 
 // --- OutputStreamShardSet (all output ports) ---
 
@@ -151,7 +120,7 @@ class GraphContext {
 
 - **InputStreamShard**: One per input port. The Scheduler's `FillInputSet()` populates each shard's `packet_queue_` with one Packet (from `InputStreamManager::PopPacketAtTimestamp()`). The Node reads via `Value()` / `Get<T>()`. If no packet was sent at this timestamp, the shard is populated with an empty Packet (`IsEmpty() == true`). `IsDone()` signals that the stream is closed and no more data will arrive.
 
-- **OutputStreamShard**: One per output port. The Node writes output via `AddPacket()`. After `Process()` returns, the Scheduler's task runner collects all shards' `output_queue_` and calls `OutputStream::Send()` to propagate to downstream `InputStreamManager` deques. `SetOffset()` and `SetHeader()` are only valid during `Open()`.
+- **OutputStreamShard**: One per output port. Implements the `OutputStream` abstract interface. The Node writes output via `AddPacket()`. After `Process()` returns, `OutputStreamHandler::PostProcess()` drains each shard via `OutputStreamManager::PropagateUpdatesToMirrors()`, which sends packets directly to downstream `InputStreamManager` deques. `SetOffset()` and `SetHeader()` are only valid during `Open()`.
 
 - **InputStreamShardSet / OutputStreamShardSet**: Tag/index-addressable collections. `Get("TAG")` or `Get("TAG", index)` or `Index(i)`. Support range iteration.
 
