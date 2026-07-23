@@ -7,3 +7,22 @@ cc_library(
         "//src/node:node_options",
     ],
 )
+
+cc_library(
+    name = "config",
+    hdrs = [
+        "i_graph_config_parser.h",
+        "config_validator.h",
+        "parser_registry.h",
+    ],
+    srcs = [
+        "config_validator.cc",
+        "parser_registry.cc",
+    ],
+    deps = [
+        ":graph_config",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "//src/public:types",
+    ],
+)

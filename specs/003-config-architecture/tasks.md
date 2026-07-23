@@ -57,9 +57,9 @@ Phase 2: Foundational
 
 **Purpose**: Create directory structure and BUILD.bazel for config module.
 
-- [ ] T001 Create directory structure (`graph_runtime/src/config/json/testdata/`)
-- [ ] T002 Create/update `graph_runtime/src/config/BUILD.bazel` with cc_library targets for `:config` (i_graph_config_parser + config_validator + parser_registry)
-- [ ] T003 Create `graph_runtime/src/config/json/BUILD.bazel` with cc_library for `:json_parser` depending on `//src/config:config` and `@nlohmann_json//:json`
+- [X] T001 Create directory structure (`graph_runtime/src/config/json/testdata/`)
+- [X] T002 Create/update `graph_runtime/src/config/BUILD.bazel` with cc_library targets for `:config` (i_graph_config_parser + config_validator + parser_registry)
+- [X] T003 Create `graph_runtime/src/config/json/BUILD.bazel` with cc_library for `:json_parser` depending on `//src/config:config` and `@nlohmann_json//:json`
 
 ---
 

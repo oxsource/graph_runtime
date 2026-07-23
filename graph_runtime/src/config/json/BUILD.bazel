@@ -1,0 +1,11 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "json_parser",
+    srcs = ["json_parser.cc"],
+    hdrs = ["json_parser.h"],
+    deps = [
+        "//src/config:config",
+        "@nlohmann_json//:json",
+    ],
+)
