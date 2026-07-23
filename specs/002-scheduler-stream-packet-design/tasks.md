@@ -80,12 +80,12 @@ Foundational (Phase 2)
 
 **Purpose**: Implement the zero-dependency types that all other modules depend on.
 
-- [ ] T008 Implement `Types` (`graph_runtime/src/public/types.h`): CollectionItemId (int), ErrorCallback, IsStopStatus(), StatusStop()
-- [ ] T009 Implement `Timestamp` (`graph_runtime/src/stream/timestamp.h/.cc`): 8 special values, int64_t encoding, IsSpecialValue/IsRangeValue/IsAllowedInStream, NextAllowedInStream/PreviousAllowedInStream, DebugString, TimestampDiff
-- [ ] T010 Implement `Packet` (`graph_runtime/src/stream/packet.h/.cc`): MakePacket/Adopt factories, shallow copy via shared_ptr, Get/ValidateAsType/Share, At(timestamp), operator== (pointer equality), DebugString/DebugTypeName
-- [ ] T011 Implement `NodeOptions` (`graph_runtime/src/node/node_options.h/.cc`): Set/Get/Has/Keys, std::any storage
-- [ ] T012 Implement `OptionsRegistry` (`graph_runtime/src/node/options_registry.h/.cc`): Register/Deserialize/IsRegistered, GRAPH_RUNTIME_REGISTER_OPTIONS macro
-- [ ] T013 Create foundational unit test (`graph_runtime/src/tests/foundational_test.cc`): Timestamp special values, Packet copy/move/Get/ValidateAsType, NodeOptions set/get
+- [X] T008 Implement `Types` (`graph_runtime/src/public/types.h`): CollectionItemId (int), ErrorCallback, IsStopStatus(), StatusStop()
+- [X] T009 Implement `Timestamp` (`graph_runtime/src/stream/timestamp.h/.cc`): 8 special values, int64_t encoding, IsSpecialValue/IsRangeValue/IsAllowedInStream, NextAllowedInStream/PreviousAllowedInStream, DebugString, TimestampDiff
+- [X] T010 Implement `Packet` (`graph_runtime/src/stream/packet.h/.cc`): MakePacket/Adopt factories, shallow copy via shared_ptr, Get/ValidateAsType/Share, At(timestamp), operator== (pointer equality), DebugString/DebugTypeName
+- [X] T011 Implement `NodeOptions` (`graph_runtime/src/node/node_options.h/.cc`): Set/Get/Has/Keys, std::any storage
+- [X] T012 Implement `OptionsRegistry` (`graph_runtime/src/node/options_registry.h/.cc`): Register/Deserialize/IsRegistered, GRAPH_RUNTIME_REGISTER_OPTIONS macro
+- [X] T013 Create foundational unit test (`graph_runtime/src/tests/foundational_test.cc`): Timestamp special values, Packet copy/move/Get/ValidateAsType, NodeOptions set/get
 
 **Checkpoint**: `bazel test //src/tests:foundational_test` passes. Core types ready.
 
