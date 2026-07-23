@@ -111,6 +111,15 @@ cc_test(
 )
 
 cc_test(
+    name = "public_api_test",
+    srcs = ["public_api_test.cc"],
+    deps = [
+        "@graph_runtime//src/public:runtime",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "integration_test",
     srcs = ["integration_test.cc"],
     deps = [

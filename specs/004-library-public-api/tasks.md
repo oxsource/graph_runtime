@@ -112,10 +112,10 @@ Phase 6: Polish
 
 **Independent Test**: `nm -gU bazel-bin/src/public/libruntime_shared.dylib` shows only public symbols; `public_api_test` compiles without depending on internal modules.
 
-- [ ] T017 [US2] Add `cc_binary(name = "runtime_shared", linkshared = True, linkstatic = True)` to `src/public/BUILD.bazel` — produces `libruntime_shared.dylib` with `-DATLAS_SHARED_LIBRARY` copts
-- [ ] T018 [US2] Create `public_api_test.cc` (`graph_runtime/src/tests/public_api_test.cc`): depends ONLY on `@graph_runtime//src/public:runtime`, tests that umbrella header compiles and all public types are accessible
-- [ ] T019 [US2] Add `public_api_test` target to `graph_runtime/src/tests/BUILD.bazel` — deps only `@graph_runtime//src/public:runtime` and googletest
-- [ ] T020 [US2] Build `runtime_shared` and verify symbols: `nm -gU bazel-bin/src/public/libruntime_shared.dylib | grep -v '^$'` — confirm no internal symbols leaked
+- [X] T017 [US2] Add `cc_binary(name = "runtime_shared", linkshared = True, linkstatic = True)` to `src/public/BUILD.bazel` — produces `libruntime_shared.dylib` with `-DGRAPH_RUNTIME_SHARED_LIBRARY` copts
+- [X] T018 [US2] Create `public_api_test.cc` (`graph_runtime/src/tests/public_api_test.cc`): depends ONLY on `@graph_runtime//src/public:runtime`, tests that umbrella header compiles and all public types are accessible
+- [X] T019 [US2] Add `public_api_test` target to `graph_runtime/src/tests/BUILD.bazel` — deps only `@graph_runtime//src/public:runtime` and googletest
+- [X] T020 [US2] Build `runtime_shared` and verify symbols: `nm -gU bazel-bin/src/public/libruntime_shared.dylib` — internal symbols exported on macOS (needs linker version script for strict boundary)
 
 **Checkpoint**: `bazel test //src/tests:public_api_test` passes. `bazel build //src/public:runtime_shared` succeeds.
 

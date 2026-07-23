@@ -22,7 +22,7 @@ cc_library(
     srcs = ["graph_builder.cc"],
     hdrs = ["graph_builder.h"],
     deps = [
-        ":runtime_shared",
+        ":runtime_internal",
         "@graph_runtime//src/config:config",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/scheduler:scheduler",
@@ -32,7 +32,7 @@ cc_library(
 )
 
 cc_library(
-    name = "runtime_shared",
+    name = "runtime_internal",
     hdrs = [
         "graph_runtime.h",
         "types.h",
@@ -74,9 +74,23 @@ cc_library(
     alwayslink = 1,
     deps = [
         ":graph_builder",
-        ":runtime_shared",
+        ":runtime_internal",
         "@graph_runtime//src/scheduler:scheduler",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/public:types",
+    ],
+)
+
+cc_binary(
+    name = "runtime_shared",
+    linkshared = True,
+    linkstatic = True,
+    copts = [
+        "-DGRAPH_RUNTIME_SHARED_LIBRARY",
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+    ],
+    deps = [
+        ":runtime",
     ],
 )
