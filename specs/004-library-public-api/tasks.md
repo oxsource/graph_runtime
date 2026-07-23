@@ -77,13 +77,13 @@ Phase 6: Polish
 
 **Purpose**: Migrate all BUILD.bazel deps to `@graph_runtime//` prefix and refactor `src/public/BUILD.bazel` with `strip_include_prefix`.
 
-- [ ] T004 Update `graph_runtime/src/stream/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
-- [ ] T005 [P] Update `graph_runtime/src/node/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
-- [ ] T006 [P] Update `graph_runtime/src/scheduler/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
-- [ ] T007 [P] Update `graph_runtime/src/public/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/` + add `strip_include_prefix = "include"` + add `copts = ["-fvisibility=hidden", "-fvisibility-inlines-hidden"]` + add `alwayslink = 1`
-- [ ] T008 [P] Update `graph_runtime/src/config/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
-- [ ] T009 [P] Update `graph_runtime/src/tests/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
-- [ ] T010 [P] Update `graph_runtime/src/examples/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
+- [X] T004 Update `graph_runtime/src/stream/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
+- [X] T005 [P] Update `graph_runtime/src/node/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
+- [X] T006 [P] Update `graph_runtime/src/scheduler/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
+- [X] T007 [P] Update `graph_runtime/src/public/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/` + add `copts = ["-fvisibility=hidden", "-fvisibility-inlines-hidden"]` + add `alwayslink = 1` (strip_include_prefix deferred to Phase 3 when re-export headers exist under `include/`)
+- [X] T008 [P] Update `graph_runtime/src/config/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
+- [X] T009 [P] Update `graph_runtime/src/tests/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
+- [X] T010 [P] Update `graph_runtime/src/examples/BUILD.bazel` — change all `//src/` deps to `@graph_runtime//src/`
 
 **Checkpoint**: `bazel build //src/...` succeeds after all dep prefix changes.
 

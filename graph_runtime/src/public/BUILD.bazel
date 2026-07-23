@@ -12,8 +12,8 @@ cc_library(
     name = "side_packet",
     hdrs = ["side_packet.h"],
     deps = [
-        "//src/stream:packet",
-        "//src/public:types",
+        "@graph_runtime//src/stream:packet",
+        "@graph_runtime//src/public:types",
     ],
 )
 
@@ -23,11 +23,11 @@ cc_library(
     hdrs = ["graph_builder.h"],
     deps = [
         ":runtime_shared",
-        "//src/config:config",
-        "//src/config:graph_config",
-        "//src/scheduler:scheduler",
-        "//src/scheduler:thread_pool_executor",
-        "//src/node:node_factory_registry",
+        "@graph_runtime//src/config:config",
+        "@graph_runtime//src/config:graph_config",
+        "@graph_runtime//src/scheduler:scheduler",
+        "@graph_runtime//src/scheduler:thread_pool_executor",
+        "@graph_runtime//src/node:node_factory_registry",
     ],
 )
 
@@ -38,23 +38,32 @@ cc_library(
         "types.h",
         "side_packet.h",
     ],
+    copts = [
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+    ],
     deps = [
-        "//src/config:graph_config",
-        "//src/scheduler:scheduler",
-        "//src/node:graph_context",
-        "//src/public:types",
-        "//src/stream:packet",
+        "@graph_runtime//src/config:graph_config",
+        "@graph_runtime//src/scheduler:scheduler",
+        "@graph_runtime//src/node:graph_context",
+        "@graph_runtime//src/public:types",
+        "@graph_runtime//src/stream:packet",
     ],
 )
 
 cc_library(
     name = "runtime",
     srcs = ["graph_runtime.cc"],
+    copts = [
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+    ],
+    alwayslink = 1,
     deps = [
         ":graph_builder",
         ":runtime_shared",
-        "//src/scheduler:scheduler",
-        "//src/config:graph_config",
-        "//src/public:types",
+        "@graph_runtime//src/scheduler:scheduler",
+        "@graph_runtime//src/config:graph_config",
+        "@graph_runtime//src/public:types",
     ],
 )

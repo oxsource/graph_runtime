@@ -19,8 +19,8 @@ cc_library(
     name = "node_contract",
     hdrs = ["node_contract.h"],
     deps = [
-        "//src/stream:packet",
-        "//src/public:types",
+        "@graph_runtime//src/stream:packet",
+        "@graph_runtime//src/public:types",
     ],
 )
 
@@ -31,8 +31,8 @@ cc_library(
     deps = [
         ":node_contract",
         ":node_options",
-        "//src/stream:input_stream_manager",
-        "//src/stream:output_stream",
+        "@graph_runtime//src/stream:input_stream_manager",
+        "@graph_runtime//src/stream:output_stream",
     ],
 )
 
@@ -62,10 +62,10 @@ cc_library(
     deps = [
         ":node_base",
         ":node_options",
-        "//src/stream:input_stream",
-        "//src/stream:output_stream_shard",
-        "//src/public:side_packet",
-        "//src/stream:packet",
-        "//src/public:types",
+        "@graph_runtime//src/stream:input_stream",
+        "@graph_runtime//src/stream:output_stream_shard",
+        "@graph_runtime//src/public:side_packet",
+        "@graph_runtime//src/stream:packet",
+        "@graph_runtime//src/public:types",
     ],
 )

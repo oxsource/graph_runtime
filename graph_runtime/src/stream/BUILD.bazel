@@ -68,9 +68,9 @@ cc_library(
         ":output_stream_shard",
         ":packet",
         ":timestamp",
-        "//src/scheduler:input_stream_handler",
-        "//src/scheduler:executor",
-        "//src/public:types",
+        "@graph_runtime//src/scheduler:input_stream_handler",
+        "@graph_runtime//src/scheduler:executor",
+        "@graph_runtime//src/public:types",
     ],
 )
 
@@ -83,7 +83,7 @@ cc_library(
         ":output_stream_shard",
         ":packet",
         ":timestamp",
-        "//src/node:graph_context",
-        "//src/public:types",
+        "@graph_runtime//src/node:graph_context",
+        "@graph_runtime//src/public:types",
     ],
 )

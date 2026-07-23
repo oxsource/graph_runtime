@@ -4,11 +4,11 @@ cc_test(
     name = "foundational_test",
     srcs = ["foundational_test.cc"],
     deps = [
-        "//src/stream:timestamp",
-        "//src/stream:packet",
-        "//src/node:node_options",
-        "//src/node:options_registry",
-        "//src/public:types",
+        "@graph_runtime//src/stream:timestamp",
+        "@graph_runtime//src/stream:packet",
+        "@graph_runtime//src/node:node_options",
+        "@graph_runtime//src/node:options_registry",
+        "@graph_runtime//src/public:types",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -17,10 +17,10 @@ cc_test(
     name = "input_chain_test",
     srcs = ["input_chain_test.cc"],
     deps = [
-        "//src/stream:input_stream_manager",
-        "//src/stream:input_stream",
-        "//src/stream:packet",
-        "//src/scheduler:input_stream_handler",
+        "@graph_runtime//src/stream:input_stream_manager",
+        "@graph_runtime//src/stream:input_stream",
+        "@graph_runtime//src/stream:packet",
+        "@graph_runtime//src/scheduler:input_stream_handler",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -29,10 +29,10 @@ cc_test(
     name = "output_chain_test",
     srcs = ["output_chain_test.cc"],
     deps = [
-        "//src/stream:output_stream_manager",
-        "//src/stream:output_stream_shard",
-        "//src/stream:output_stream_handler",
-        "//src/stream:packet",
+        "@graph_runtime//src/stream:output_stream_manager",
+        "@graph_runtime//src/stream:output_stream_shard",
+        "@graph_runtime//src/stream:output_stream_handler",
+        "@graph_runtime//src/stream:packet",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -41,10 +41,10 @@ cc_test(
     name = "node_chain_test",
     srcs = ["node_chain_test.cc"],
     deps = [
-        "//src/node:node_factory_registry",
-        "//src/node:node_factory",
-        "//src/node:graph_context",
-        "//src/stream:packet",
+        "@graph_runtime//src/node:node_factory_registry",
+        "@graph_runtime//src/node:node_factory",
+        "@graph_runtime//src/node:graph_context",
+        "@graph_runtime//src/stream:packet",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -53,8 +53,8 @@ cc_test(
     name = "execution_infra_test",
     srcs = ["execution_infra_test.cc"],
     deps = [
-        "//src/scheduler:scheduler_queue",
-        "//src/scheduler:thread_pool_executor",
+        "@graph_runtime//src/scheduler:scheduler_queue",
+        "@graph_runtime//src/scheduler:thread_pool_executor",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -63,7 +63,7 @@ cc_test(
     name = "scheduler_test",
     srcs = ["scheduler_test.cc"],
     deps = [
-        "//src/scheduler:scheduler",
+        "@graph_runtime//src/scheduler:scheduler",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -72,8 +72,8 @@ cc_test(
     name = "node_lifecycle_test",
     srcs = ["node_lifecycle_test.cc"],
     deps = [
-        "//src/node:node_factory_registry",
-        "//src/node:graph_context",
+        "@graph_runtime//src/node:node_factory_registry",
+        "@graph_runtime//src/node:graph_context",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -81,10 +81,10 @@ cc_test(
 cc_test(
     name = "config_parser_test",
     srcs = ["config_parser_test.cc"],
-    data = ["//src/config/json:testdata"],
+    data = ["@graph_runtime//src/config/json:testdata"],
     deps = [
-        "//src/config/json:json_parser",
-        "//src/config:config",
+        "@graph_runtime//src/config/json:json_parser",
+        "@graph_runtime//src/config:config",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -93,10 +93,10 @@ cc_test(
     name = "build_validation_test",
     srcs = ["build_validation_test.cc"],
     deps = [
-        "//src/config:config",
-        "//src/config:graph_config",
-        "//src/public:graph_builder",
-        "//src/public:runtime",
+        "@graph_runtime//src/config:config",
+        "@graph_runtime//src/config:graph_config",
+        "@graph_runtime//src/public:graph_builder",
+        "@graph_runtime//src/public:runtime",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -105,7 +105,7 @@ cc_test(
     name = "parser_extensibility_test",
     srcs = ["parser_extensibility_test.cc"],
     deps = [
-        "//src/config:config",
+        "@graph_runtime//src/config:config",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -114,7 +114,7 @@ cc_test(
     name = "integration_test",
     srcs = ["integration_test.cc"],
     deps = [
-        "//src/public:runtime",
+        "@graph_runtime//src/public:runtime",
         "@com_google_googletest//:gtest_main",
     ],
 )

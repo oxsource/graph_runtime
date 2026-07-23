@@ -14,10 +14,10 @@ cc_library(
     hdrs = ["input_stream_handler.h"],
     deps = [
         ":executor",
-        "//src/stream:input_stream_manager",
-        "//src/node:node_base",
-        "//src/node:graph_context",
-        "//src/public:types",
+        "@graph_runtime//src/stream:input_stream_manager",
+        "@graph_runtime//src/node:node_base",
+        "@graph_runtime//src/node:graph_context",
+        "@graph_runtime//src/public:types",
     ],
 )
 
@@ -36,7 +36,7 @@ cc_library(
     hdrs = ["scheduler_queue.h"],
     deps = [
         ":executor",
-        "//src/node:node_base",
+        "@graph_runtime//src/node:node_base",
     ],
 )
 
@@ -49,11 +49,11 @@ cc_library(
         ":scheduler_queue",
         ":thread_pool_executor",
         ":input_stream_handler",
-        "//src/stream:input_stream_manager",
-        "//src/stream:input_stream",
-        "//src/stream:output_stream_handler",
-        "//src/node:graph_context",
-        "//src/node:node_factory_registry",
-        "//src/node:node_base",
+        "@graph_runtime//src/stream:input_stream_manager",
+        "@graph_runtime//src/stream:input_stream",
+        "@graph_runtime//src/stream:output_stream_handler",
+        "@graph_runtime//src/node:graph_context",
+        "@graph_runtime//src/node:node_factory_registry",
+        "@graph_runtime//src/node:node_base",
     ],
 )
