@@ -615,7 +615,110 @@ Schedule() is NON-BLOCKING — it sets up event observers and returns immediatel
   5. Graph::WaitUntilDone() returns (state_ == kTerminated)
 ```
 
-## Module Responsibility Matrix
+---
+
+### GraphConfig
+
+Configuration data for building a graph pipeline.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `nodes` | `vector<NodeDef>` | Node definitions (name, type, ports, options, executor) |
+| `streams` | `vector<StreamDef>` | Stream connections between node ports |
+| `executors` | `vector<ExecutorDef>` | Named executor configurations |
+| `input_streams` | `vector<string>` | External input stream names (creates GraphInputStreams) |
+| `output_streams` | `vector<string>` | External output stream names (creates GraphOutputStreams) |
+| `max_queue_size` | `int` | Default max queue depth (100, -1 = unlimited) |
+| `report_deadlock` | `bool` | true = deadlock fails graph instead of auto-unthrottle |
+
+**NodeDef extended fields**:
+| Field | Type | Description |
+|-------|------|-------------|
+| `input_side_packets` | `vector<string>` | Side packet inputs (`"TAG:name"`) |
+| `output_side_packets` | `vector<string>` | Side packet outputs (`"TAG:name"`) |
+| `input_stream_handler` | `string` | Per-node input handler override |
+| `max_in_flight` | `int` | Concurrent Process invocations (Phase 2) |
+
+---
+
+### GraphBuilder
+
+Static utility that validates `GraphConfig`, creates instances, wires connections, and returns a `GraphRuntime`.
+
+| Step | Description |
+|------|-------------|
+| ValidateContracts | Call NodeFactory::GetContract per node, check stream + side packet types |
+| ValidateOptions | Check OptionsRegistry for each node's options type |
+| CreateExecutors | Instantiate ThreadPoolExecutor per ExecutorDef |
+| CreateNodes | NodeFactoryRegistry::CreateByName for each NodeDef |
+| CreateStreamManagers | InputStreamManager + OutputStreamManager per port |
+| WireMirrors | Populate OutputStreamManager::mirrors_ from StreamDef |
+| CreateGraphInputStreams | Virtual source nodes for external input |
+| CreateGraphOutputStreams | Virtual sink nodes for external output |
+| CreateOutputStreamHandlers | One per node |
+| CreateScheduler | With configured executors + InputStreamHandler |
+| AssignNodesToQueues | Scheduler::AssignNodeToQueue per node |
+| Return GraphRuntime | Fully initialized, ready for Start() |
+
+---
+
+### SidePacket / PacketSet / OutputSidePacketSet
+
+Graph-level constants, validated and injected before Start().
+
+| Class | Purpose |
+|-------|---------|
+| `PacketSet` | Immutable input side packet collection (`Get(name)`) |
+| `OutputSidePacketSet` | Mutable output side packet collection (`Set(name, packet)`) |
+
+**Boundaries**:
+- Declared via `NodeContract::InputSidePackets()` / `OutputSidePackets()` during GetContract.
+- Injected via `GraphRuntime::SetInputSidePacket(name, packet)` before Start().
+- Access via `GraphContext::InputSidePackets()` / `OutputSidePackets()` during Open/Process/Close.
+- Type mismatches caught at build time during graph validation.
+
+---
+
+### OptionsRegistry
+
+Compile-time options deserialization without protobuf.
+
+| Method | Description |
+|--------|-------------|
+| `Register<T>(type_name)` | Create registrar for type T |
+| `Deserialize<T>(options) -> T` | Convert key-value map to typed struct |
+| `Field(name, &T::member)` | Register a field for deserialization |
+
+**Registration macro**:
+```cpp
+GRAPH_RUNTIME_REGISTER_OPTIONS("MyCalc", MyCalcOptions)
+    .Field("threshold", &MyCalcOptions::threshold);
+```
+
+---
+
+### NodeOptions
+
+Simple key-value options container with registry-backed typed deserialization.
+
+| Method | Description |
+|--------|-------------|
+| `Set<T>(key, value)` | Store a typed option |
+| `Get<T>(key) -> const T*` | Retrieve a typed option (nullptr if missing) |
+| `Deserialize<T>() -> const T&` | Deserialize via OptionsRegistry into typed struct (cached) |
+
+---
+
+Project-wide type aliases and utility functions.
+
+| Symbol | Definition | Purpose |
+|--------|-----------|---------|
+| `CollectionItemId` | `int` | Lightweight index handle for tag-indexed port collections |
+| `ErrorCallback` | `function<void(Status)>` | Invoked on non-OK, non-Stop status |
+| `IsStopStatus(status) -> bool` | `status.code() == kUnavailable` | Distinguish graceful stop from error |
+| `StatusStop()` | `UnavailableError("Stop")` | Helper to create stop status |
+
+---
 
 | Concern | Packet | InputStreamMgr | OutputStreamMgr | OutputStream | Node | NodeContract | NodeFactoryReg | NodeFactory | GraphCtx | GraphCtxMgr | GraphRuntime | Scheduler | InputStreamHdlr | Executor |
 |---------|--------|----------------|-----------------|--------------|------|-------------|---------------|------------|----------|-------------|-------------|-----------|----------------|----------|

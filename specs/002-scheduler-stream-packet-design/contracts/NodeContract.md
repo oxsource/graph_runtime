@@ -3,6 +3,8 @@
 **File**: `graph_runtime/src/node/node_contract.h`
 
 ```cpp
+// Uses CollectionItemId from types.h
+
 namespace graph::runtime {
 
 class PacketType {
@@ -25,9 +27,13 @@ class PacketTypeSet {
 
 class NodeContract {
  public:
-  // Declare input/output port types
+  // Declare input/output stream port types
   PacketTypeSet& Inputs();
   PacketTypeSet& Outputs();
+
+  // Declare input/output side packet types
+  PacketTypeSet& InputSidePackets();
+  PacketTypeSet& OutputSidePackets();
 
   // Access node options (from graph config)
   const NodeOptions& Options() const;
@@ -46,5 +52,6 @@ class NodeContract {
 - `PacketType::Set<T>()` declares that a port accepts/produces type `T`. `SetAny()` accepts any type. `SetNone()` accepts nothing.
 - `PacketType::SetSameAs(other)` links a port's type to another port's type — used for pass-through nodes where output type mirrors input.
 - `Inputs()` and `Outputs()` return `PacketTypeSet` collections indexed by port name.
-- `Options()` provides typed access to node configuration from the graph config.
+- `InputSidePackets()` and `OutputSidePackets()` declare side packet types — graph-level constants that are validated and injected before graph start. Side packet type mismatches produce an error at build time.
+- `Options()` provides typed access to node configuration from the graph config. The `Options<T>()` template uses `OptionsRegistry` to deserialize key-value pairs into a typed struct at runtime — providing compile-time field access without protobuf.
 - `GetContract()` is called at graph construction time (before any Node instances exist). Type mismatches between connected ports produce an error at graph build time, not at runtime.

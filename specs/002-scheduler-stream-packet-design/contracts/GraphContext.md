@@ -81,13 +81,17 @@ class GraphContext {
   //   Close()  → Timestamp::Done()
   Timestamp InputTimestamp() const;
 
-  // Input/output
+  // Input/output streams
   InputStreamShardSet& Inputs();
   const InputStreamShardSet& Inputs() const;
   OutputStreamShardSet& Outputs();
   const OutputStreamShardSet& Outputs() const;
 
-  // Options
+  // Side packets (graph-level constants, persisted across invocations)
+  const PacketSet& InputSidePackets() const;
+  OutputSidePacketSet& OutputSidePackets();
+
+  // Options (typed via OptionsRegistry deserialization)
   template <typename T>
   const T& Options() const;
   template <typename T>

@@ -48,6 +48,18 @@ class GraphRuntime {
   // Remove a previously registered output callback.
   void ClearOutputStreamCallback(const std::string& stream_name);
 
+  // --- Side packets (graph-level constants, set before Start) ---
+
+  // Set an input side packet by tag name. Must be called before Start().
+  // The tag name must match a declaration in a Node's GetContract().
+  // The framework routes the packet to all nodes that declare this tag
+  // in InputSidePackets(). No node-name prefix needed.
+  absl::Status SetInputSidePacket(const std::string& tag_name, Packet packet);
+
+  // Register a callback for an output side packet.
+  void SetOutputSidePacketCallback(const std::string& name,
+                                    std::function<void(const Packet&)> callback);
+
  private:
   std::unique_ptr<internal::GraphImpl> impl_;
 };
@@ -57,9 +69,9 @@ class GraphRuntime {
 
 **Semantics**:
 
-- **GraphRuntime** is the top-level public API. Users create one instance, configure it with a `GraphConfig` (JSON/programmatic), and drive the lifecycle.
+- **GraphRuntime** is the top-level public API. Users create one instance via `GraphBuilder::Build(config)` and drive the lifecycle.
 
-- **Initialize(config)**: Parses the config, validates node types and port contracts via `NodeFactoryRegistry`, creates `InputStreamManager`s, `OutputStream`s, `OutputStreamManager`s, `Node` instances, wires mirrors, creates the `Scheduler` with configured executors and `InputStreamHandler`. MUST be called before `Start()`.
+- **Initialize(config)**: Delegates to `GraphBuilder::Build(config)`. Validates node types and port contracts via `NodeFactoryRegistry`, creates `InputStreamManager`s, `OutputStream`s, `OutputStreamManager`s, `Node` instances, wires mirrors, creates the `Scheduler` with configured executors and `InputStreamHandler`. MUST be called before `Start()`.
 
 - **Start()**: Calls `Scheduler::Schedule()` to begin event-driven execution. Non-blocking — returns immediately. Call `WaitUntilDone()` to block until completion.
 
@@ -71,7 +83,9 @@ class GraphRuntime {
 
 - **CloseInputStream(name)**: Closes an external input stream, signaling end-of-data. Propagates `Timestamp::Done()` bound to downstream nodes.
 
-- **SetOutputStreamCallback(name, callback)**: Registers a callback that fires for each packet sent to a graph output stream. Packets are delivered on the executor thread. The callback receives a copy of the packet — for zero-copy, capture by shared_ptr.
+- **SetInputSidePacket(tag_name, packet)**: Injects a graph-level constant packet. The `tag_name` (e.g., `"model_path"`) must match a declaration in at least one Node's `GetContract()` via `NodeContract::InputSidePackets()`. The framework automatically routes the packet to all nodes that declare the matching tag — **no node-name prefix needed**. Must be called before `Start()`. If any declared side packet is not provided before `Start()`, `Start()` returns `FailedPreconditionError`.
+
+- **SetOutputStreamCallback(name, callback)**: Registers a callback that fires for each packet sent to a graph output stream.
 
 **GraphInputStream** (internal):
 - Each input stream declared in the graph config creates a virtual Source Node with zero inputs and one output.

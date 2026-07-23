@@ -94,19 +94,15 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
                   All closed ──────┴──────► kTerminated
 ```
 
-- `Schedule()` is **non-blocking**. It performs one-time initialization and installs event observers, then returns immediately. Called by `GraphRuntime::Start()` after `GraphRuntime::Initialize()` has completed:
+- `Schedule()` is **non-blocking**. It installs event observers and activates source nodes, then returns immediately. All construction (Node creation, InputStreamManagers, OutputStreamManagers, wiring) is done by `GraphBuilder::Build()` / `GraphRuntime::Initialize()` before this call. Called by `GraphRuntime::Start()`:
 
-  1. Build topological ordering from Graph's Node/Stream wiring.
+  1. Build topological ordering from Graph's Node/Stream wiring (wiring is already complete from Build).
   2. Group Source Nodes by `source_layer` (Phase 2: layer-ordered; Phase 1: all concurrent).
-  3. For each virtual GraphInputStream source node: wire its `OutputStream` to the downstream `InputStreamManager`s declared for that input stream.
-  4. For each virtual GraphOutputStream sink node: wire its `InputStreamManager` to the upstream `OutputStreamManager` declared for that output stream. Set up the user callback to fire on packet arrival.
-  5. Set up `InputStreamManager` per Node per input port:
-     - `SetArrivalCallback()` → `InputStreamHandler::NotifyPacketArrival()`.
-     - `SetQueueSizeCallbacks()` → throttle/unthrottle.
-  6. Create `OutputStream` per Node per output port with mirrors.
-  7. Register each queue's idle callback → `QueueIdleStateChanged()` (contributes to `non_idle_queue_count_`).
-  8. For each Node: `AssignNodeToQueue(node)` — routes to `default_queue_` or named queue based on `Node::ExecutorName()`.
-  9. Activate all Source Nodes (including virtual GraphInputStream sources) — schedule their `Open` tasks.
+  3. For each Node: if `node_def.input_stream_handler` is non-empty, create the specified InputStreamHandler instead of the default. This overrides `SetInputStreamHandler()` for that specific node.
+  4. Set up `InputStreamManager` arrival/queue-size callbacks per Node input port.
+  5. Validate input side packets: for each Node, check that every `InputSidePacket` declared in its contract has a matching `SetInputSidePacket(tag_name, packet)` call from the user. The matching is done by flat tag name — the framework routes the packet to all nodes that declare that tag. If any declared side packet is missing, `Start()` returns `FailedPreconditionError` with details of the missing tag. Store found side packets in each Node's state for access via `GraphContext::InputSidePackets()`.
+  6. Register each SchedulerQueue's idle callback → `QueueIdleStateChanged()` (contributes to `non_idle_queue_count_`).
+  7. Activate all Source Nodes (including virtual GraphInputStream sources) — schedule their `Open` tasks.
 
 - **AssignNodeToQueue(node)**: If `node->ExecutorName()` is non-empty, looks up the name in `non_default_queues_` and sets `node->SetSchedulerQueue(queue)`. Otherwise uses `default_queue_`. All subsequent scheduling for this node goes through the assigned queue.
 

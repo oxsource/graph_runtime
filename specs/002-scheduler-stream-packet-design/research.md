@@ -240,3 +240,9 @@
 | GraphInputStream | Virtual Source Node for external data injection | Packets injected directly into OutputStreamManager, no Process() overhead |
 | GraphOutputStream | Virtual Sink Node for external output observation | Callback invoked per received packet; silent sink when no callback |
 | GraphContextManager | Context pool — GetDefaultCalculatorContext for sequential, Prepare/Recycle for Phase 2 parallel | MediaPipe CalculatorContextManager; Source always uses default context |
+| GraphConfig | Config data: NodeDef, StreamDef, ExecutorDef, input/output_streams, max_queue_size, report_deadlock | Input contract for GraphBuilder::Build() |
+| GraphBuilder | Static builder: ValidateContracts → Create → Wire → Return GraphRuntime | Validates stream + side packet types, options |
+| NodeOptions | Key-value map (std::any) + OptionsRegistry typed deserialization | GRAPH_RUNTIME_REGISTER_OPTIONS macro for compile-time field access |
+| SidePacket / PacketSet | Input/Output side packets — PacketSet, OutputSidePacketSet | Declared in NodeContract, injected before Start(), validated at build |
+| OptionsRegistry | Global registry mapping type_name → FieldDescriptor[] | Deserialize<T> converts key-value map to typed struct; not protobuf |
+| Types | CollectionItemId (int), ErrorCallback, IsStopStatus, StatusStop | Project-wide type aliases |
