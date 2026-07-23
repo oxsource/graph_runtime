@@ -10,6 +10,38 @@
 #include "src/config/config_validator.h"
 
 namespace graph::runtime {
+namespace {
+
+// JSON field key constants — single source of truth for the JSON schema.
+constexpr char kKeyMaxQueueSize[]       = "max_queue_size";
+constexpr char kKeyReportDeadlock[]     = "report_deadlock";
+constexpr char kKeyInputStreams[]       = "input_streams";
+constexpr char kKeyOutputStreams[]      = "output_streams";
+constexpr char kKeyInputSidePkts[]      = "input_side_packets";
+constexpr char kKeyOutputSidePkts[]     = "output_side_packets";
+constexpr char kKeyExecutors[]          = "executors";
+constexpr char kKeyNodes[]              = "nodes";
+constexpr char kKeyStreams[]            = "streams";
+constexpr char kKeyName[]               = "name";
+constexpr char kKeyType[]               = "type";
+constexpr char kKeyNumThreads[]         = "num_threads";
+constexpr char kKeyExecutor[]           = "executor";
+constexpr char kKeyInputStreamHandler[] = "input_stream_handler";
+constexpr char kKeyMaxInFlight[]        = "max_in_flight";
+constexpr char kKeySourceLayer[]        = "source_layer";
+constexpr char kKeySourceNode[]         = "source_node";
+constexpr char kKeySourcePort[]         = "source_port";
+constexpr char kKeyDestNode[]           = "dest_node";
+constexpr char kKeyDestPort[]           = "dest_port";
+
+// Default values
+constexpr int    kDefaultMaxQueueSize   = 100;
+constexpr int    kDefaultNumThreads     = 0;
+constexpr int    kDefaultMaxInFlight    = 1;
+constexpr int    kDefaultSourceLayer    = 0;
+constexpr char   kDefaultExecutorType[] = "ThreadPoolExecutor";
+
+}  // namespace
 
 absl::StatusOr<GraphConfig> JsonParser::Parse(
     const std::string& file_path) {
@@ -31,63 +63,63 @@ absl::StatusOr<GraphConfig> JsonParser::Parse(
   }
 
   GraphConfig config;
-  config.max_queue_size = root.value("max_queue_size", 100);
-  config.report_deadlock = root.value("report_deadlock", false);
+  config.max_queue_size = root.value(kKeyMaxQueueSize, kDefaultMaxQueueSize);
+  config.report_deadlock = root.value(kKeyReportDeadlock, false);
 
-  for (auto& s : root.value("input_streams", std::vector<std::string>{}))
+  for (auto& s : root.value(kKeyInputStreams, std::vector<std::string>{}))
     config.input_streams.push_back(std::move(s));
-  for (auto& s : root.value("output_streams", std::vector<std::string>{}))
+  for (auto& s : root.value(kKeyOutputStreams, std::vector<std::string>{}))
     config.output_streams.push_back(std::move(s));
 
   // Parse executors
-  if (root.contains("executors")) {
-    for (const auto& ej : root["executors"]) {
+  if (root.contains(kKeyExecutors)) {
+    for (const auto& ej : root[kKeyExecutors]) {
       GraphConfig::ExecutorDef def;
-      def.name = ej.value("name", "");
-      def.type = ej.value("type", "ThreadPoolExecutor");
-      def.num_threads = ej.value("num_threads", 0);
+      def.name = ej.value(kKeyName, "");
+      def.type = ej.value(kKeyType, kDefaultExecutorType);
+      def.num_threads = ej.value(kKeyNumThreads, kDefaultNumThreads);
       config.executors.push_back(std::move(def));
     }
   }
 
   // Parse nodes
-  if (root.contains("nodes")) {
-    for (const auto& nj : root["nodes"]) {
+  if (root.contains(kKeyNodes)) {
+    for (const auto& nj : root[kKeyNodes]) {
       GraphConfig::NodeDef def;
-      def.name = nj.value("name", "");
+      def.name = nj.value(kKeyName, "");
       if (def.name.empty())
         return absl::InvalidArgumentError("node name is required");
-      def.type = nj.value("type", "");
+      def.type = nj.value(kKeyType, "");
       if (def.type.empty())
         return absl::InvalidArgumentError(
             absl::StrCat("node '", def.name, "': type is required"));
-      for (auto& s : nj.value("input_streams", std::vector<std::string>{}))
+      for (auto& s : nj.value(kKeyInputStreams, std::vector<std::string>{}))
         def.input_streams.push_back(std::move(s));
-      for (auto& s : nj.value("output_streams", std::vector<std::string>{}))
+      for (auto& s : nj.value(kKeyOutputStreams, std::vector<std::string>{}))
         def.output_streams.push_back(std::move(s));
-      for (auto& s : nj.value("input_side_packets", std::vector<std::string>{}))
+      for (auto& s : nj.value(kKeyInputSidePkts, std::vector<std::string>{}))
         def.input_side_packets.push_back(std::move(s));
-      for (auto& s : nj.value("output_side_packets", std::vector<std::string>{}))
+      for (auto& s : nj.value(kKeyOutputSidePkts, std::vector<std::string>{}))
         def.output_side_packets.push_back(std::move(s));
-      def.executor = nj.value("executor", "");
-      def.input_stream_handler = nj.value("input_stream_handler", "");
-      def.max_in_flight = nj.value("max_in_flight", 1);
-      def.source_layer = nj.value("source_layer", 0);
+      def.executor = nj.value(kKeyExecutor, "");
+      def.input_stream_handler = nj.value(kKeyInputStreamHandler, "");
+      def.max_in_flight = nj.value(kKeyMaxInFlight, kDefaultMaxInFlight);
+      def.source_layer = nj.value(kKeySourceLayer, kDefaultSourceLayer);
       config.nodes.push_back(std::move(def));
     }
   }
 
   // Parse streams
-  if (root.contains("streams")) {
-    for (const auto& sj : root["streams"]) {
+  if (root.contains(kKeyStreams)) {
+    for (const auto& sj : root[kKeyStreams]) {
       GraphConfig::StreamDef def;
-      def.name = sj.value("name", "");
+      def.name = sj.value(kKeyName, "");
       if (def.name.empty())
         return absl::InvalidArgumentError("stream name is required");
-      def.source_node = sj.value("source_node", "");
-      def.source_port = sj.value("source_port", "");
-      def.dest_node = sj.value("dest_node", "");
-      def.dest_port = sj.value("dest_port", "");
+      def.source_node = sj.value(kKeySourceNode, "");
+      def.source_port = sj.value(kKeySourcePort, "");
+      def.dest_node = sj.value(kKeyDestNode, "");
+      def.dest_port = sj.value(kKeyDestPort, "");
       config.streams.push_back(std::move(def));
     }
   }
