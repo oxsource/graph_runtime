@@ -127,13 +127,13 @@ Phase 6: Polish
 
 **Independent Test**: Creating a new BUILD in `examples/consumer_demo/` that depends on `@graph_runtime//src/public:runtime` builds without errors.
 
-- [ ] T021 [US3] Refine `graph_runtime_deps.bzl` — ensure `graph_runtime_setup()` is the single entry point, add `native.existing_rule()` guards for all deps
-- [ ] T022 [US3] Create embedded consumer demo directory (`graph_runtime/examples/consumer_demo/`)
-- [ ] T023 [US3] Create consumer demo WORKSPACE (`graph_runtime/examples/consumer_demo/WORKSPACE`): `local_repository(name = "graph_runtime", path = "../..")` + `load("@graph_runtime//:graph_runtime_deps.bzl", "graph_runtime_setup")` + `graph_runtime_setup()`
-- [ ] T024 [US3] Create consumer demo BUILD (`graph_runtime/examples/consumer_demo/BUILD.bazel`): `cc_binary(name = "demo", srcs = ["main.cc"], deps = ["@graph_runtime//src/public:runtime"])`
-- [ ] T025 [US3] Create consumer demo source (`graph_runtime/examples/consumer_demo/main.cc`): `#include "graph_runtime/graph_runtime.h"` + basic type usage (`GraphConfig`, `Timestamp`, `Packet::MakePacket`)
-- [ ] T026 [US3] Create consumer demo test (`graph_runtime/examples/consumer_demo/demo_test.cc`): GoogleTest with `deps = ["@graph_runtime//src/public:runtime"]` verifying public types are accessible
-- [ ] T027 [US3] Build and run consumer demo from root: `cd examples/consumer_demo && bazel test //...`
+- [X] T021 [US3] Refine `graph_runtime_deps.bzl` — ensure `graph_runtime_setup()` is the single entry point, add `native.existing_rule()` guards for all deps
+- [X] T022 [US3] Create embedded consumer demo directory (`graph_runtime/examples/consumer_demo/`)
+- [X] T023 [US3] Create consumer demo WORKSPACE (`graph_runtime/examples/consumer_demo/WORKSPACE`): `local_repository(name = "graph_runtime", path = "../..")` + `load("@graph_runtime//:graph_runtime_deps.bzl", "graph_runtime_setup")` + `graph_runtime_setup()`
+- [X] T024 [US3] Create consumer demo BUILD (`graph_runtime/examples/consumer_demo/BUILD.bazel`): `cc_binary(name = "demo", srcs = ["main.cc"], deps = ["@graph_runtime//src/public:runtime"])`
+- [X] T025 [US3] Create consumer demo source (`graph_runtime/examples/consumer_demo/main.cc`): `#include "graph_runtime/graph_runtime.h"` + basic type usage (`GraphConfig`, `Timestamp`, `Packet::MakePacket`)
+- [X] T026 [US3] Create consumer demo test (`graph_runtime/examples/consumer_demo/demo_test.cc`): GoogleTest with `deps = ["@graph_runtime//src/public:runtime"]` verifying public types are accessible
+- [X] T027 [US3] Build and run consumer demo from root: `cd examples/consumer_demo && bazel test //...`
 
 **Checkpoint**: `bazel test //...` from within `examples/consumer_demo/` succeeds, proving external consumption works.
 
