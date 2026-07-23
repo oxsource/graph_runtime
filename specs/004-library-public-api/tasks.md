@@ -67,9 +67,9 @@ Phase 6: Polish
 
 **Purpose**: Create the export macro and public header directory structure.
 
-- [ ] T001 Create `GRAPH_RUNTIME_API` export macro (`graph_runtime/src/public/include/graph_runtime/graph_runtime_export.h`): Atlas-style dllexport/dllimport/visibility pattern, gated by `GRAPH_RUNTIME_SHARED_LIBRARY`
-- [ ] T002 Create public header directory structure (`graph_runtime/src/public/include/graph_runtime/`)
-- [ ] T003 Create `types.h` public header (`graph_runtime/src/public/include/graph_runtime/types.h`): wraps `src/public/types.h` with `GRAPH_RUNTIME_API` include
+- [X] T001 Create `GRAPH_RUNTIME_API` export macro (`graph_runtime/src/public/include/graph_runtime/graph_runtime_export.h`): Atlas-style dllexport/dllimport/visibility pattern, gated by `GRAPH_RUNTIME_SHARED_LIBRARY`
+- [X] T002 Create public header directory structure (`graph_runtime/src/public/include/graph_runtime/`)
+- [X] T003 Create `types.h` public header (`graph_runtime/src/public/include/graph_runtime/types.h`): wraps `src/public/types.h` with `GRAPH_RUNTIME_API` include
 
 ---
 
