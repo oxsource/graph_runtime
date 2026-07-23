@@ -238,7 +238,9 @@ Node ready → node->GetSchedulerQueue()->AddNode(node)
         → if idle: idle_callback_(true) → non_idle_queue_count_--
 ```
 
----### InputStreamManager
+---
+
+### InputStreamManager
 
 Owns the `std::deque<Packet>` for one downstream Node input port. Data is written directly by upstream `OutputStream::Send()` — no intermediate Stream component.
 
@@ -281,20 +283,45 @@ Output port abstraction. Writes directly to downstream `InputStreamManager` dequ
 
 
 
-### InputStreamHandler
+### SyncSet
 
-Pluggable strategy determining when a Node is ready to execute.
+Group of input streams for coordinated readiness calculation. `DefaultInputStreamHandler` uses a single SyncSet; advanced handlers may split streams into multiple sets.
 
 | Method | Description |
 |--------|-------------|
-| `GetNodeReadiness(Node&) -> Readiness` | Returns kNotReady, kReadyForProcess, or kReadyForClose |
-| `FillInputSet(Node&, GraphContext&)` | Pops input Packets into GraphContext.inputs |
-| `NotifyPacketArrival(Node&)` | Called when new data arrives on an input Stream |
+| `GetReadiness(Timestamp*) -> Readiness` | Compare min_packet vs min_bound across all streams. Returns kReadyForProcess when timestamp is settled, kNotReady otherwise, kReadyForClose when all done. |
+| `FillInputSet(Timestamp, GraphContext&)` | Pop one packet per stream at the given timestamp into InputStreamShards. |
+| `FillInputBounds(GraphContext&)` | Pop timestamp-bound-only packets (ProcessTimestampBounds mode). |
+
+**Readiness logic**:
+- `min_stream_timestamp = min(min_packet, min_bound)` across all streams in set.
+- If all streams have bound >= `Timestamp::Done()` → `kReadyForClose`.
+- If `min_bound > min_packet` → `kReadyForProcess` (timestamp settled).
+- Otherwise → `kNotReady`.
+
+---
+
+### InputStreamHandler
+
+Pluggable strategy determining when a Node is ready to execute. Collaborates with `SyncSet`(s) for per-stream-set readiness.
+
+| Method | Description |
+|--------|-------------|
+| `SetScheduleCallback(ScheduleCallback)` | Register callback to schedule Node execution |
+| `ScheduleInvocations(max_allowance, input_bound*) -> bool` | Core scheduling loop — calls GetNodeReadiness up to max_allowance times. Each time: if ready → FillInputSet → ScheduleCallback. Returns true if any invocation scheduled. |
+| `GetNodeReadiness(Timestamp*) -> Readiness` | Delegates to SyncSet::GetReadiness. Returns kReadyForProcess, kReadyForClose, or kNotReady. |
+| `FillInputSet(Timestamp, GraphContext&)` | Delegates to SyncSet::FillInputSet. Pop one Packet per input port into InputStreamShards. |
+| `NotifyPacketArrival()` | Called by InputStreamManager arrival callback. Triggers ScheduleInvocations. |
+| `SetNextTimestampBound(CollectionItemId, Timestamp)` | Forward bound to specific InputStreamManager. Called when upstream closes or propagates bound. |
+| `Close()` | Close all managed InputStreamManagers. |
 
 **Built-in strategies**:
-- **DefaultInputStreamHandler**: Ready when all input Streams have ≥1 Packet. Pops one per stream. Default for Phase 1.
-- **ImmediateInputStreamHandler**: Ready when any input Stream has a Packet. Non-monotonic timestamps possible.
-- **BarrierInputStreamHandler**: Ready when all streams have a Packet at the same timestamp.
+
+| Handler | Behavior | SyncSet | Schedule Trigger |
+|---------|----------|---------|-----------------|
+| `DefaultInputStreamHandler` | Ready when ALL input Streams have ≥1 Packet at a settled timestamp. Pops one per stream. | Single set (all streams) | Last missing input arrives |
+| `ImmediateInputStreamHandler` | Ready when ANY input Stream has a Packet. May produce non-monotonic timestamps. | Single set | Any packet arrival |
+| `BarrierInputStreamHandler` | Ready when ALL streams have a Packet at the **same timestamp**. | Single set | Last stream reaches timestamp T |
 
 ---
 

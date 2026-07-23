@@ -47,6 +47,7 @@ class InputStreamManager {
   bool IsDone() const;                // queue_.empty() && bound_ == Timestamp::Done()
   int QueueSize() const;
   int MaxQueueSize() const;
+  int64_t NumPacketsAdded() const;    // lifetime monotonic counter
 
   // Timestamp bound — used by InputStreamHandler::GetNodeReadiness()
   // Returns queue front's timestamp if non-empty, else next_timestamp_bound_.
@@ -63,6 +64,7 @@ class InputStreamManager {
  private:
   std::string name_;
   std::deque<Packet> queue_;
+  int64_t num_packets_added_ = 0;
   Timestamp next_timestamp_bound_{Timestamp::PreStream()};
   Timestamp last_select_timestamp_{Timestamp::Unstarted()};
   bool closed_ = false;

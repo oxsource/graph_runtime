@@ -229,3 +229,6 @@
 | Input shard | InputStreamShard with Value/Get/IsEmpty/IsDone/Header | One per port per Process call; populated by FillInputSet |
 | Output shard | OutputStreamShard with AddPacket/SetOffset/SetNextBound/Close/SetHeader | One per port per Process call; drained by Scheduler task runner |
 | Open/Process/Close distinction | InputTimestamp: Unstarted / scheduled_ts / Done | Outputs: SetHeader allowed / AddPacket allowed / Close allowed |
+| InputStreamHandler | ScheduleInvocations(max_allowance) loop + SyncSet + SetNextTimestampBound | MediaPipe ScheduleInvocations pattern; decouples readiness from scheduling |
+| SyncSet | Inner class: GetReadiness (min_packet vs min_bound) + FillInputSet | Single sync set in Phase 1; multiple sets for advanced handlers in Phase 2 |
+| InputStreamManager | Matches MediaPipe — deque + bound + callbacks + PopPacketAtTimestamp | Added num_packets_added for lifetime tracking |
