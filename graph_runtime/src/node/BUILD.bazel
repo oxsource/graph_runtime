@@ -67,5 +67,6 @@ cc_library(
         "//src/stream:output_stream_shard",
         "//src/public:side_packet",
         "//src/stream:packet",
+        "//src/public:types",
     ],
 )

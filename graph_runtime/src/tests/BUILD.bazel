@@ -20,7 +20,7 @@ cc_test(
         "//src/stream:input_stream_manager",
         "//src/stream:input_stream",
         "//src/stream:packet",
-        "//src/scheduler:executor",
+        "//src/scheduler:input_stream_handler",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -99,32 +99,32 @@ Foundational (Phase 2)
 
 ### Sub-phase 3a — Input Stream Chain
 
-- [ ] T014 [P] [US1] Implement `InputStream` abstract interface (`graph_runtime/src/stream/input_stream.h`): Name/Value/IsEmpty/IsDone/Header/Get<T>
-- [ ] T015 [P] [US1] Implement `InputStreamManager` (`graph_runtime/src/stream/input_stream_manager.h/.cc`): std::deque<Packet> queue, AddPackets/MovePackets, SetNextTimestampBound, Close, PopPacketAtTimestamp, PopQueueHead, MinTimestampOrBound, IsDone, QueueSize, MaxQueueSize, SetQueueSizeCallbacks, SetArrivalCallback, NumPacketsAdded
-- [ ] T016 [US1] Implement `InputStreamShard` (`graph_runtime/src/node/graph_context.h` inline): inherits InputStream, packet_queue_, is_done_, implements Value/IsEmpty/IsDone/Header/Name
-- [ ] T017 [P] [US1] Implement `SyncSet` (`graph_runtime/src/scheduler/input_stream_handler.h`): GetReadiness (min_packet vs min_bound), FillInputSet, FillInputBounds
-- [ ] T018 [P] [US1] Implement `InputStreamHandler` interface (`graph_runtime/src/scheduler/input_stream_handler.h/.cc`): SetScheduleCallback, ScheduleInvocations, GetNodeReadiness, FillInputSet, NotifyPacketArrival, SetNextTimestampBound, Close
-- [ ] T019 [US1] Implement `DefaultInputStreamHandler` (`graph_runtime/src/scheduler/input_stream_handler.cc`): single SyncSet, all-inputs-barrier readiness
-- [ ] T020 [US1] Create input chain test (`graph_runtime/src/tests/input_chain_test.cc`): mock OutputStream → InputStreamManager → InputStreamHandler → ScheduleInvocations
+- [X] T014 [P] [US1] Implement `InputStream` abstract interface (`graph_runtime/src/stream/input_stream.h`): Name/Value/IsEmpty/IsDone/Header/Get<T>
+- [X] T015 [P] [US1] Implement `InputStreamManager` (`graph_runtime/src/stream/input_stream_manager.h/.cc`): std::deque<Packet> queue, AddPackets/MovePackets, SetNextTimestampBound, Close, PopPacketAtTimestamp, PopQueueHead, MinTimestampOrBound, IsDone, QueueSize, MaxQueueSize, SetQueueSizeCallbacks, SetArrivalCallback, NumPacketsAdded
+- [X] T016 [US1] Implement `InputStreamShard` (`graph_runtime/src/node/graph_context.h` inline): inherits InputStream, packet_queue_, is_done_, implements Value/IsEmpty/IsDone/Header/Name
+- [X] T017 [P] [US1] Implement `SyncSet` (`graph_runtime/src/scheduler/input_stream_handler.h`): GetReadiness (min_packet vs min_bound), FillInputSet, FillInputBounds
+- [X] T018 [P] [US1] Implement `InputStreamHandler` interface (`graph_runtime/src/scheduler/input_stream_handler.h/.cc`): SetScheduleCallback, ScheduleInvocations, GetNodeReadiness, FillInputSet, NotifyPacketArrival, SetNextTimestampBound, Close
+- [X] T019 [US1] Implement `DefaultInputStreamHandler` (`graph_runtime/src/scheduler/input_stream_handler.cc`): single SyncSet, all-inputs-barrier readiness
+- [X] T020 [US1] Create input chain test (`graph_runtime/src/tests/input_chain_test.cc`): mock OutputStream → InputStreamManager → InputStreamHandler → ScheduleInvocations
 
 ### Sub-phase 3b — Output Stream Chain
 
-- [ ] T021 [P] [US1] Implement `OutputStream` abstract interface (`graph_runtime/src/stream/output_stream.h`): Name/AddPacket/SetNextTimestampBound/NextTimestampBound/Close/IsClosed/SetOffset/OffsetEnabled/Offset/SetHeader/Header
-- [ ] T022 [P] [US1] Implement `OutputStreamShard` (`graph_runtime/src/stream/output_stream_shard.h/.cc`): inherits OutputStream, output_queue_, next_timestamp_bound_, updated_next_timestamp_bound_, Reset, friend OutputStreamManager
-- [ ] T023 [P] [US1] Implement `OutputStreamSpec` and `OutputStreamManager` (`graph_runtime/src/stream/output_stream_manager.h/.cc`): mirrors_, ComputeOutputTimestampBound, PropagateUpdatesToMirrors (last mirror move), ResetShard, Close, PropagateHeader, LockIntroData, Spec
-- [ ] T024 [US1] Implement `OutputStreamHandler` (`graph_runtime/src/stream/output_stream_handler.h/.cc`): InitializeOutputStreamManagers, SetupOutputShards, Open, PrepareOutputs, PostProcess, Close, UpdateTaskTimestampBound, TryPropagateTimestampBound
-- [ ] T025 [US1] Implement `InOrderOutputStreamHandler` (`graph_runtime/src/stream/output_stream_handler.cc`): direct PropagateOutputPackets (Phase 1 sequential path)
-- [ ] T026 [US1] Create output chain test (`graph_runtime/src/tests/output_chain_test.cc`): OutputStreamShard → OutputStreamManager::PropagateUpdatesToMirrors → mock InputStreamManager
+- [X] T021 [P] [US1] Implement `OutputStream` abstract interface (`graph_runtime/src/stream/output_stream.h`): Name/AddPacket/SetNextTimestampBound/NextTimestampBound/Close/IsClosed/SetOffset/OffsetEnabled/Offset/SetHeader/Header
+- [X] T022 [P] [US1] Implement `OutputStreamShard` (`graph_runtime/src/stream/output_stream_shard.h/.cc`): inherits OutputStream, output_queue_, next_timestamp_bound_, updated_next_timestamp_bound_, Reset, friend OutputStreamManager
+- [X] T023 [P] [US1] Implement `OutputStreamSpec` and `OutputStreamManager` (`graph_runtime/src/stream/output_stream_manager.h/.cc`): mirrors_, ComputeOutputTimestampBound, PropagateUpdatesToMirrors (last mirror move), ResetShard, Close, PropagateHeader, LockIntroData, Spec
+- [X] T024 [US1] Implement `OutputStreamHandler` (`graph_runtime/src/stream/output_stream_handler.h/.cc`): InitializeOutputStreamManagers, SetupOutputShards, Open, PrepareOutputs, PostProcess, Close, UpdateTaskTimestampBound, TryPropagateTimestampBound
+- [X] T025 [US1] Implement `InOrderOutputStreamHandler` (`graph_runtime/src/stream/output_stream_handler.cc`): direct PropagateOutputPackets (Phase 1 sequential path)
+- [X] T026 [US1] Create output chain test (`graph_runtime/src/tests/output_chain_test.cc`): OutputStreamShard → OutputStreamManager::PropagateUpdatesToMirrors → mock InputStreamManager
 
 ### Sub-phase 3c — Node & Context Chain
 
-- [ ] T027 [P] [US1] Implement `NodeContract` (`graph_runtime/src/node/node_contract.h/.cc`): PacketType, PacketTypeSet, Inputs/Outputs, InputSidePackets/OutputSidePackets, Options, SetMaxInFlight, SetProcessTimestampBounds
-- [ ] T028 [P] [US1] Implement `Node` base class (`graph_runtime/src/node/node.h/.cc`): name, input_port_managers_, output_streams_, executor_name_, scheduler_queue_, source_layer_, Open/Process/Close virtual, SetInputPort/SetOutputPort, SetExecutorName, SetSchedulerQueue, SetSourceLayer, SourceProcessOrder
-- [ ] T029 [P] [US1] Implement `NodeFactory` + `NodeFactoryFor<T>` (`graph_runtime/src/node/node_factory.h/.cc`): GetContract, CreateNode, NodeFactoryFor<T> template with static_assert for HasGetContract
-- [ ] T030 [P] [US1] Implement `NodeFactoryRegistry` (`graph_runtime/src/node/node_registry.h/.cc`): Register, Unregister, CreateByName, CreateByNameInNamespace, GetFactory, IsRegistered, RegisteredTypes, GRAPH_RUNTIME_REGISTER_NODE macro, NodeRegistrationToken
-- [ ] T031 [P] [US1] Implement `GraphContext` (`graph_runtime/src/node/graph_context.h/.cc`): NodeName/NodeId/CalculatorType/InputTimestamp, InputStreamShardSet/OutputStreamShardSet, Options<T>, InputSidePackets/OutputSidePackets, SetOffset
-- [ ] T032 [US1] Implement `GraphContextManager` (`graph_runtime/src/node/graph_context.h/.cc`): GetDefaultCalculatorContext, PrepareCalculatorContext (Phase 2 stub), RecycleCalculatorContext (Phase 2 stub), CleanupAfterRun
-- [ ] T033 [US1] Create node chain test (`graph_runtime/src/tests/node_chain_test.cc`): NodeFactoryRegistry::CreateByName → NodeFactory::CreateNode → Node::Open/Process/Close lifecycle with GraphContext
+- [X] T027 [P] [US1] Implement `NodeContract` (`graph_runtime/src/node/node_contract.h/.cc`): PacketType, PacketTypeSet, Inputs/Outputs, InputSidePackets/OutputSidePackets, Options, SetMaxInFlight, SetProcessTimestampBounds
+- [X] T028 [P] [US1] Implement `Node` base class (`graph_runtime/src/node/node.h/.cc`): name, input_port_managers_, output_streams_, executor_name_, scheduler_queue_, source_layer_, Open/Process/Close virtual, SetInputPort/SetOutputPort, SetExecutorName, SetSchedulerQueue, SetSourceLayer, SourceProcessOrder
+- [X] T029 [P] [US1] Implement `NodeFactory` + `NodeFactoryFor<T>` (`graph_runtime/src/node/node_factory.h/.cc`): GetContract, CreateNode, NodeFactoryFor<T> template with static_assert for HasGetContract
+- [X] T030 [P] [US1] Implement `NodeFactoryRegistry` (`graph_runtime/src/node/node_registry.h/.cc`): Register, Unregister, CreateByName, CreateByNameInNamespace, GetFactory, IsRegistered, RegisteredTypes, GRAPH_RUNTIME_REGISTER_NODE macro, NodeRegistrationToken
+- [X] T031 [P] [US1] Implement `GraphContext` (`graph_runtime/src/node/graph_context.h/.cc`): NodeName/NodeId/CalculatorType/InputTimestamp, InputStreamShardSet/OutputStreamShardSet, Options<T>, InputSidePackets/OutputSidePackets, SetOffset
+- [X] T032 [US1] Implement `GraphContextManager` (`graph_runtime/src/node/graph_context.h/.cc`): GetDefaultCalculatorContext, PrepareCalculatorContext (Phase 2 stub), RecycleCalculatorContext (Phase 2 stub), CleanupAfterRun
+- [X] T033 [US1] Create node chain test (`graph_runtime/src/tests/node_chain_test.cc`): NodeFactoryRegistry::CreateByName → NodeFactory::CreateNode → Node::Open/Process/Close lifecycle with GraphContext
 
 **Checkpoint**: All module interfaces are implemented and independently testable. `bazel test //src/tests:input_chain_test && bazel test //src/tests:output_chain_test && bazel test //src/tests:node_chain_test` passes.
 

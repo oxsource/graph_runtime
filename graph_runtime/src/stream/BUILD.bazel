@@ -6,6 +6,7 @@ cc_library(
     hdrs = ["timestamp.h"],
     deps = [
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -15,6 +16,7 @@ cc_library(
     hdrs = ["packet.h"],
     deps = [
         ":timestamp",
+        "@com_google_absl//absl/statusor",
     ],
 )
 
@@ -33,6 +35,8 @@ cc_library(
     deps = [
         ":packet",
         ":timestamp",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -64,7 +68,9 @@ cc_library(
         ":output_stream_shard",
         ":packet",
         ":timestamp",
+        "//src/scheduler:input_stream_handler",
         "//src/scheduler:executor",
+        "//src/public:types",
     ],
 )
 
@@ -77,5 +83,7 @@ cc_library(
         ":output_stream_shard",
         ":packet",
         ":timestamp",
+        "//src/node:graph_context",
+        "//src/public:types",
     ],
 )
