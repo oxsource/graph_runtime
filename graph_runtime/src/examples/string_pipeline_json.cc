@@ -92,7 +92,10 @@ int main() {
   using namespace graph::runtime;
   std::cout << "=== String Pipeline (JSON Config) ===\n";
 
-  // JSON config written inline, same schema as testdata/string_pipeline.json
+  // JSON config — connections are implicit via stream name matching.
+  // producer outputs to "output:text_stream", transformer reads from "input:text_stream".
+  // Both reference the same stream name "text_stream" → implicitly connected.
+  // No explicit "streams" array needed, matching MediaPipe's design.
   const std::string json_config = R"({
     "nodes": [
       {
@@ -110,22 +113,6 @@ int main() {
         "name": "consumer",
         "type": "StringConsumer",
         "input_streams": ["input:upper_stream"]
-      }
-    ],
-    "streams": [
-      {
-        "name": "text_stream",
-        "source_node": "producer",
-        "source_port": "output",
-        "dest_node": "transformer",
-        "dest_port": "input"
-      },
-      {
-        "name": "upper_stream",
-        "source_node": "transformer",
-        "source_port": "output",
-        "dest_node": "consumer",
-        "dest_port": "input"
       }
     ]
   })";
@@ -149,8 +136,8 @@ int main() {
     return 1;
   }
   const auto& config = *parse_result;
-  std::cout << "Parsed " << config.nodes.size() << " nodes, "
-            << config.streams.size() << " streams\n";
+  std::cout << "Parsed " << config.nodes.size() << " nodes"
+            << " (connections implicit via stream name matching)\n";
 
   // Verify the parsed config matches expectations
   ConfigValidator::Validate(config).IgnoreError();
