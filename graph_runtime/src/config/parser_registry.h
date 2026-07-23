@@ -10,9 +10,10 @@
 namespace graph::runtime {
 
 #define GRAPH_RUNTIME_REGISTER_PARSER(extension, parser_class)        \
-  static auto _register_##parser_class = [] {                         \
-    ParserRegistry::Register(extension,                               \
-        []() -> std::unique_ptr<IGraphConfigParser> {                 \
+  static auto _register_parser_##__COUNTER__ = [] {                     \
+    ::graph::runtime::ParserRegistry::Register(                       \
+        extension,                                                    \
+        []() -> std::unique_ptr<::graph::runtime::IGraphConfigParser> {\
           return std::make_unique<parser_class>();                    \
         });                                                           \
     return 0;                                                         \

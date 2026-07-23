@@ -121,9 +121,9 @@ Phase 2: Foundational
 
 **Independent Test**: A custom parser implementing IGraphConfigParser is registered and used to parse a config, producing the same result as JSON.
 
-- [ ] T020 [P] [US2] Add `GRAPH_RUNTIME_REGISTER_PARSER` macro to `parser_registry.h` — file-scope static registration
-- [ ] T021 [US2] Create custom parser example (`graph_runtime/src/examples/custom_parser.cc`): implements IGraphConfigParser for key-value format, registered via macro
-- [ ] T022 [US2] Create parser extensibility test (`graph_runtime/src/tests/parser_extensibility_test.cc`): register custom parser → parse → verify GraphConfig matches expected
+- [X] T020 [P] [US2] Add `GRAPH_RUNTIME_REGISTER_PARSER` macro to `parser_registry.h` — file-scope static registration
+- [X] T021 [US2] Create custom parser example (`graph_runtime/src/examples/custom_parser.cc`): implements IGraphConfigParser for key-value format, registered via macro
+- [X] T022 [US2] Create parser extensibility test (`graph_runtime/src/tests/parser_extensibility_test.cc`): register custom parser → parse → verify GraphConfig matches expected
 
 **Checkpoint**: `bazel test //src/tests:parser_extensibility_test` passes.
 

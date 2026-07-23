@@ -102,6 +102,15 @@ cc_test(
 )
 
 cc_test(
+    name = "parser_extensibility_test",
+    srcs = ["parser_extensibility_test.cc"],
+    deps = [
+        "//src/config:config",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "integration_test",
     srcs = ["integration_test.cc"],
     deps = [

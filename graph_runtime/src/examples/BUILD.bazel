@@ -7,3 +7,11 @@ cc_binary(
         "//src/public:runtime",
     ],
 )
+
+cc_binary(
+    name = "custom_parser",
+    srcs = ["custom_parser.cc"],
+    deps = [
+        "//src/config:config",
+    ],
+)
