@@ -2,7 +2,8 @@
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at
 `specs/001-project-architecture/plan.md`, the module interaction design at
-`specs/002-scheduler-stream-packet-design/plan.md`, and the project bootstrap at
+`specs/002-scheduler-stream-packet-design/plan.md`, the config architecture at
+`specs/003-config-architecture/plan.md`, and the project bootstrap at
 `graph_runtime/docs/project_bootstrap.md`.
 
 Key architecture references:
