@@ -7,22 +7,17 @@ namespace graph::runtime {
 
 // --- InputStreamShard (per input port, per invocation) ---
 
-class InputStreamShard {
+// --- InputStreamShard (per input port, per invocation) ---
+// Implements InputStream — see separate contract at InputStream.md for the interface.
+
+class InputStreamShard : public InputStream {
  public:
-  // Access the current packet
-  const Packet& Value() const;
-  Packet& Value();               // mutable — allows moving out
-
-  template <typename T>
-  const T& Get() const;          // syntactic sugar: Value().Get<T>()
-
-  // State
-  bool IsEmpty() const;          // Value().IsEmpty()
-  bool IsDone() const;           // stream closed and no more packets
-
-  // Metadata
-  const std::string& Name() const;
-  Packet Header() const;         // header set by upstream during Open()
+  const std::string& Name() const final;
+  const Packet& Value() const final;
+  Packet& Value() final;
+  bool IsEmpty() const final;
+  bool IsDone() const final;
+  Packet Header() const final;
 
  private:
   std::queue<Packet> packet_queue_;
