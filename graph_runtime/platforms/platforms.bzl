@@ -1,5 +1,3 @@
-load("@bazel_platforms//:constraints.bzl", "constraints_from_env")
-
 def config_setting_and_platform(
         name,
         constraint_values,

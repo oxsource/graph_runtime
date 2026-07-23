@@ -5,8 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "graph_runtime/src/stream/packet.h"
-#include "graph_runtime/src/public/types.h"
+#include "src/stream/packet.h"
+#include "src/node/node_options.h"
+#include "src/public/types.h"
 
 namespace graph::runtime {
 
@@ -48,8 +49,6 @@ class NodeContract {
   PacketTypeSet& OutputSidePackets() { return output_side_packets_; }
 
   const NodeOptions& Options() const { return *options_; }
-  template <typename T>
-  const T& Options() const { return options_->Deserialize<T>(); }
   void SetOptions(const NodeOptions* opts) { options_ = opts; }
 
   void SetMaxInFlight(int n) { max_in_flight_ = n; }

@@ -6,11 +6,11 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "graph_runtime/src/stream/packet.h"
-#include "graph_runtime/src/stream/input_stream_manager.h"
-#include "graph_runtime/src/node/node.h"
-#include "graph_runtime/src/node/graph_context.h"
-#include "graph_runtime/src/public/types.h"
+#include "src/stream/packet.h"
+#include "src/stream/input_stream_manager.h"
+#include "src/node/node.h"
+#include "src/node/graph_context.h"
+#include "src/public/types.h"
 
 namespace graph::runtime {
 

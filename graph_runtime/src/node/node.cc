@@ -1,4 +1,4 @@
-#include "graph_runtime/src/node/node.h"
+#include "src/node/node.h"
 
 namespace graph::runtime {
 // Node is primarily a header with virtual methods.

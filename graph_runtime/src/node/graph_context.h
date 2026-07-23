@@ -8,12 +8,12 @@
 #include <string>
 #include <vector>
 
-#include "graph_runtime/src/stream/input_stream.h"
-#include "graph_runtime/src/stream/output_stream_shard.h"
-#include "graph_runtime/src/stream/packet.h"
-#include "graph_runtime/src/node/node_options.h"
-#include "graph_runtime/src/public/types.h"
-#include "graph_runtime/src/public/side_packet.h"
+#include "src/stream/input_stream.h"
+#include "src/stream/output_stream_shard.h"
+#include "src/stream/packet.h"
+#include "src/node/node_options.h"
+#include "src/public/types.h"
+#include "src/public/side_packet.h"
 
 namespace graph::runtime {
 
@@ -136,10 +136,7 @@ class GraphContext {
   OutputSidePacketSet& OutputSidePackets() { return output_side_packets_; }
   void SetInputSidePackets(const PacketSet& ps) { input_side_packets_ = ps; }
 
-  template <typename T>
-  const T& Options() const { return options_->Deserialize<T>(); }
-  template <typename T>
-  bool HasOptions() const { return options_->Has(""); }
+  const NodeOptions& Options() const { return *options_; }
 
   void SetOffset(TimestampDiff offset) {
     for (auto& kv : outputs_.shards_) {

@@ -1,4 +1,4 @@
-#include "graph_runtime/src/scheduler/input_stream_handler.h"
+#include "src/scheduler/input_stream_handler.h"
 
 #include <algorithm>
 

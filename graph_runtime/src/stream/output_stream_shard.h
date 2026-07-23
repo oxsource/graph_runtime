@@ -4,7 +4,7 @@
 #include <list>
 #include <string>
 
-#include "graph_runtime/src/stream/output_stream.h"
+#include "src/stream/output_stream.h"
 
 namespace graph::runtime {
 

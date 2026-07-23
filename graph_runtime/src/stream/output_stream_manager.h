@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "graph_runtime/src/stream/packet.h"
-#include "graph_runtime/src/stream/output_stream_shard.h"
-#include "graph_runtime/src/scheduler/executor.h"
+#include "src/stream/packet.h"
+#include "src/stream/output_stream_shard.h"
+#include "src/public/types.h"
 
 namespace graph::runtime {
 
@@ -40,6 +40,8 @@ class OutputStreamManager {
   Timestamp NextTimestampBound() const;
 
   void ResetShard(OutputStreamShard* shard);
+  bool OffsetEnabled() const { return spec_.offset_enabled; }
+  TimestampDiff Offset() const { return spec_.offset; }
 
   OutputStreamSpec* Spec();
 

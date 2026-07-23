@@ -1,8 +1,8 @@
-#include "graph_runtime/src/stream/timestamp.h"
-#include "graph_runtime/src/stream/packet.h"
-#include "graph_runtime/src/node/node_options.h"
-#include "graph_runtime/src/node/options_registry.h"
-#include "graph_runtime/src/public/types.h"
+#include "src/stream/timestamp.h"
+#include "src/stream/packet.h"
+#include "src/node/node_options.h"
+#include "src/node/options_registry.h"
+#include "src/public/types.h"
 
 #include "gtest/gtest.h"
 
@@ -122,7 +122,12 @@ TEST(PacketTest, DebugString) {
   auto p = Packet::MakePacket<int>(42).At(Timestamp(100));
   auto s = p.DebugString();
   EXPECT_FALSE(s.empty());
-  EXPECT_TRUE(s.find("int") != std::string::npos);
+  EXPECT_TRUE(s.find("100") != std::string::npos);
+}
+
+TEST(PacketTest, DebugStringEmpty) {
+  Packet p;
+  EXPECT_EQ(p.DebugString(), "Packet with timestamp: Timestamp::Unset() and no data");
 }
 
 TEST(PacketTest, EmptyPacketDebug) {

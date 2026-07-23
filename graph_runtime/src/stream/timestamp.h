@@ -8,6 +8,7 @@ namespace graph::runtime {
 
 class Timestamp {
  public:
+  Timestamp() : timestamp_(INT64_MIN) {}  // Default: Unset
   static Timestamp Unset();
   static Timestamp Unstarted();
   static Timestamp PreStream();
@@ -30,15 +31,12 @@ class Timestamp {
 
   std::string DebugString() const;
 
-  bool operator==(const Timestamp& other) const {
-    return timestamp_ == other.timestamp_;
-  }
-  bool operator!=(const Timestamp& other) const {
-    return timestamp_ != other.timestamp_;
-  }
-  bool operator<(const Timestamp& other) const {
-    return timestamp_ < other.timestamp_;
-  }
+  bool operator==(const Timestamp& other) const { return timestamp_ == other.timestamp_; }
+  bool operator!=(const Timestamp& other) const { return timestamp_ != other.timestamp_; }
+  bool operator<(const Timestamp& other) const { return timestamp_ < other.timestamp_; }
+  bool operator<=(const Timestamp& other) const { return timestamp_ <= other.timestamp_; }
+  bool operator>(const Timestamp& other) const { return timestamp_ > other.timestamp_; }
+  bool operator>=(const Timestamp& other) const { return timestamp_ >= other.timestamp_; }
 
  private:
   friend class TimestampDiff;

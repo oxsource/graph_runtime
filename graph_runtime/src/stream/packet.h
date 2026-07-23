@@ -7,7 +7,8 @@
 #include <typeinfo>
 
 #include "absl/status/statusor.h"
-#include "graph_runtime/src/stream/timestamp.h"
+#include "absl/strings/str_cat.h"
+#include "src/stream/timestamp.h"
 
 namespace graph::runtime {
 
@@ -32,7 +33,7 @@ class Packet {
   bool IsEmpty() const;
 
   template <typename T>
-  absl::StatusOr<const T&> Get() const;
+  absl::StatusOr<T> Get() const;
 
   template <typename T>
   absl::Status ValidateAsType() const;
@@ -59,7 +60,7 @@ class Packet {
     ~Holder() override { delete ptr_; }
     const void* Ptr() const override { return ptr_; }
     const std::type_info& Type() const override { return typeid(T); }
-    std::unique_ptr<const T> ptr_;
+    const T* ptr_;
   };
 
   std::shared_ptr<const HolderBase> holder_;
@@ -69,20 +70,20 @@ class Packet {
 template <typename T, typename... Args>
 Packet Packet::MakePacket(Args&&... args) {
   Packet p;
-  p.holder_ = std::make_shared<const Holder<T>>(
-      new T(std::forward<Args>(args)...));
+  p.holder_ = std::shared_ptr<const HolderBase>(
+      new Holder<T>(new T(std::forward<Args>(args)...)));
   return p;
 }
 
 template <typename T>
 Packet Packet::Adopt(const T* ptr) {
   Packet p;
-  p.holder_ = std::make_shared<const Holder<T>>(ptr);
+  p.holder_ = std::shared_ptr<const HolderBase>(new Holder<T>(ptr));
   return p;
 }
 
 template <typename T>
-absl::StatusOr<const T&> Packet::Get() const {
+absl::StatusOr<T> Packet::Get() const {
   if (IsEmpty()) {
     return absl::InternalError("Packet is empty");
   }
@@ -96,6 +97,20 @@ absl::StatusOr<const T&> Packet::Get() const {
 }
 
 template <typename T>
+absl::StatusOr<std::shared_ptr<const T>> Packet::Share() const {
+  if (IsEmpty()) {
+    return absl::InternalError("Packet is empty");
+  }
+  if (holder_->Type() != typeid(T)) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Packet type mismatch: expected ", typeid(T).name(),
+                     ", got ", holder_->Type().name()));
+  }
+  const auto* holder = static_cast<const Holder<T>*>(holder_.get());
+  return std::shared_ptr<const T>(holder_, holder->ptr_);
+}
+
+template <typename T>
 absl::Status Packet::ValidateAsType() const {
   if (IsEmpty()) {
     return absl::InternalError("Packet is empty");
@@ -106,13 +121,6 @@ absl::Status Packet::ValidateAsType() const {
                      ", got ", holder_->Type().name()));
   }
   return absl::OkStatus();
-}
-
-template <typename T>
-absl::StatusOr<std::shared_ptr<const T>> Packet::Share() const {
-  auto result = Get<T>();
-  if (!result.ok()) return result.status();
-  return std::shared_ptr<const T>(holder_, &result.value());
 }
 
 }  // namespace graph::runtime

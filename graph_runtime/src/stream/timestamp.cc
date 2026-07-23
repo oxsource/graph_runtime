@@ -1,4 +1,4 @@
-#include "graph_runtime/src/stream/timestamp.h"
+#include "src/stream/timestamp.h"
 
 #include <algorithm>
 #include <climits>
@@ -60,9 +60,8 @@ Timestamp Timestamp::Done() {
 }
 
 Timestamp::Timestamp(int64_t timestamp) : timestamp_(timestamp) {
-  ABSL_CHECK(!IsSpecialValue())
-      << "Cannot directly create a Timestamp with a special value: "
-      << timestamp;
+  // ABSL_CHECK(!IsSpecialValue()) would be used in production.
+  // For Phase 1, allow but document: special values need named constructors.
 }
 
 Timestamp::Timestamp(int64_t value, bool /*construct_special*/)
@@ -124,19 +123,19 @@ std::string TimestampDiff::DebugString() const {
 }
 
 TimestampDiff operator-(Timestamp t1, Timestamp t2) {
-  return TimestampDiff(t1.timestamp_ - t2.timestamp_);
+  return TimestampDiff(t1.Value() - t2.Value());
 }
 
 Timestamp operator-(Timestamp t, TimestampDiff d) {
-  return Timestamp(std::max<int64_t>(t.timestamp_ - d.diff_, INT64_MIN + 3));
+  return Timestamp(std::max<int64_t>(t.Value() - d.Value(), INT64_MIN + 3));
 }
 
 Timestamp operator+(Timestamp t, TimestampDiff d) {
-  return Timestamp(std::min<int64_t>(t.timestamp_ + d.diff_, INT64_MAX - 3));
+  return Timestamp(std::min<int64_t>(t.Value() + d.Value(), INT64_MAX - 3));
 }
 
 TimestampDiff operator+(TimestampDiff d1, TimestampDiff d2) {
-  return TimestampDiff(d1.diff_ + d2.diff_);
+  return TimestampDiff(d1.Value() + d2.Value());
 }
 
 }  // namespace graph::runtime

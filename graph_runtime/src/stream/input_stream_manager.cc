@@ -1,4 +1,4 @@
-#include "graph_runtime/src/stream/input_stream_manager.h"
+#include "src/stream/input_stream_manager.h"
 
 #include <algorithm>
 
@@ -97,10 +97,10 @@ Packet InputStreamManager::PopPacketAtTimestamp(
   Packet packet;
   Timestamp current_timestamp = Timestamp::Unset();
 
-  if (!queue_.empty() && queue_.front().Timestamp() <= timestamp) {
+  if (!queue_.empty() && queue_.front().timestamp() <= timestamp) {
     packet = std::move(queue_.front());
     queue_.pop_front();
-    current_timestamp = packet.Timestamp();
+    current_timestamp = packet.timestamp();
     *num_packets_dropped = 0;
   }
 
@@ -165,7 +165,7 @@ int64_t InputStreamManager::NumPacketsAdded() const {
 Timestamp InputStreamManager::MinTimestampOrBound(bool* is_empty) const {
   if (!queue_.empty()) {
     if (is_empty) *is_empty = false;
-    return queue_.front().Timestamp();
+    return queue_.front().timestamp();
   }
   if (is_empty) *is_empty = true;
   return next_timestamp_bound_;

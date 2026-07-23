@@ -17,7 +17,6 @@ cc_library(
 
 cc_library(
     name = "node_contract",
-    srcs = ["node_contract.cc"],
     hdrs = ["node_contract.h"],
     deps = [
         "//src/stream:packet",

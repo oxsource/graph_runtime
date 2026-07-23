@@ -1,4 +1,5 @@
-#include "graph_runtime/src/node/node_registry.h"
+#include "src/node/node_registry.h"
+#include "src/node/node.h"
 
 #include <map>
 #include <mutex>

@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/statusor.h"
-
 namespace graph::runtime {
 
 class NodeOptions {

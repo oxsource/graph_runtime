@@ -1,4 +1,4 @@
-#include "graph_runtime/src/stream/output_stream_shard.h"
+#include "src/stream/output_stream_shard.h"
 
 #include <utility>
 
@@ -84,7 +84,7 @@ const Packet& OutputStreamShard::Header() const {
 
 Timestamp OutputStreamShard::LastAddedPacketTimestamp() const {
   if (output_queue_.empty()) return Timestamp::Unset();
-  return output_queue_.back().Timestamp();
+  return output_queue_.back().timestamp();
 }
 
 }  // namespace graph::runtime
