@@ -151,6 +151,26 @@
 
 **Phase 1 behavior**: `source_layer` field exists but is not consulted. All sources activate together.
 
+### 12. Executor Model — TaskQueue + SchedulerQueue + Heterogeneous Executors
+
+**Decision**: Align Executor design with MediaPipe:
+- Split `Executor` into `TaskQueue` (what to run next) and `Executor` (how/where to run).
+- `SchedulerQueue` implements `TaskQueue` — owns priority queue, idle callbacks, executor binding.
+- Support multiple named executors via `map<string, shared_ptr<Executor>>` — per-node assignment via `Node::ExecutorName`.
+- `ThreadPoolExecutor`: Phase 1, default thread count = `min(CPUs, nodes)`.
+- `ApplicationThreadExecutor`: zero-thread fallback, tasks drained via `app_thread_tasks_` in `WaitUntilDone()`.
+- Executor registry via `RegisterExecutor()` allows third-party executor types.
+
+**Rationale**:
+- MediaPipe's `TaskQueue`/`Executor` separation decouples "which node to run" (priority policy) from "how to run" (threading model).
+- Heterogeneous executors are essential for real-world pipelines — GPU processing on a dedicated thread, CPU on a thread pool, I/O on a low-priority pool.
+- Per-node executor assignment from config matches MediaPipe's `Node.executor` field, enabling declarative thread affinity.
+- ThreadPoolExecutor in Phase 1 eliminates the Phase 2 deferral risk — multi-thread support is foundational, not optional.
+
+**Key differences from MediaPipe**:
+- Our `SchedulerQueue` is simplified: no `CalculatorNode` scheduling state machine (kIdle/kScheduling/kSchedulingPending) — Phase 1 single-queue-single-thread safety is sufficient. Phase 2 may add it for fine-grained flow control.
+- `Executor::AddTask(TaskQueue*)` default implementation matches MediaPipe's. No custom overrides needed in Phase 1.
+
 ### 10. Stream Layer Removal — Direct OutputStream → InputStreamManager Write (Align with MediaPipe)
 
 **Decision**: Remove the `Stream` class and `OutputStreamHandler` class. `OutputStream` writes directly to downstream `InputStreamManager` deques via mirrors. Output propagation is inlined in the Scheduler task runner.
@@ -181,24 +201,23 @@
 |----------|--------|-----------|
 | Stream layer | Eliminated — OutputStream writes directly to InputStreamManager deque | Aligns with MediaPipe; removes intermediate queue round-trip |
 | Queue storage | `std::deque<Packet>` owned by InputStreamManager | Supports timestamp-based popping, zero-copy last-mirror move |
-| Back-pressure | Callback-based (becomes_full / becomes_not_full) via InputStreamManager | Packets never rejected; Scheduler reacts to threshold crossing |
+| Back-pressure | Callback-based (becomes_full/not_full) via InputStreamManager | Packets never rejected; Scheduler reacts to threshold crossing |
 | Close semantics | Set bound = Timestamp::Done() on all mirrors — no sentinel packet | Single unified end-of-stream detection via IsDone() |
-| Output propagation | Inlined in Scheduler task runner (no OutputStreamHandler) | 3 lines of logic, no separate class |
-| Activation model | Event-driven: OutputStream::Send → InputStreamManager::AddPackets → arrival_callback → NotifyPacketArrival | No central polling, reactive, scales to multi-thread |
-| Schedule() mode | Non-blocking — installs event observers, returns | WaitUntilDone() blocks for completion |
-| Schedule() mode | Non-blocking — installs event observers, returns | WaitUntilDone() blocks for completion |
+| Output propagation | Inlined in Scheduler task runner | 3 lines of logic, no separate class |
+| Activation model | Event-driven: Send → AddPackets → arrival_callback → NotifyPacketArrival | No central polling, reactive |
+| Schedule() mode | Non-blocking — installs observers, returns | WaitUntilDone() blocks for completion |
 | Node blocking | Non-blocking required | Single-thread constraint |
-| Timestamp model | Standalone Timestamp class with special-value encoding | Aligns with MediaPipe; Done() replaces is_empty |
-| Packet semantics | Shallow copy via shared_ptr; MakePacket/Adopt/Get/ValidateAsType/Share | Zero-copy forwarding, non-FATAL type checking |
-| Packet storage | Phase 1: std::any; Phase 2: custom Holder<T> with TypeId | std::any for quick start, upgrade path for perf |
+| Timestamp model | Standalone class with special-value encoding | Aligns with MediaPipe; Done() replaces is_empty |
+| Packet semantics | Shallow copy via shared_ptr; MakePacket/Get/Share | Zero-copy forwarding, non-FATAL type checking |
 | Error propagation | Fail-fast, abort graph | Predictable, simple |
-| Scheduler topology | Layer-based topological order | Matches Phase 1 simplicity |
-| Input readiness | DefaultInputStreamHandler (all-inputs barrier) | Safe default; pluggable via interface |
-| Task execution | ApplicationThreadExecutor (sync) | Phase 1 default; pluggable via interface |
-| Execution order | Event-timed (Init → Data → Teardown) | Natural lifecycle sequencing, no priority enum |
-| Stream notification | InputStreamMgr (arrival cb + bound) | Decouples data plane from readiness policy |
-| Output fan-out | OutputStream (N downstream) + OutputStreamHandler (PostProcess) | Supports one-to-many graph topologies |
-| Scheduler state | 5-state machine + stopping_ + non_idle_count_ + reentrancy guard | Pause/resume, clean shutdown, safe HandleIdle |
+| Input readiness | DefaultInputStreamHandler (all-inputs barrier) | Safe default; pluggable |
+| Executor model | TaskQueue + Executor(Schedule/AddTask) + SchedulerQueue | MediaPipe-aligned; decouples prioritization from threading |
+| Multi-executor | map<string, shared_ptr<Executor>> — named per config | Heterogeneous (CPU/GPU) support without framework changes |
+| Node assignment | Node::ExecutorName → AssignNodeToQueue → SchedulerQueue | Per-node executor affinity from config |
+| Default threads | ThreadPoolExecutor with min(CPUs, nodes) threads | Phase 1 multi-threaded; reasonable default |
+| Single-thread fallback | ApplicationThreadExecutor via DelegatingExecutor + app_thread_tasks_ | No threads when constrained |
+| Queue priority | SchedulerQueue::Item: Open > non-source > source | MediaPipe ordering; lifecycle correctness |
+| Scheduler state | 5-state + stopping_ + non_idle_count_ + handling_idle_ guard | Pause/resume, clean shutdown, safe HandleIdle |
 | Source context | Single default GraphContext reused | max_in_flight always 1 for sources |
-| Source layering | source_layer field (Phase 2) | Ordered multi-source startup; Phase 1: all sources concurrent |
-| Back-pressure recovery | Auto-unthrottle on Pop + HandleIdle deadlock break | Prevents deadlock without manual tuning |
+| Source layering | source_layer field (Phase 2) | Ordered multi-source startup; Phase 1: all concurrent |
+| Back-pressure recovery | Auto-unthrottle via becomes_not_full + HandleIdle deadlock break | Prevents deadlock without manual tuning |

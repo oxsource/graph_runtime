@@ -5,6 +5,8 @@
 ```cpp
 namespace graph::runtime {
 
+class SchedulerQueue;
+
 class Node {
  public:
   virtual ~Node() = default;
@@ -17,32 +19,45 @@ class Node {
   virtual absl::Status Close(GraphContext& context) = 0;
 
   // Port binding (called by GraphBuilder during initialization)
-  void SetInputPort(const std::string& name, Stream* stream);
-  void SetOutputPort(const std::string& name, Stream* stream);
+  void SetInputPort(const std::string& name, InputStreamManager* mgr);
+  void SetOutputPort(const std::string& name, OutputStream* stream);
 
-  Stream* GetInputPort(const std::string& name) const;
-  Stream* GetOutputPort(const std::string& name) const;
+  InputStreamManager* GetInputPort(const std::string& name) const;
+  OutputStream* GetOutputPort(const std::string& name) const;
 
   size_t input_port_count() const;
   size_t output_port_count() const;
+
+  // Executor assignment (called by GraphBuilder from config)
+  void SetExecutorName(const std::string& executor_name);
+  const std::string& ExecutorName() const;
+
+  // Scheduler queue assignment (called by Scheduler during Setup)
+  void SetSchedulerQueue(SchedulerQueue* queue);
+  SchedulerQueue* GetSchedulerQueue() const;
+
+  // Source ordering
+  void SetSourceLayer(int layer);
+  int SourceLayer() const;
 
  protected:
   Node(std::string name);
 
  private:
   std::string name_;
-  std::map<std::string, Stream*> input_ports_;
-  std::map<std::string, Stream*> output_ports_;
+  std::map<std::string, InputStreamManager*> input_ports_;
+  std::map<std::string, OutputStream*> output_ports_;
+  std::string executor_name_;       // "" = default executor
+  SchedulerQueue* scheduler_queue_ = nullptr;
+  int source_layer_ = 0;
 };
 
 }  // namespace graph::runtime
 ```
 
 **Semantics**:
-- `Open()` called once before any `Process()` calls. Initialize resources, validate options, open external connections.
-- `Process()` called when all input Streams have data. Read inputs via `GraphContext::inputs`, write outputs via `GraphContext::outputs`. MUST return promptly (non-blocking).
-- `Close()` called once after all `Process()` calls complete. Release resources, flush pending data.
-- Port binding is done by GraphBuilder during `Graph::Initialize()` — Nodes do not wire themselves.
-- Subclasses implement Open/Process/Close; port management and lifecycle state tracking are handled by the base class.
-- Source Nodes (zero inputs) are activated by Scheduler immediately on graph start.
-- Sink Nodes (zero outputs) have their Process() result discarded by Scheduler.
+- Same lifecycle (`Open`/`Process`/`Close`) as before.
+- Port binding updated: input ports bind to `InputStreamManager*` (owns the deque), output ports bind to `OutputStream*` (holds mirrors). No intermediate `Stream` class.
+- `SetExecutorName()` / `ExecutorName()`: declares which named executor this node should run on. Empty string = default executor. Set from `config.node.executor` by GraphBuilder.
+- `SetSchedulerQueue()` / `GetSchedulerQueue()`: set by `Scheduler::AssignNodeToQueue()` during `Schedule()`. All task scheduling for this node goes through this queue.
+- `SetSourceLayer()` / `SourceLayer()`: controls source activation order (Phase 2). Phase 1: all sources are layer 0.

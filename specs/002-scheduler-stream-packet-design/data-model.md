@@ -112,10 +112,13 @@ Execution engine with state machine, pluggable input policies, and task executio
 | `error_callback_` | `ErrorCallback` | Invoked when Node returns non-OK, non-Stop status; sets HasError and initiates kCancelling. HandleIdle waits for non_idle_queue_count_==0 before kTerminated |
 | `non_idle_queue_count_` | `int` | Tracks active Executor queues; HandleIdle fires when reaches 0 |
 | `handling_idle_` | `int` | Reentrancy guard counter for HandleIdle (int, not bool) |
-| `active_sources_` | `set<Node*>` | Currently open, running source Nodes (for stopping_ cleanup) |
-
+| `active_sources_` | `set<Node*>` | Currently open source Nodes (for stopping_ cleanup) |
 | `input_stream_handler_` | `unique_ptr<InputStreamHandler>` | Pluggable readiness policy |
-| `executor_` | `shared_ptr<Executor>` | Task execution strategy |
+| `default_queue_` | `SchedulerQueue` | Default queue bound to default executor |
+| `non_default_queues_` | `map<string, unique_ptr<SchedulerQueue>>` | Named queues for heterogeneous executors |
+| `all_queues_` | `vector<SchedulerQueue*>` | All queues for iteration |
+| `default_executor_` | `shared_ptr<Executor>` | Default executor (ThreadPool or ApplicationThread) |
+| `throttled_sources_` | `set<Node*>` | Source Nodes paused by back-pressure |
 | `throttled_sources_` | `set<Node*>` | Source Nodes paused by back-pressure |
 | `source_layers_` | `map<int, vector<Node*>>` | Source Nodes grouped by activation layer (Phase 2 — unused in Phase 1) |
 | `active_layer_` | `int` | Currently active source layer index (Phase 2 — always 0 in Phase 1) |
@@ -150,7 +153,34 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 
 ---
 
-### InputStreamManager
+### SchedulerQueue
+
+Per-executor priority queue implementing `TaskQueue`. One per executor. Bridges scheduling and execution.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `queue_` | `std::priority_queue<Item>` | Nodes ordered by priority (Open > non-source > source) |
+| `executor_` | `Executor*` | Bound executor — dispatches tasks via `AddTask(this)` |
+| `num_pending_tasks_` | `int` | Tasks submitted to executor but not yet completed |
+| `idle_callback_` | `function<void(bool)>` | Fires on idle state change → `Scheduler::QueueIdleStateChanged` |
+
+**Priority ordering** (`Item::operator<`):
+1. OpenNode tasks (highest — run before any ProcessNode).
+2. Non-sources (scheduled before sources).
+3. Sources (ordered by source_layer → node_id).
+
+**Task dispatch path**:
+```
+Node ready → node->GetSchedulerQueue()->AddNode(node)
+  → queue_.push(Item(node))
+  → executor_->AddTask(this)
+    → Schedule([this]{ RunNextTask(); })
+      → thread picks up → RunNextTask()
+        → pop Item → Node::Process/Open
+        → if idle: idle_callback_(true) → non_idle_queue_count_--
+```
+
+---### InputStreamManager
 
 Owns the `std::deque<Packet>` for one downstream Node input port. Data is written directly by upstream `OutputStream::Send()` — no intermediate Stream component.
 
@@ -212,15 +242,26 @@ Pluggable strategy determining when a Node is ready to execute.
 
 ### Executor
 
-Pluggable strategy for running scheduler tasks.
+Pluggable strategy for running scheduler tasks. Works with `SchedulerQueue` via `TaskQueue` interface.
 
 | Method | Description |
 |--------|-------------|
-| `ScheduleTask(function<void()>)` | Enqueue a task for execution |
+| `AddTask(TaskQueue*)` | Entry point from SchedulerQueue — schedules `RunNextTask()` |
+| `Schedule(closure)` | Pure virtual — executes closure on executor's thread(s) |
+
+**TaskQueue interface**:
+- `RunNextTask()` — pure virtual, implemented by `SchedulerQueue`. Called by executor when a thread is available.
 
 **Built-in implementations**:
-- **ApplicationThreadExecutor**: Synchronous, on-calling-thread execution. Default for Phase 1.
-- **ThreadPoolExecutor**: Multi-threaded thread pool. Configurable thread count. Phase 2.
+| Executor | Threads | Description | Phase |
+|----------|---------|-------------|-------|
+| `ApplicationThreadExecutor` | 0 (uses app thread) | Tasks enqueued to `app_thread_tasks_`, drained in `WaitUntilDone()`. Implemented via `DelegatingExecutor`. | Phase 1 |
+| `ThreadPoolExecutor` | N (`min(CPUs, nodes)`) | Distributes tasks across a fixed-size thread pool. `num_threads` configurable. | Phase 1 |
+
+**Per-node assignment**:
+- Nodes declare executor via `Node::SetExecutorName()` from config.
+- Empty name → `default_queue_` → default executor.
+- Non-empty name → looked up in `non_default_queues_` → named executor queue.
 
 ---
 
