@@ -15,3 +15,16 @@ cc_binary(
         "//src/config:config",
     ],
 )
+
+cc_binary(
+    name = "string_pipeline_json",
+    srcs = ["string_pipeline_json.cc"],
+    deps = [
+        "//src/config/json:json_parser",
+        "//src/config:config",
+        "//src/node:node_base",
+        "//src/node:graph_context",
+        "//src/stream:packet",
+        "//src/stream:timestamp",
+    ],
+)
