@@ -15,13 +15,13 @@
 
 **Purpose**: Move 7 internal modules to `src/framework/` via `git mv`.
 
-- [ ] T001 `git mv src/config/ src/framework/config/`
-- [ ] T002 `git mv src/hook/ src/framework/hook/`
-- [ ] T003 `git mv src/log/ src/framework/log/`
-- [ ] T004 `git mv src/node/ src/framework/node/`
-- [ ] T005 `git mv src/public/ src/framework/public/`
-- [ ] T006 `git mv src/scheduler/ src/framework/scheduler/`
-- [ ] T007 `git mv src/stream/ src/framework/stream/`
+- [x] T001 `git mv src/config/ src/framework/config/`
+- [x] T002 `git mv src/hook/ src/framework/hook/`
+- [x] T003 `git mv src/log/ src/framework/log/`
+- [x] T004 `git mv src/node/ src/framework/node/`
+- [x] T005 `git mv src/public/ src/framework/public/`
+- [x] T006 `git mv src/scheduler/ src/framework/scheduler/`
+- [x] T007 `git mv src/stream/ src/framework/stream/`
 
 **Checkpoint**: `ls src/framework/` shows 7 directories ✅
 
