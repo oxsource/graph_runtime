@@ -264,9 +264,13 @@ absl::Status Scheduler::Start() {
 
   // Wire idle callbacks so queue idle → HandleIdle → termination detection.
   for (auto* q : all_queues_) {
-    q->SetIdleCallback([this](bool) { HandleIdle(); });
+    q->SetIdleCallback([this](bool) {
+      cv_.notify_all();
+      HandleIdle();
+    });
     q->SetSourceStoppedCallback([this](Node* node) {
       active_sources_.erase(node);
+      cv_.notify_all();
       HandleIdle();
     });
     q->SetRunning(true);
@@ -292,6 +296,12 @@ void Scheduler::Shutdown() {
 absl::Status Scheduler::WaitUntilDone() {
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.wait(lock, [this] { return state_ == SchedulerState::kTerminated; });
+  return absl::OkStatus();
+}
+
+absl::Status Scheduler::WaitForIdle() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cv_.wait(lock, [this] { return IsIdle(); });
   return absl::OkStatus();
 }
 

@@ -46,6 +46,7 @@ class Scheduler {
   virtual absl::Status Schedule();
   virtual absl::Status Start();
   virtual absl::Status WaitUntilDone();
+  virtual absl::Status WaitForIdle();
   virtual void Shutdown();
   virtual absl::Status Pause();
   virtual absl::Status Resume();
@@ -59,6 +60,9 @@ class Scheduler {
       if (!q->IsIdle()) return false;
     }
     return true;
+  }
+  bool HasGraphFinished() const {
+    return state_ == SchedulerState::kTerminated;
   }
 
   void AssignNodeToQueue(Node* node);

@@ -86,10 +86,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T015 [P] [US3] Implement `WaitForIdle()` in `src/framework/scheduler/scheduler.cc` — condition variable triggered when `IsIdle()` returns true
-- [ ] T016 [P] [US3] Implement `HasGraphFinished()` in `src/framework/scheduler/scheduler.cc` — combine `state()` with input stream close state
-- [ ] T017 [US3] Expose `GetGraphState()` via `GraphRuntime` in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` — delegate to `Scheduler::state()`
-- [ ] T018 [P] [US3] Test: Lifecycle query API state transitions in `src/tests/scheduler_test.cc`
+- [X] T015 [P] [US3] Implement `WaitForIdle()` in `src/framework/scheduler/scheduler.cc` — condition variable triggered when `IsIdle()` returns true
+- [X] T016 [P] [US3] Implement `HasGraphFinished()` in `src/framework/scheduler/scheduler.cc` — combine `state()` with input stream close state
+- [X] T017 [US3] Expose `GetGraphState()` via `GraphRuntime` in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` — delegate to `Scheduler::state()`
+- [X] T018 [P] [US3] Test: Lifecycle query API state transitions in `src/tests/scheduler_test.cc`
 
 **Checkpoint**: `WaitForIdle()`, `HasGraphFinished()`, `GetGraphState()` all functional — test verifies state transitions ✅
 

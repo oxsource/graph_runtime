@@ -129,6 +129,19 @@ absl::Status GraphRuntime::WaitUntilDone() {
   return scheduler_->WaitUntilDone();
 }
 
+absl::Status GraphRuntime::WaitForIdle() {
+  if (!scheduler_) return absl::OkStatus();
+  return scheduler_->WaitForIdle();
+}
+
+bool GraphRuntime::HasGraphFinished() const {
+  return scheduler_ && scheduler_->HasGraphFinished();
+}
+
+SchedulerState GraphRuntime::GetGraphState() const {
+  return scheduler_ ? scheduler_->state() : SchedulerState::kNotStarted;
+}
+
 void GraphRuntime::Shutdown() {
   if (scheduler_) {
     scheduler_->Shutdown();

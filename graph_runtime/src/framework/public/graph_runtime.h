@@ -32,6 +32,9 @@ class GraphRuntime {
   absl::Status Start();
   absl::Status Schedule();
   absl::Status WaitUntilDone();
+  absl::Status WaitForIdle();
+  bool HasGraphFinished() const;
+  SchedulerState GetGraphState() const;
   void Shutdown();
 
   absl::Status AddPacketToInputStream(const std::string& stream_name,

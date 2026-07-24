@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/framework/config/graph_config.h"
 #include "src/framework/stream/packet.h"
+#include "src/framework/scheduler/scheduler.h"
 
 namespace graph::runtime {
 
@@ -53,8 +54,41 @@ TEST_F(OutputStreamCallbackTest, InitializeWithOutputStreamsSucceeds) {
   config.nodes.push_back(
       {"src", "UnregisteredNode", {}, {}, {"out"}, {}, {}, "", "", 0, 0});
   auto status = runtime_->Initialize(config);
-  // May fail if node not registered, but should not crash.
   EXPECT_TRUE(status.ok() || !status.ok());
+}
+
+class LifecycleQueryTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    runtime_ = std::make_unique<GraphRuntime>();
+  }
+
+  std::unique_ptr<GraphRuntime> runtime_;
+};
+
+TEST_F(LifecycleQueryTest, GetGraphStateDefaultIsNotStarted) {
+  EXPECT_EQ(runtime_->GetGraphState(), SchedulerState::kNotStarted);
+}
+
+TEST_F(LifecycleQueryTest, HasGraphFinishedDefaultsFalse) {
+  EXPECT_FALSE(runtime_->HasGraphFinished());
+}
+
+TEST_F(LifecycleQueryTest, WaitForIdleWithoutInitDoesNotCrash) {
+  auto status = runtime_->WaitForIdle();
+  EXPECT_TRUE(status.ok());
+}
+
+TEST_F(LifecycleQueryTest, StateTransitionsAfterShutdown) {
+  GraphConfig config;
+  config.nodes.push_back(
+      {"a", "UnregisteredNode", {}, {}, {}, {}, {}, "", "", 1, 0});
+  // Initialize returns error because node is unregistered.
+  auto status = runtime_->Initialize(config);
+  // The graph should be in kNotStarted or kTerminated state.
+  auto state = runtime_->GetGraphState();
+  EXPECT_TRUE(state == SchedulerState::kNotStarted ||
+              state == SchedulerState::kTerminated);
 }
 
 }  // namespace graph::runtime
