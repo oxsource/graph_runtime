@@ -1,7 +1,8 @@
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
+
+#include "src/public/logger.h"
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -48,13 +49,13 @@ GRAPH_RUNTIME_REGISTER_PARSER("kv", graph::runtime::KeyValueParser);
 
 int main() {
   using namespace graph::runtime;
-  std::cout << "Custom KeyValueParser registered for .kv extension" << std::endl;
+  Logger::Info("graphrt::example", "Custom KeyValueParser registered for .kv extension");
 
   auto parser = ParserRegistry::CreateForFile("test.kv");
   if (!parser) {
-    std::cerr << "Parser not found for .kv extension" << std::endl;
+    Logger::Error("graphrt::example", "Parser not found for .kv extension");
     return 1;
   }
-  std::cout << "Parser created successfully via registry" << std::endl;
+  Logger::Info("graphrt::example", "Parser created successfully via registry");
   return 0;
 }

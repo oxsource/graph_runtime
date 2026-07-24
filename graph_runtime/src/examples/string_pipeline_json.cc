@@ -1,9 +1,10 @@
 #include <cctype>
 #include <cstdio>
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
+
+#include "src/public/logger.h"
 
 #include "absl/strings/str_cat.h"
 #include "src/config/json/json_parser.h"
@@ -24,17 +25,17 @@ class StringProducer : public Node {
   static absl::Status GetContract(NodeContract* c) {
     c->Outputs().Get("output").Set<std::string>(); return {};
   }
-  absl::Status Open(GraphContext&) override { std::cout<<"  [PRODUCER] Open\n"; return {}; }
+  absl::Status Open(GraphContext&) override { Logger::Info("graphrt::example", "[PRODUCER] Open"); return {}; }
   absl::Status Process(GraphContext& ctx) override {
-    if (sent_ >= total_) { std::cout<<"  [PRODUCER] Done\n"; return StatusStop(); }
+    if (sent_ >= total_) { Logger::Info("graphrt::example", "[PRODUCER] Done"); return StatusStop(); }
     auto pkt = Packet::MakePacket<std::string>("hello_" + std::to_string(sent_))
                    .At(ctx.InputTimestamp());
     ctx.Outputs().Get("output").AddPacket(std::move(pkt));
-    std::cout<<"  [PRODUCER] Sent \"hello_"<<sent_<<"\"\n";
+    Logger::Info("graphrt::example", std::string("[PRODUCER] Sent \"hello_" + std::to_string(sent_) + "\"").c_str());
     ++sent_; return {};
   }
   absl::Status Close(GraphContext&) override {
-    std::cout<<"  [PRODUCER] Close, sent="<<sent_<<"\n"; return {};
+    Logger::Info("graphrt::example", std::string("[PRODUCER] Close, sent=" + std::to_string(sent_)).c_str()); return {};
   }
  private:
   int sent_ = 0, total_ = 5;
@@ -47,7 +48,7 @@ class StringUppercase : public Node {
     c->Inputs().Get("input").Set<std::string>();
     c->Outputs().Get("output").Set<std::string>(); return {};
   }
-  absl::Status Open(GraphContext&) override { std::cout<<"  [TRANSFORMER] Open\n"; return {}; }
+  absl::Status Open(GraphContext&) override { Logger::Info("graphrt::example", "[TRANSFORMER] Open"); return {}; }
   absl::Status Process(GraphContext& ctx) override {
     auto& shard = ctx.Inputs().Get("input");
     if (shard.IsEmpty()) return {};
@@ -56,10 +57,10 @@ class StringUppercase : public Node {
     for (char c : *r) u += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
     ctx.Outputs().Get("output").AddPacket(
         Packet::MakePacket<std::string>(u).At(ctx.InputTimestamp()));
-    std::cout<<"  [TRANSFORMER] \""<<*r<<"\" -> \""<<u<<"\"\n";
+    Logger::Info("graphrt::example", std::string("[TRANSFORMER] \"" + *r + "\" -> \"" + u + "\"").c_str());
     return {};
   }
-  absl::Status Close(GraphContext&) override { std::cout<<"  [TRANSFORMER] Close\n"; return {}; }
+  absl::Status Close(GraphContext&) override { Logger::Info("graphrt::example", "[TRANSFORMER] Close"); return {}; }
 };
 
 class StringConsumer : public Node {
@@ -68,18 +69,17 @@ class StringConsumer : public Node {
   static absl::Status GetContract(NodeContract* c) {
     c->Inputs().Get("input").Set<std::string>(); return {};
   }
-  absl::Status Open(GraphContext&) override { std::cout<<"  [CONSUMER] Open\n"; return {}; }
+  absl::Status Open(GraphContext&) override { Logger::Info("graphrt::example", "[CONSUMER] Open"); return {}; }
   absl::Status Process(GraphContext& ctx) override {
     auto& shard = ctx.Inputs().Get("input");
     if (shard.IsEmpty()) return {};
     auto r = shard.Get<std::string>(); if (!r.ok()) return {};
     result_.push_back(*r);
-    std::cout<<"  [CONSUMER] Received \""<<*r<<"\"\n";
+    Logger::Info("graphrt::example", std::string("[CONSUMER] Received \"" + *r + "\"").c_str());
     return {};
   }
   absl::Status Close(GraphContext&) override {
-    std::cout<<"  [CONSUMER] Close, received="<<result_.size()<<"\n";
-    for (auto& s : result_) std::cout<<"    \""<<s<<"\"\n";
+    Logger::Info("graphrt::example", std::string("[CONSUMER] Close, received=" + std::to_string(result_.size())).c_str());
     return {};
   }
  private:
@@ -90,7 +90,7 @@ class StringConsumer : public Node {
 
 int main() {
   using namespace graph::runtime;
-  std::cout << "=== String Pipeline (JSON Config) ===\n";
+  Logger::Info("graphrt::example", "=== String Pipeline (JSON Config) ===");
 
   // JSON config — connections are implicit via stream name matching.
   // producer outputs to "output:text_stream", transformer reads from "input:text_stream".
@@ -155,13 +155,13 @@ int main() {
   OutputStreamShardSet dummy_o;
 
   // Open
-  std::cout << "\n--- Open ---\n";
+  Logger::Info("graphrt::example", "--- Open ---");
   { GraphContext c("p",1,"SP",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); producer->Open(c); }
   { GraphContext c("t",2,"SU",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); transformer->Open(c); }
   { GraphContext c("c",3,"SC",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); consumer->Open(c); }
 
   // Process loop — same RunOnce pattern as string_pipeline.cc
-  std::cout << "\n--- Process ---\n";
+  Logger::Info("graphrt::example", "--- Process ---");
   for (int i = 0; i < 10; ++i) {
     Timestamp ts(i);
 
@@ -189,12 +189,12 @@ int main() {
     { GraphContext c("c",3,"SC",ts,&ci,&co,&opts); consumer->Process(c); }
   }
 
-  std::cout << "\n--- Close ---\n";
+  Logger::Info("graphrt::example", "--- Close ---");
   { GraphContext c("p",1,"SP",Timestamp::Done(),&dummy_i,&dummy_o,&opts); producer->Close(c); }
   { GraphContext c("t",2,"SU",Timestamp::Done(),&dummy_i,&dummy_o,&opts); transformer->Close(c); }
   { GraphContext c("c",3,"SC",Timestamp::Done(),&dummy_i,&dummy_o,&opts); consumer->Close(c); }
 
   std::remove(tmp_path);
-  std::cout << "\n=== Done (JSON config driven) ===\n";
+  Logger::Info("graphrt::example", "=== Done (JSON config driven) ===");
   return 0;
 }
