@@ -54,6 +54,10 @@ class Node {
   }
   const std::string& ExecutorName() const { return executor_name_; }
 
+  // Iterate input ports for throttling.
+  const auto& InputPorts() const { return input_ports_; }
+  auto& InputPorts() { return input_ports_; }
+
   void SetSchedulerQueue(SchedulerQueue* queue) { scheduler_queue_ = queue; }
   SchedulerQueue* GetSchedulerQueue() const { return scheduler_queue_; }
 

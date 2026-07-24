@@ -51,6 +51,20 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
   }
 
   scheduler_->SetTotalGraphInputStreams(num_open_input_streams_);
+
+  // Wire backpressure callbacks on each input stream.
+  for (const auto& ndef : config_.nodes) {
+    for (const auto& input_stream : ndef.input_streams) {
+      auto it = stream_managers_.find(input_stream);
+      if (it != stream_managers_.end()) {
+        auto* mgr = it->second;
+        mgr->SetQueueSizeCallbacks(
+            [this](InputStreamManager* m, bool*) { OnInputStreamFull(m); },
+            [this](InputStreamManager* m, bool*) { OnInputStreamNotFull(m); });
+      }
+    }
+  }
+
   return absl::OkStatus();
 }
 
@@ -127,6 +141,45 @@ Node* GraphRuntime::FindNode(const std::string& name) {
     if (node->name() == name) return node.get();
   }
   return nullptr;
+}
+
+void GraphRuntime::OnInputStreamFull(InputStreamManager* mgr) {
+  for (auto& node : all_nodes_) {
+    for (auto& [port_name, port_mgr] : node->InputPorts()) {
+      if (port_mgr == mgr) {
+        full_input_streams_[node.get()].insert(mgr);
+        return;
+      }
+    }
+  }
+}
+
+void GraphRuntime::OnInputStreamNotFull(InputStreamManager* mgr) {
+  for (auto& [node, streams] : full_input_streams_) {
+    streams.erase(mgr);
+  }
+  scheduler_->HandleIdle();
+}
+
+void GraphRuntime::UnthrottleSources() {
+  for (auto& [node, streams] : full_input_streams_) {
+    for (auto* mgr : streams) {
+      int current = mgr->MaxQueueSize();
+      if (current > 0) {
+        mgr->SetMaxQueueSize(current * 2);
+      } else if (current == -1) {
+        mgr->SetMaxQueueSize(64);
+      } else {
+        mgr->SetMaxQueueSize(128);
+      }
+    }
+  }
+  full_input_streams_.clear();
+}
+
+bool GraphRuntime::IsNodeThrottled(Node* node) const {
+  auto it = full_input_streams_.find(node);
+  return it != full_input_streams_.end() && !it->second.empty();
 }
 
 }  // namespace graph::runtime

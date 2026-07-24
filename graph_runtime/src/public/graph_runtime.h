@@ -6,6 +6,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -44,6 +45,20 @@ class GraphRuntime {
   // Example: SetHook(hook::kTypeLog, myFn);
   void SetHook(int type, hook::HookFn fn);
 
+  // --- Backpressure ---
+
+  enum GraphInputStreamAddMode { ADD_IF_NOT_FULL, WAIT_TILL_NOT_FULL };
+
+  // Callbacks from InputStreamManager for queue full/not-full events.
+  void OnInputStreamFull(InputStreamManager* mgr);
+  void OnInputStreamNotFull(InputStreamManager* mgr);
+
+  // Unthrottle blocked sources when the graph is deadlocked.
+  void UnthrottleSources();
+
+  // Check if a node is throttled (has any full input stream).
+  bool IsNodeThrottled(Node* node) const;
+
  private:
   Node* FindNode(const std::string& name);
 
@@ -54,6 +69,9 @@ class GraphRuntime {
   std::map<std::string, InputStreamManager*> stream_managers_;
   std::set<std::string> graph_input_streams_set_;
   int num_open_input_streams_ = 0;
+
+  // Throttle tracking: full input streams per node.
+  std::map<Node*, std::set<InputStreamManager*>> full_input_streams_;
 };
 
 }  // namespace graph::runtime
