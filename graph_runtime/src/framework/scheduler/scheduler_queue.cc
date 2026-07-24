@@ -50,6 +50,7 @@ void SchedulerQueue::AddNodeForOpen(Node* node) {
 
 void SchedulerQueue::RunNextTask() {
   if (queue_.empty()) {
+    --num_pending_tasks_;
     UpdateIdleState();
     return;
   }
@@ -75,6 +76,19 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   InputStreamShardSet inputs;
   OutputStreamShardSet outputs;
   NodeOptions opts;
+
+  // Populate input shards from the node's InputStreamManagers.
+  for (const auto& [port_name, mgr] : node->InputPorts()) {
+    bool stream_is_done = false;
+    Packet pkt = mgr->PopQueueHead(&stream_is_done);
+    if (!pkt.IsEmpty()) {
+      auto& shard = inputs.Get(port_name);
+      shard.PushPacket(std::move(pkt));
+    }
+    if (stream_is_done) {
+      inputs.Get(port_name).SetDone(true);
+    }
+  }
 
   Timestamp ts = is_open ? Timestamp::Unstarted() : Timestamp(timestamp_counter_++);
   GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),

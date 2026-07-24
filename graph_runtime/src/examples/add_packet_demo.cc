@@ -54,10 +54,8 @@ int main() {
   Logger::Info(status.ok() ? "AddPacket OK" : std::string(status.ToString()).c_str());
 
   (void)runtime.CloseInputStream("input");
-  // Note: WaitUntilDone works only for graphs with source nodes or
-  // when the async scheduler path is fully event-driven. For this
-  // simple input-only demo, use Shutdown() to force termination.
-  runtime.Shutdown();
+  status = runtime.WaitUntilDone();
+  Logger::Info(status.ok() ? "WaitUntilDone OK" : std::string(status.ToString()).c_str());
   Logger::Info("Demo done");
   return 0;
 }

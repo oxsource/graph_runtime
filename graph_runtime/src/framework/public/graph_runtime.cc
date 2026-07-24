@@ -179,17 +179,8 @@ absl::Status GraphRuntime::AddPacketToInputStream(
   absl::Status st = it->second->AddPackets(packets, &notify);
   if (!st.ok()) return st;
 
-  // Schedule the owning node for processing.
-  for (auto& node : all_nodes_) {
-    if (node->GetInputPort(stream_name)) {
-      auto* q = node->GetSchedulerQueue();
-      if (q && q->IsRunning()) {
-        q->AddNode(node.get());
-      }
-      break;
-    }
-  }
-
+  // Notify the scheduler that a packet arrived. The scheduler will schedule
+  // the owning node.
   scheduler_->AddedPacketToGraphInputStream();
   return absl::OkStatus();
 }

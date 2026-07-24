@@ -1,6 +1,8 @@
 #ifndef GRAPH_RUNTIME_SCHEDULER_H_
 #define GRAPH_RUNTIME_SCHEDULER_H_
 
+#include <atomic>
+#include <atomic>
 #include <condition_variable>
 #include <map>
 #include <memory>
@@ -88,7 +90,7 @@ class Scheduler {
   bool stopping_ = false;
   bool has_error_ = false;
   int non_idle_queue_count_ = 0;
-  int handling_idle_ = 0;
+  std::atomic<int> handling_idle_{0};
   std::set<Node*> active_sources_;
 
   SchedulerQueue default_queue_{"default"};

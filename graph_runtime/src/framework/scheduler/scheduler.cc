@@ -274,6 +274,22 @@ absl::Status Scheduler::Start() {
 }
 
 void Scheduler::AddedPacketToGraphInputStream() {
+  for (auto* node : all_nodes_) {
+    if (node->input_port_count() == 0) continue;
+    bool has_data = false;
+    for (const auto& [name, mgr] : node->InputPorts()) {
+      if (!mgr->IsEmpty()) {
+        has_data = true;
+        break;
+      }
+    }
+    if (has_data) {
+      auto* q = node->GetSchedulerQueue();
+      if (q && q->IsRunning()) {
+        q->AddNode(node);
+      }
+    }
+  }
   HandleIdle();
 }
 
