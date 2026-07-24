@@ -9,14 +9,6 @@ cc_library(
 )
 
 cc_library(
-    name = "log_interface",
-    hdrs = ["logger.h"],
-    deps = [
-        "//src/log:log_core",
-    ],
-)
-
-cc_library(
     name = "side_packet",
     hdrs = ["side_packet.h"],
     deps = [
@@ -47,7 +39,6 @@ cc_library(
         "side_packet.h",
     ],
     deps = [
-        ":log_interface",
         "//src/log:hook_table",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/scheduler:scheduler",
@@ -77,7 +68,6 @@ cc_library(
     alwayslink = 1,
     deps = [
         ":graph_builder",
-        ":log_interface",
         ":runtime_internal",
         "//src/log:log_core",
         "@graph_runtime//src/scheduler:scheduler",
