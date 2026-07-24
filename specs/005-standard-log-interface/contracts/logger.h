@@ -1,25 +1,13 @@
 #pragma once
 
-#include "graph_runtime/graph_runtime_export.h"
+// Public API — macros only. The Logger class is internal.
 
-namespace graph::runtime {
+#ifndef GRAPHRT_LOG_TAG
+#define GRAPHRT_LOG_TAG "graphrt"
+#endif
 
-// Public Logger API. All methods are static — call directly via Logger::Info(...).
-// Each internally maps to the corresponding LogLevel. The full Log(level, ...)
-// method and LogLevel enum are internal (see src/public/logger.h).
-class GRAPH_RUNTIME_API Logger {
- public:
-  static void Debug(const char* tag, const char* content);
-  static void Info(const char* tag, const char* content);
-  static void Warn(const char* tag, const char* content);
-  static void Error(const char* tag, const char* content);
-  static void Fatal(const char* tag, const char* content);
-
- private:
-  Logger() = default;
-  Logger(const Logger&) = delete;
-  Logger& operator=(const Logger&) = delete;
-  static Logger& Instance();
-};
-
-}  // namespace graph::runtime
+#define GRAPHRT_LOGD(msg)  ::graph::runtime::LogDebug(GRAPHRT_LOG_TAG, (msg))
+#define GRAPHRT_LOGI(msg)  ::graph::runtime::LogInfo(GRAPHRT_LOG_TAG, (msg))
+#define GRAPHRT_LOGW(msg)  ::graph::runtime::LogWarn(GRAPHRT_LOG_TAG, (msg))
+#define GRAPHRT_LOGE(msg)  ::graph::runtime::LogError(GRAPHRT_LOG_TAG, (msg))
+#define GRAPHRT_LOGF(msg)  ::graph::runtime::LogFatal(GRAPHRT_LOG_TAG, (msg))
