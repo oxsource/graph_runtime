@@ -34,6 +34,14 @@ cc_binary(
 )
 
 cc_binary(
+    name = "async_pipeline_demo",
+    srcs = ["async_pipeline_demo.cc"],
+    deps = [
+        "@graph_runtime//src/public:runtime",
+    ],
+)
+
+cc_binary(
     name = "add_packet_demo",
     srcs = ["add_packet_demo.cc"],
     deps = [
