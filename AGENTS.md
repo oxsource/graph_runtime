@@ -1,11 +1,12 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at
-`specs/001-project-architecture/plan.md`, the module interaction design at
+`specs/005-standard-log-interface/plan.md`, the module interaction design at
 `specs/002-scheduler-stream-packet-design/plan.md`, the config architecture at
 `specs/003-config-architecture/plan.md`, the library public API at
-`specs/004-library-public-api/plan.md`, and the project bootstrap at
-`graph_runtime/docs/project_bootstrap.md`.
+`specs/004-library-public-api/plan.md`, the project bootstrap at
+`graph_runtime/docs/project_bootstrap.md`, and the feature specification at
+`specs/005-standard-log-interface/spec.md`.
 
 Key architecture references:
 - MediaPipe: /Users/moks/Develop/docker/ubuntu24/codes/mediapipe (stream scheduler, Calculator, Packet)
