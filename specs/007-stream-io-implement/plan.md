@@ -4,50 +4,65 @@
 
 ## Summary
 
-Implement `GraphRuntime::AddPacketToInputStream` and `CloseInputStream` to support incremental packet injection into a running graph. Add async scheduling mode. Fix `OutputStreamManager::PropagateUpdatesToMirrors` to actually propagate packets. Wire stream mirrors in `GraphBuilder`.
+Implement `GraphRuntime::AddPacketToInputStream` and `CloseInputStream` for incremental packet injection. Add async scheduler mode. Fix stream propagation infrastructure. Reference: MediaPipe CalculatorGraph.
 
 ## Technical Context
 
 **Language/Version**: C++17
 **Primary Dependencies**: abseil-cpp (existing)
 **Testing**: Google Test (existing)
-**Target Platform**: macOS, Linux — cross-platform C++
-**Project Type**: C++ Library (Bazel)
-**Reference Implementation**: MediaPipe (`/Users/moks/Develop/docker/ubuntu24/codes/mediapipe`)
+**Reference**: MediaPipe at `/Users/moks/Develop/docker/ubuntu24/codes/mediapipe`
 
 ## Constitution Check
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| I. Stream-Based Graph Architecture | ✅ PASS | This feature directly implements stream-based dataflow between nodes |
-| III. Modularity & Extensibility | ✅ PASS | Extends existing scheduler, stream, node modules with async support |
-| V. Build System Integrity | ✅ PASS | No new external dependencies |
+| Principle | Status |
+|-----------|--------|
+| I. Stream-Based Graph Architecture | ✅ PASS |
+| III. Modularity & Extensibility | ✅ PASS |
+| V. Build System Integrity | ✅ PASS |
 
-## Project Structure
+## MediaPipe Alignment — Corrections to Initial Plan
 
-### Affected Files
+Initial plan had 12 gaps vs MediaPipe reference. Corrected below:
 
-```text
-src/
-├── public/
-│   ├── graph_runtime.h    # + GraphInputStream map, async lifecycle
-│   ├── graph_runtime.cc   # + AddPacketToInputStream, CloseInputStream
-│   └── graph_builder.cc   # + stream mirror wiring
-├── scheduler/
-│   ├── scheduler.h        # + async state, HandleIdle, ScheduleNodeIfNotThrottled
-│   ├── scheduler.cc       # + async Schedule path, source layer mgmt
-│   ├── scheduler_queue.h  # + Item with context, source order
-│   └── scheduler_queue.cc # + RunNode body
-├── stream/
-│   ├── output_stream_manager.cc  # + PropagateUpdatesToMirrors packet transfer
-│   ├── output_stream_handler.cc  # + parallel execution state
-│   └── input_stream_handler.cc   # + FillInputSet wiring
-└── node/
-    ├── node.h             # + InputStreamHandler*, OutputStreamHandler*
-    └── node.cc            # + ProcessNode wrapper, scheduling state
+### Stream Infrastructure
+
+- **`PropagateUpdatesToMirrors`**: Signature is `(Timestamp next_timestamp_bound, OutputStreamShard* shard)`. Last mirror uses `MovePackets`, others `AddPackets`. Must update `next_timestamp_bound_` under mutex.
+- **`FillInputSet`**: Through `SyncSet` abstraction. Supports `late_preparation_` flag. Also reports `num_packets_dropped` and `stream_is_done`.
+- **`Node::ProcessNode`**: Only executes `Process()`. `OpenNode()` and `CloseNode()` are separate methods. Source vs non-source nodes have fundamentally different paths.
+- **`PropagateOutputPackets`**: Default (sequential) mode has NO state machine. State machine only for parallel execution.
+- **Mirror connection**: Done during node initialization (after flat manager arrays created), using upstream index from validated graph.
+
+### Async Scheduler
+
+- **State machine**: Full set is `kNotStarted`, `kRunning`, `kPaused`, `kCancelling`, `kTerminated`. `kIdle` is a condition (`non_idle_queue_count_ == 0`), NOT a state.
+- **`HandleIdle()`**: Reentrancy-protected. Manages: `CleanupActiveSources()`, quit conditions, `TryToScheduleNextSourceLayer()`, `UnthrottleSources()`.
+- **Source layer management**: Three tiers: `unopened_sources_` (not yet opened, sorted by `source_layer()`) → `sources_queue_` (opened but not activated) → `active_sources_` (currently running).
+- **`TryToScheduleNextSourceLayer()`**: Pauses queue, adds layer sources atomically, resumes queue.
+
+### GraphRuntime API
+
+- **`GraphInputStream`**: Wraps `OutputStreamManager*` + reusable `OutputStreamShard`. Key: external packets are injected as if from an output stream.
+- **`AddPacketToInputStream`**: Must check throttling first (`ADD_IF_NOT_FULL` / `WAIT_TILL_NOT_FULL` mode), use virtual node ID for throttle tracking, error-check after add, then `PropagateUpdatesToMirrors`, then notify scheduler via `AddedPacketToGraphInputStream()`.
+- **`CloseInputStream`**: Increments counter; when all closed, calls `scheduler_.ClosedAllGraphInputStreams()`.
+- **Backpressure**: Full system: `full_input_streams_` vector, `UpdateThrottledNodes` callbacks, `GraphInputStreamAddMode`, `UnthrottleSources()` for deadlock recovery.
+
+## Architecture
+
+### Packet Flow (MediaPipe-aligned)
+
 ```
-
-## Architecture Changes
+AddPacketToInputStream("s", pkt)
+  → GraphInputStream::AddPacket (→ OutputStreamShard)
+  → OutputStreamManager::PropagateUpdatesToMirrors(bound, &shard)
+    → InputStreamHandler::AddPackets/MovePackets (per mirror)
+      → InputStreamManager queue (thread-safe, arrival_callback)
+        → InputStreamHandler::ScheduleInvocations
+          → Node::ProcessNode(CalculatorContext)
+            → OutputStreamShard (node output)
+            → OutputStreamHandler::PropagateOutputPackets
+              → OutputStreamManager::PropagateUpdatesToMirrors (downstream)
+```
 
 ### Scheduler: Dual Mode
 
@@ -56,65 +71,60 @@ Current (Sync):
   Schedule() → open all → process loop → close all → return
 
 New (Async):
-  Start() → return immediately (worker threads process)
-  AddedPacketToInputStream() → wake scheduler
-  HandleIdle() → detect no work, yield
-  WaitUntilDone() → block until all streams closed
-  WaitUntilIdle() → block until no work available
+  Start() → SetRunning → HandleIdle → return
+  AddedPacketToInputStream → wake scheduler via AddedPacketToGraphInputStream
+  HandleIdle() → CleanupActiveSources → schedule layers → unthrottle → yield
+  WaitUntilIdle() → block until non_idle_queue_count_ == 0
+  WaitUntilDone() → block until state == kTerminated
 ```
 
-### Packet Flow
+## Phases (Corrected Order)
+
+Dependencies dictate this order:
+
+### Phase 1 — Node & Stream Infrastructure
+
+1. Add `InputStreamHandler*` / `OutputStreamHandler*` members to `Node`
+2. Implement mirror connections during node init (upstream index from validated graph)
+3. Fix `OutputStreamManager::PropagateUpdatesToMirrors` (two params, MovePackets, bound)
+4. Fix `InputStreamHandler::FillInputSet` through SyncSet (late_preparation_, PopPacketAtTimestamp)
+5. Add `Node::OpenNode()` / `Node::CloseNode()` / `Node::ProcessNode(CalculatorContext*)` with source/non-source paths
+6. Fix `OutputStreamHandler::PropagateOutputPackets` (sequential: direct; parallel: state machine)
+
+### Phase 2 — Backpressure & Throttling
+
+1. Add `full_input_streams_` vector and `UpdateThrottledNodes` callback wiring
+2. Implement `GraphInputStreamAddMode` (ADD_IF_NOT_FULL / WAIT_TILL_NOT_FULL)
+3. Implement `UnthrottleSources()` for deadlock recovery
+4. Wire throttling into `HandleIdle`
+
+### Phase 3 — Async Scheduler
+
+1. State machine (kNotStarted, kRunning, kPaused, kCancelling, kTerminated)
+2. `Scheduler::Start()` — non-blocking, set running, HandleIdle
+3. `HandleIdle()` — reentrancy-protected, cleanup, schedule layers, unthrottle
+4. `TryToScheduleNextSourceLayer()` — source layer activation
+5. `ScheduleNodeIfNotThrottled()` — throttle check + enqueue
+6. `SchedulerQueue::RunCalculatorNode()` — ProcessNode + StatusStop handling
+7. `WaitUntilIdle()` / `WaitUntilDone()` — condition variable + ApplicationThreadAwait
+
+### Phase 4 — GraphInputStream & Public API
+
+1. Add `GraphInputStream` map (stream_name → {OutputStreamManager*, OutputStreamShard})
+2. Implement `AddPacketToInputStream(stream_name, packet)` with throttle check
+3. Implement `CloseInputStream(stream_name)` with counter + scheduler notification
+4. Update `GraphRuntime::Initialize()` for input stream mirror setup
+
+### Phase 5 — Testing & Examples
+
+1. Unit tests for each phase (see tasks.md)
+2. New example: `add_packet_demo` — feeds packets to a running graph
+3. Integration test: pipeline with external input → output
+
+## Key Dependencies
 
 ```
-AddPacketToInputStream("stream", pkt)
-  → GraphInputStream → OutputStreamShard::AddPacket
-  → OutputStreamManager::PropagateUpdatesToMirrors
-    → InputStreamManager queue (downstream)
-    → InputStreamHandler::ScheduleInvocations
-      → Node::ProcessNode (runs calculator)
-        → OutputStreamShard (node output)
-        → OutputStreamHandler::PropagateOutputPackets
-          → next InputStreamManager
+Phase 1 (Node/Stream) ──→ Phase 2 (Throttle) ──→ Phase 3 (Scheduler) ──→ Phase 4 (API)
 ```
 
-## Phases
-
-### Phase 1 — Stream Infrastructure Fixes
-
-1. Fix `OutputStreamManager::PropagateUpdatesToMirrors` — move packets to mirrors
-2. Fix `InputStreamHandler::FillInputSet` — pop from manager into shard
-3. Fix `OutputStreamHandler::PropagateOutputPackets` — full state machine
-4. Add `Node::ProcessNode()` — wrapper for Open/Process/Close
-5. Wire stream mirrors in `GraphBuilder`
-
-### Phase 2 — Async Scheduler
-
-1. Add async state machine to Scheduler (states: kNotStarted, kRunning, kIdle, kTerminated)
-2. Implement `HandleIdle()` — detect idle, schedule sources
-3. Implement `ScheduleNodeIfNotThrottled()`
-4. Implement source layer management
-5. Implement `WaitUntilIdle()` / `WaitUntilDone()`
-6. Update `SchedulerQueue::RunNode()` to call `Node::ProcessNode()`
-
-### Phase 3 — GraphRuntime API
-
-1. Add `GraphInputStream` map to `GraphRuntime`
-2. Implement `AddPacketToInputStream(stream_name, packet)`
-3. Implement `CloseInputStream(stream_name)`
-4. Backpressure: throttle upstream when downstream queues full
-5. Update `Initialize()` to set up input stream mirrors
-
-### Phase 4 — Testing
-
-1. Unit test: `AddPacketToInputStream` → node receives packet
-2. Unit test: `CloseInputStream` → downstream gets StatusStop
-3. Unit test: concurrent AddPacket calls (8 threads)
-4. Unit test: unknown stream error, lifecycle order errors
-5. Integration test: simple pipeline with external input
-
-## Key Risks
-
-- `SchedulerQueue::RunNode` currently has an empty body — the full implementation depends on `GraphContext` having correct input shards
-- `GraphContext` may need to be extended to carry input/output shard sets
-- The `Node` class doesn't currently have `InputStreamHandler`/`OutputStreamHandler` members — these need to be added and wired during graph construction
-- Backpressure handling adds significant complexity — may be deferred to Phase 3 extension
+Each phase block the next. Testing in Phase 5 validates the full chain.

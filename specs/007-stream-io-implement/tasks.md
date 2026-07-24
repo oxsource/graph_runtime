@@ -1,37 +1,45 @@
 # Tasks: Stream Input/Output API
 
-## Phase 1 — Stream Infrastructure Fixes
+## Phase 1 — Node & Stream Infrastructure
 
-- [ ] T001 Fix `OutputStreamManager::PropagateUpdatesToMirrors` to actually move packets to downstream InputStreamManagers in `src/stream/output_stream_manager.cc`
-- [ ] T002 Fix `InputStreamHandler::FillInputSet` to pop packets from input queue and populate the shard in `src/scheduler/input_stream_handler.cc`
-- [ ] T003 Fix `OutputStreamHandler::PropagateOutputPackets` to complete the propagation state machine in `src/stream/output_stream_handler.cc`
-- [ ] T004 Add `Node::ProcessNode(GraphContext&)` that delegates to `Open()`/`Process()`/`Close()` based on node lifecycle state in `src/node/node.cc`
-- [ ] T005 Add `InputStreamHandler*` and `OutputStreamHandler*` members to `Node` in `src/node/node.h`
-- [ ] T006 Wire stream mirror connections in `GraphBuilder::Build()` in `src/public/graph_builder.cc`
+- [ ] T001 Add `InputStreamHandler*` and `OutputStreamHandler*` members to `Node` in `src/node/node.h`
+- [ ] T002 Implement mirror connections during node initialization using upstream index from validated graph in `src/node/node.cc` / `src/public/graph_builder.cc`
+- [ ] T003 Fix `OutputStreamManager::PropagateUpdatesToMirrors(Timestamp, OutputStreamShard*)` in `src/stream/output_stream_manager.cc` — move packets to mirrors, last mirror uses MovePackets
+- [ ] T004 Fix `InputStreamHandler::FillInputSet` through SyncSet with `late_preparation_` support in `src/scheduler/input_stream_handler.cc`
+- [ ] T005 Add `Node::OpenNode(CalculatorContext*)`, `Node::CloseNode()`, `Node::ProcessNode(CalculatorContext*)` with source/non-source paths in `src/node/node.cc`
+- [ ] T006 Fix `OutputStreamHandler::PropagateOutputPackets` (sequential: direct; parallel: state machine) in `src/stream/output_stream_handler.cc`
 
-## Phase 2 — Async Scheduler
+## Phase 2 — Backpressure & Throttling
 
-- [ ] T007 Add async state machine (kNotStarted, kRunning, kIdle, kTerminated) to `Scheduler` in `src/scheduler/scheduler.h`
-- [ ] T008 Implement `Scheduler::Start()` — non-blocking entry, activates source nodes in `src/scheduler/scheduler.cc`
-- [ ] T009 Implement `Scheduler::HandleIdle()` — detect idle state, schedule sources/unthrottle in `src/scheduler/scheduler.cc`
-- [ ] T010 Implement `Scheduler::ScheduleNodeIfNotThrottled()` — check throttling, enqueue node in `src/scheduler/scheduler.cc`
-- [ ] T011 Implement `Scheduler::WaitUntilIdle()` / `WaitUntilDone()` in `src/scheduler/scheduler.cc`
-- [ ] T012 Update `SchedulerQueue::AddNode` and `RunNextTask` to support `ProcessNode` items with `GraphContext` in `src/scheduler/scheduler_queue.cc`
+- [ ] T007 Add `full_input_streams_` vector and `UpdateThrottledNodes` callback wiring in `src/public/graph_runtime.cc`
+- [ ] T008 Implement `GraphInputStreamAddMode` (ADD_IF_NOT_FULL / WAIT_TILL_NOT_FULL) in `src/public/graph_runtime.cc`
+- [ ] T009 Implement `UnthrottleSources()` for deadlock recovery in `src/scheduler/scheduler.cc`
+- [ ] T010 Wire throttling into `HandleIdle` in `src/scheduler/scheduler.cc`
 
-## Phase 3 — GraphRuntime API
+## Phase 3 — Async Scheduler
 
-- [ ] T013 Add `GraphInputStream` map (stream_name → OutputStreamManager) to `GraphRuntime` in `src/public/graph_runtime.h`
-- [ ] T014 Implement `GraphRuntime::AddPacketToInputStream(stream_name, packet)` in `src/public/graph_runtime.cc`
-- [ ] T015 Implement `GraphRuntime::CloseInputStream(stream_name)` in `src/public/graph_runtime.cc`
-- [ ] T016 Implement backpressure: if downstream queue exceeds limit, throttle upstream in `src/public/graph_runtime.cc`
-- [ ] T017 Update `GraphRuntime::Initialize()` to set up input stream mirrors and map entries
+- [ ] T011 Add full state machine (kNotStarted, kRunning, kPaused, kCancelling, kTerminated) to `Scheduler` in `src/scheduler/scheduler.h`
+- [ ] T012 Implement `Scheduler::Start()` — non-blocking, set running, call HandleIdle in `src/scheduler/scheduler.cc`
+- [ ] T013 Implement `HandleIdle()` with reentrancy protection, CleanupActiveSources, TryToScheduleNextSourceLayer in `src/scheduler/scheduler.cc`
+- [ ] T014 Implement `TryToScheduleNextSourceLayer()` for source layer activation in `src/scheduler/scheduler.cc`
+- [ ] T015 Implement `ScheduleNodeIfNotThrottled()` in `src/scheduler/scheduler.cc`
+- [ ] T016 Update `SchedulerQueue::RunCalculatorNode()` — ProcessNode call + StatusStop handling + EndScheduling in `src/scheduler/scheduler_queue.cc`
+- [ ] T017 Implement `WaitUntilIdle()` / `WaitUntilDone()` in `src/scheduler/scheduler.cc`
 
-## Phase 4 — Testing
+## Phase 4 — GraphInputStream & Public API
 
-- [ ] T018 Write unit test: `AddPacketToInputStream` delivers packet to target node in `src/tests/stream_io_test.cc`
-- [ ] T019 Write unit test: `CloseInputStream` propagates `StatusStop()` in `src/tests/stream_io_test.cc`
-- [ ] T020 Write unit test: concurrent `AddPacketToInputStream` from 8 threads in `src/tests/stream_io_test.cc`
-- [ ] T021 Write unit test: error cases (unknown stream, lifecycle order) in `src/tests/stream_io_test.cc`
-- [ ] T022 Write integration test: pipeline with external input → output in `src/tests/stream_io_test.cc`
-- [ ] T023 Add `stream_io_test` target to `src/tests/BUILD.bazel`
-- [ ] T024 Run `bazel test //...` — verify all existing tests still pass
+- [ ] T018 Add `GraphInputStream` map (stream_name → {OutputStreamManager*, OutputStreamShard}) to `GraphRuntime` in `src/public/graph_runtime.h`
+- [ ] T019 Implement `AddPacketToInputStream(stream_name, packet)` with throttle check in `src/public/graph_runtime.cc`
+- [ ] T020 Implement `CloseInputStream(stream_name)` with counter + scheduler notification in `src/public/graph_runtime.cc`
+- [ ] T021 Update `GraphRuntime::Initialize()` for input stream mirror wiring in `src/public/graph_runtime.cc`
+
+## Phase 5 — Testing & Examples
+
+- [ ] T022 Create `add_packet_demo` example: feeds packets to a running graph via AddPacketToInputStream in `src/examples/add_packet_demo.cc`
+- [ ] T023 Add unit test: AddPacketToInputStream delivers packet to target node in `src/tests/stream_io_test.cc`
+- [ ] T024 Add unit test: CloseInputStream propagates StatusStop in `src/tests/stream_io_test.cc`
+- [ ] T025 Add unit test: concurrent AddPacket calls from 8 threads in `src/tests/stream_io_test.cc`
+- [ ] T026 Add unit test: error cases (unknown stream, lifecycle order) in `src/tests/stream_io_test.cc`
+- [ ] T027 Add integration test: pipeline with external input → consumer output in `src/tests/stream_io_test.cc`
+- [ ] T028 Add BUILD targets for stream_io_test and add_packet_demo
+- [ ] T029 Run `bazel test //...` — verify all existing tests still pass
