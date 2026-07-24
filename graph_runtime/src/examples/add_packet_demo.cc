@@ -54,7 +54,11 @@ int main() {
   Logger::Info(status.ok() ? "AddPacket OK" : std::string(status.ToString()).c_str());
 
   (void)runtime.CloseInputStream("input");
-  runtime.Shutdown();
+  status = runtime.WaitUntilDone();
+  if (!status.ok()) {
+    Logger::Error((std::string("WaitUntilDone: ") + std::string(status.ToString())).c_str());
+    return 1;
+  }
   Logger::Info("Demo done");
   return 0;
 }

@@ -63,6 +63,7 @@ cc_test(
     name = "scheduler_test",
     srcs = ["scheduler_test.cc"],
     deps = [
+        "@graph_runtime//src/framework/public:runtime",
         "@graph_runtime//src/framework/scheduler:scheduler",
         "@com_google_googletest//:gtest_main",
     ],

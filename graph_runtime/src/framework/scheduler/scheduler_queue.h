@@ -68,6 +68,7 @@ class SchedulerQueue : public TaskQueue {
   bool running_ = false;
   std::priority_queue<Item> queue_;
   int num_pending_tasks_ = 0;
+  int64_t timestamp_counter_ = 0;
 };
 
 }  // namespace graph::runtime

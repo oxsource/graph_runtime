@@ -1,5 +1,6 @@
-#include "graph_runtime/graph_runtime.h"
+#include "src/framework/public/graph_runtime.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 

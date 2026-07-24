@@ -76,7 +76,7 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   OutputStreamShardSet outputs;
   NodeOptions opts;
 
-  Timestamp ts = is_open ? Timestamp::Unstarted() : Timestamp(1);
+  Timestamp ts = is_open ? Timestamp::Unstarted() : Timestamp(timestamp_counter_++);
   GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
                    "node", ts, &inputs, &outputs, &opts);
 

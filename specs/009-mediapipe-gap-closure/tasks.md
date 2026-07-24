@@ -68,11 +68,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Fix `Start()` async path in `src/framework/scheduler/scheduler.cc` — build event-driven scheduling loop that drives nodes to completion rather than relying solely on `HandleIdle()`
-- [ ] T011 [US2] Fix hardcoded `Timestamp(1)` in `src/framework/scheduler/scheduler_queue.cc:79` — use real/assigned timestamp from scheduler context
-- [ ] T012 [US2] Fix `WaitUntilDone()` in `src/framework/scheduler/scheduler.cc` — ensure `cv_` is notified when async path reaches `kTerminated`
-- [ ] T013 [US2] Update `add_packet_demo.cc` in `src/examples/add_packet_demo.cc` — replace `Shutdown()` with `WaitUntilDone()`
-- [ ] T014 [US2] Update `async_pipeline_demo.cc` in `src/examples/async_pipeline_demo.cc` — replace `Shutdown()` with `WaitUntilDone()`
+- [X] T010 [US2] Fix `Start()` async path in `src/framework/scheduler/scheduler.cc` — build event-driven scheduling loop that drives nodes to completion rather than relying solely on `HandleIdle()`
+- [X] T011 [US2] Fix hardcoded `Timestamp(1)` in `src/framework/scheduler/scheduler_queue.cc:79` — use real/assigned timestamp from scheduler context
+- [X] T012 [US2] Fix `WaitUntilDone()` in `src/framework/scheduler/scheduler.cc` — ensure `cv_` is notified when async path reaches `kTerminated`
+- [X] T013 [US2] Update `add_packet_demo.cc` in `src/examples/add_packet_demo.cc` — replace `Shutdown()` with `WaitUntilDone()`
+- [X] T014 [US2] Update `async_pipeline_demo.cc` in `src/examples/async_pipeline_demo.cc` — replace `Shutdown()` with `WaitUntilDone()`
 
 **Checkpoint**: Both demos use `WaitUntilDone()` and exit normally — `bazel test //...` all pass ✅
 

@@ -63,7 +63,7 @@ void Scheduler::HandleIdle() {
 
     bool all_inputs_closed = (total_graph_input_streams_ > 0 &&
                               num_closed_graph_input_streams_ >= total_graph_input_streams_);
-    bool no_more_sources = active_sources_.empty() && source_nodes_.empty();
+    bool no_more_sources = active_sources_.empty();
     bool should_quit = has_error_ ||
                        (no_more_sources && all_inputs_closed) ||
                        (no_more_sources && total_graph_input_streams_ == 0);
