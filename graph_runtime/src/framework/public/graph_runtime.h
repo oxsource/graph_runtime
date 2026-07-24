@@ -77,6 +77,14 @@ class GraphRuntime {
   /// Force-terminate the graph (async path only).
   void Shutdown();
 
+  /// Pause graph execution (async path). Stops all queues. Resume() to
+  /// continue. Has no effect if the graph is not running.
+  absl::Status Pause();
+
+  /// Resume a paused graph (async path). Restarts queues and triggers
+  /// HandleIdle. Has no effect if the graph is not paused.
+  absl::Status Resume();
+
   /// @name Sync execution path
 
   /// Execute the graph synchronously on the calling thread.

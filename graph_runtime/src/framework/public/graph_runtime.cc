@@ -159,6 +159,20 @@ void GraphRuntime::Shutdown() {
   }
 }
 
+absl::Status GraphRuntime::Pause() {
+  if (!scheduler_) {
+    return absl::FailedPreconditionError("Graph not initialized");
+  }
+  return scheduler_->Pause();
+}
+
+absl::Status GraphRuntime::Resume() {
+  if (!scheduler_) {
+    return absl::FailedPreconditionError("Graph not initialized");
+  }
+  return scheduler_->Resume();
+}
+
 absl::Status GraphRuntime::AddPacketToInputStream(
     const std::string& stream_name, Packet packet) {
   auto it = stream_managers_.find(stream_name);

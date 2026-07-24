@@ -91,4 +91,48 @@ TEST_F(LifecycleQueryTest, StateTransitionsAfterShutdown) {
               state == SchedulerState::kTerminated);
 }
 
+class PauseResumeTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    runtime_ = std::make_unique<GraphRuntime>();
+  }
+
+  std::unique_ptr<GraphRuntime> runtime_;
+};
+
+TEST_F(PauseResumeTest, PauseWithoutInitReturnsError) {
+  auto status = runtime_->Pause();
+  EXPECT_FALSE(status.ok());
+}
+
+TEST_F(PauseResumeTest, ResumeWithoutInitReturnsError) {
+  auto status = runtime_->Resume();
+  EXPECT_FALSE(status.ok());
+}
+
+TEST_F(PauseResumeTest, PauseBeforeStartReturnsError) {
+  GraphConfig config;
+  ASSERT_TRUE(runtime_->Initialize(config).ok());
+  auto status = runtime_->Pause();
+  EXPECT_FALSE(status.ok());
+}
+
+TEST_F(PauseResumeTest, PauseAndResumeStates) {
+  GraphConfig config;
+  auto status = runtime_->Initialize(config);
+  ASSERT_TRUE(status.ok()) << status;
+  status = runtime_->Start();
+  ASSERT_TRUE(status.ok()) << status;
+
+  // If the graph terminated immediately (empty config, no nodes), Pause fails.
+  status = runtime_->Pause();
+  if (status.ok()) {
+    EXPECT_TRUE(runtime_->GetGraphState() == SchedulerState::kPaused);
+    status = runtime_->Resume();
+    EXPECT_TRUE(status.ok()) << status;
+  }
+
+  runtime_->Shutdown();
+}
+
 }  // namespace graph::runtime

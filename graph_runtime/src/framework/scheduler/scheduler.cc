@@ -314,12 +314,33 @@ absl::Status Scheduler::WaitForIdle() {
   return absl::OkStatus();
 }
 
+void Scheduler::SetQueuesRunning(bool running) {
+  for (auto* q : all_queues_) {
+    q->SetRunning(running);
+  }
+}
+
 absl::Status Scheduler::Pause() {
-  return absl::UnimplementedError("Pause not supported");
+  if (state_ != SchedulerState::kRunning) {
+    return absl::FailedPreconditionError("Graph is not running");
+  }
+  state_ = SchedulerState::kPaused;
+  SetQueuesRunning(false);
+  return absl::OkStatus();
 }
 
 absl::Status Scheduler::Resume() {
-  return absl::UnimplementedError("Resume not supported");
+  if (state_ != SchedulerState::kPaused) {
+    return absl::FailedPreconditionError("Graph is not paused");
+  }
+  state_ = SchedulerState::kRunning;
+  SetQueuesRunning(true);
+  // Submit any queued tasks and check if graph should terminate.
+  for (auto* q : all_queues_) {
+    q->SubmitWaitingTasksToExecutor();
+  }
+  HandleIdle();
+  return absl::OkStatus();
 }
 
 void Scheduler::AssignNodeToQueue(Node* node) {

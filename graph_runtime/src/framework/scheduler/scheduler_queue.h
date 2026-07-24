@@ -50,6 +50,7 @@ class SchedulerQueue : public TaskQueue {
 
   void SetRunning(bool running);
   bool IsRunning() const { return running_; }
+  void SubmitWaitingTasksToExecutor();
   void Reset();
   void CleanupAfterRun();
 

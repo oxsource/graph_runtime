@@ -82,6 +82,8 @@ class Scheduler {
   void SetInputSidePackets(const PacketSet& ps) { input_side_packets_ = ps; }
   const PacketSet& GetInputSidePackets() const { return input_side_packets_; }
 
+  void SetQueuesRunning(bool running);
+
  protected:
   SchedulerQueue& GetQueue(const std::string& executor_name);
   void OnNodeOpened(Node* node);

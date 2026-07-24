@@ -141,4 +141,10 @@ void SchedulerQueue::UpdateIdleState() {
   }
 }
 
+void SchedulerQueue::SubmitWaitingTasksToExecutor() {
+  if (!queue_.empty() && running_) {
+    SubmitToExecutor();
+  }
+}
+
 }  // namespace graph::runtime

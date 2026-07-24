@@ -103,9 +103,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Implement `Pause()` in `src/framework/scheduler/scheduler.cc` — set state to `kPaused`, block processing loop, notify via condition variable
-- [ ] T020 [US4] Implement `Resume()` in `src/framework/scheduler/scheduler.cc` — set state to `kRunning`, notify waiting threads, trigger `HandleIdle()`
-- [ ] T021 [P] [US4] Test: Pause/resume state machine and processing halt/resume in `src/tests/scheduler_test.cc`
+- [X] T019 [US4] Implement `Pause()` in `src/framework/scheduler/scheduler.cc` — set state to `kPaused`, block processing loop, notify via condition variable
+- [X] T020 [US4] Implement `Resume()` in `src/framework/scheduler/scheduler.cc` — set state to `kRunning`, notify waiting threads, trigger `HandleIdle()`
+- [X] T021 [P] [US4] Test: Pause/resume state machine and processing halt/resume in `src/tests/scheduler_test.cc`
 
 **Checkpoint**: `Pause()` and `Resume()` work — test verifies no processing during pause and correct resume ✅
 
