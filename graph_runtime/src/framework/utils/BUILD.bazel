@@ -8,7 +8,7 @@ cc_library(
 )
 
 cc_library(
-    name = "log_core",
+    name = "logger",
     srcs = ["logger.cc"],
     hdrs = ["logger.h"],
     copts = [
