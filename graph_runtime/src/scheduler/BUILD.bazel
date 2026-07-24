@@ -36,7 +36,9 @@ cc_library(
     hdrs = ["scheduler_queue.h"],
     deps = [
         ":executor",
+        "@graph_runtime//src/node:graph_context",
         "@graph_runtime//src/node:node_base",
+        "@graph_runtime//src/stream:output_stream_handler",
     ],
 )
 

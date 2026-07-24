@@ -1,4 +1,6 @@
 #include "src/scheduler/scheduler_queue.h"
+#include "src/node/graph_context.h"
+#include "src/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 
@@ -69,7 +71,30 @@ void SchedulerQueue::SubmitToExecutor() {
 
 void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (!node) return;
-  (void)is_open;
+
+  InputStreamShardSet inputs;
+  OutputStreamShardSet outputs;
+  NodeOptions opts;
+
+  Timestamp ts = is_open ? Timestamp::Unstarted() : Timestamp(1);
+  GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
+                   "node", ts, &inputs, &outputs, &opts);
+
+  if (is_open || ts == Timestamp::Done()) {
+    if (is_open) {
+      node->Open(ctx);
+    } else {
+      node->Close(ctx);
+    }
+    return;
+  }
+
+  node->Process(ctx);
+
+  // Propagate outputs
+  if (node->GetOutputStreamHandler()) {
+    node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
+  }
 }
 
 void SchedulerQueue::UpdateIdleState() {

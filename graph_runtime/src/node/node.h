@@ -15,6 +15,8 @@ namespace graph::runtime {
 
 class SchedulerQueue;
 class GraphContext;
+class InputStreamHandler;
+class OutputStreamHandler;
 
 class Node {
  public:
@@ -25,6 +27,8 @@ class Node {
   virtual absl::Status Open(GraphContext& context) = 0;
   virtual absl::Status Process(GraphContext& context) = 0;
   virtual absl::Status Close(GraphContext& context) = 0;
+
+
 
   void SetInputPort(const std::string& name, InputStreamManager* mgr) {
     input_ports_[name] = mgr;
@@ -56,6 +60,11 @@ class Node {
   void SetSourceLayer(int layer) { source_layer_ = layer; }
   int SourceLayer() const { return source_layer_; }
 
+  void SetInputStreamHandler(InputStreamHandler* h) { input_stream_handler_ = h; }
+  InputStreamHandler* GetInputStreamHandler() const { return input_stream_handler_; }
+  void SetOutputStreamHandler(OutputStreamHandler* h) { output_stream_handler_ = h; }
+  OutputStreamHandler* GetOutputStreamHandler() const { return output_stream_handler_; }
+
   virtual Timestamp SourceProcessOrder(const GraphContext& context) const {
     return Timestamp::Min();
   }
@@ -69,6 +78,8 @@ class Node {
   std::string executor_name_;
   SchedulerQueue* scheduler_queue_ = nullptr;
   int source_layer_ = 0;
+  InputStreamHandler* input_stream_handler_ = nullptr;
+  OutputStreamHandler* output_stream_handler_ = nullptr;
 };
 
 }  // namespace graph::runtime
