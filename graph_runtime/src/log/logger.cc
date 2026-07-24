@@ -1,5 +1,5 @@
 #include "src/log/logger.h"
-#include "src/log/hook_table.h"
+#include "src/hook/factory.h"
 
 #include <chrono>
 #include <cstdio>
@@ -41,22 +41,12 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
                         tag, LogLevelToString(level),
                         timestamp, msec, content);
 
-  // Dispatch to registered hooks before acquiring the output mutex.
-  // Iterate ALL kHookTypeLogIntercept entries. If any returns true,
-  // skip the default write.
+  // Dispatch to registered hooks. If any returns true, skip default output.
   bool suppressed = false;
-  const GraphHookEntity* table = GetGlobalHookTable();
-  if (table) {
-    for (const GraphHookEntity* e = table; e->type != kHookTypeSentinel; ++e) {
-      if (e->type == kHookTypeLogIntercept && e->hook_fn) {
-        try {
-          suppressed = e->hook_fn(formatted, 0) || suppressed;
-        } catch (...) {
-          // Hook threw — log a warning to stderr and fall back to default.
-          std::fprintf(stderr, "graphrt W Hook threw exception, falling back to default output\n");
-        }
-      }
-    }
+  try {
+    suppressed = hook::HookFactory::ForEachAccept(hook::kTypeLog, formatted, 0);
+  } catch (...) {
+    std::fprintf(stderr, "graphrt W Hook threw exception, falling back to default output\n");
   }
   if (suppressed) return;
 

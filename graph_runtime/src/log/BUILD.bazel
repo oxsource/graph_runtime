@@ -1,11 +1,6 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "hook_table",
-    hdrs = ["hook_table.h"],
-)
-
-cc_library(
     name = "log_core",
     srcs = ["logger.cc"],
     hdrs = ["logger.h"],
@@ -14,7 +9,7 @@ cc_library(
         "-fvisibility-inlines-hidden",
     ],
     deps = [
-        ":hook_table",
+        "//src/hook:hook",
         "@com_google_absl//absl/synchronization",
     ],
 )

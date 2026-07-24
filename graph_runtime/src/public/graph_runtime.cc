@@ -1,19 +1,11 @@
 #include "src/public/graph_runtime.h"
 #include "src/public/graph_builder.h"
-#include "src/log/hook_table.h"
 
-#include <atomic>
-
+#include "src/hook/factory.h"
 #include "src/scheduler/scheduler.h"
 #include "src/scheduler/input_stream_handler.h"
 
 namespace graph::runtime {
-
-namespace {
-
-std::atomic<const GraphHookEntity*> g_hook_table{nullptr};
-
-}  // namespace
 
 GraphRuntime::GraphRuntime()
     : scheduler_(std::make_unique<Scheduler>()) {}
@@ -80,21 +72,8 @@ void GraphRuntime::SetOutputSidePacketCallback(
     const std::string& name,
     std::function<void(const Packet&)> callback) {}
 
-void GraphRuntime::SetGlobalHook(const GraphHookEntity* table) {
-  g_hook_table.store(table, std::memory_order_release);
-}
-
-const GraphHookEntity* GraphRuntime::GetGlobalHook(int type) const {
-  const GraphHookEntity* table = g_hook_table.load(std::memory_order_acquire);
-  if (!table) return nullptr;
-  for (const GraphHookEntity* e = table; e->type != kHookTypeSentinel; ++e) {
-    if (e->type == type) return e;
-  }
-  return nullptr;
-}
-
-const GraphHookEntity* GetGlobalHookTable() {
-  return g_hook_table.load(std::memory_order_acquire);
+void GraphRuntime::SetHook(int type, hook::HookFn fn) {
+  hook::HookFactory::Register(type, fn);
 }
 
 }  // namespace graph::runtime

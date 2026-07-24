@@ -133,6 +133,7 @@ cc_test(
     srcs = ["logger_test.cc"],
     linkstatic = 1,
     deps = [
+        "@graph_runtime//src/hook:hook",
         "@graph_runtime//src/public:runtime",
         "@com_google_googletest//:gtest_main",
     ],

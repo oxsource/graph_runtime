@@ -8,7 +8,7 @@
 
 #include "absl/status/status.h"
 #include "src/config/graph_config.h"
-#include "src/log/hook_table.h"
+#include "src/public/include/graph_runtime/hook.h"
 #include "src/public/types.h"
 #include "src/public/side_packet.h"
 #include "src/scheduler/scheduler.h"
@@ -37,8 +37,9 @@ class GraphRuntime {
       const std::string& name,
       std::function<void(const Packet&)> callback);
 
-  void SetGlobalHook(const GraphHookEntity* table);
-  const GraphHookEntity* GetGlobalHook(int type) const;
+  // Register a hook by type. Replaces any previous hook of the same type.
+  // Example: SetHook(hook::kTypeLog, myFn);
+  void SetHook(int type, hook::HookFn fn);
 
  private:
   friend class GraphBuilder;

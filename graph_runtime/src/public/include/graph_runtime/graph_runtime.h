@@ -8,5 +8,6 @@
 #include "graph_runtime/graph_config.h"
 #include "graph_runtime/side_packet.h"
 #include "graph_runtime/logger.h"
+#include "graph_runtime/hook.h"
 
 #endif  // GRAPH_RUNTIME_PUBLIC_UMBRELLA_H_

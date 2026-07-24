@@ -1,41 +1,29 @@
 // log_intercept_demo.cc
-// Demonstrates injecting an external log interception hook via the
-// NULL-terminated GraphHookEntity sentinel table.
+// Demonstrates registering a log interception hook via GraphRuntime.
 //
 // Build: bazel build //src/examples:log_intercept_demo
 // Run:   bazel run //src/examples:log_intercept_demo
 
 #include <cstdio>
-#include <string>
 
 #define GRAPHRT_LOG_TAG "graphrt::demo"
 #include "src/log/logger.h"
-#include "src/log/hook_table.h"
 #include "src/public/graph_runtime.h"
 
 namespace {
 
-// Hook that writes all logs to a file (stderr in this demo), returns false
-// so default stdout output still occurs.
-bool FileHook(const void* data, int /*flag*/) {
-  const char* line = static_cast<const char*>(data);
-  std::fprintf(stderr, "[file hook] %s\n", line);
+bool FileHook(const void* data, int /*flags*/) {
+  std::fprintf(stderr, "[file hook] %s\n", static_cast<const char*>(data));
   return false;
 }
 
-// Hook that suppresses DEBUG-level messages by returning true.
-bool FilterDebugHook(const void* data, int /*flag*/) {
+bool FilterDebugHook(const void* data, int /*flags*/) {
   const char* line = static_cast<const char*>(data);
-  // Lines contain the level abbreviation at position after TAG.
-  // Our format: "graphrt::demo I YYYY-MM-DD ..."
-  if (line[0] == 'g') {
-    // Find the level character (after first space)
-    for (int i = 0; line[i]; ++i) {
-      if (line[i] == ' ' && line[i + 1] == 'D' && line[i + 2] == ' ') {
-        return true;  // suppress DEBUG
-      }
-      if (line[i] == ' ') break;  // only check first field
+  for (int i = 0; line[i]; ++i) {
+    if (line[i] == ' ' && line[i + 1] == 'D' && line[i + 2] == ' ') {
+      return true;
     }
+    if (line[i] == ' ') break;
   }
   return false;
 }
@@ -43,30 +31,17 @@ bool FilterDebugHook(const void* data, int /*flag*/) {
 }  // namespace
 
 int main() {
-  using namespace graph::runtime;
+  graph::runtime::GraphRuntime runtime;
 
-  // --- 1. Default logging (no hooks) ---
-  Logger::Info("starting demo — log with no hooks");
+  // Register hooks via runtime's public API.
+  // Only one hook per type is allowed — the second replaces the first.
+  runtime.SetHook(graph::runtime::hook::kTypeLog, FileHook);
+  runtime.SetHook(graph::runtime::hook::kTypeLog, FilterDebugHook);
 
-  // --- 2. Register a hook table with two hooks ---
-  static const GraphHookEntity kMyHooks[] = {
-    { kHookTypeLogIntercept, FileHook },
-    { kHookTypeLogIntercept, FilterDebugHook },
-    { kHookTypeSentinel, nullptr },
-  };
-
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kMyHooks);
-
-  // --- 3. Log with hooks active ---
-  Logger::Info("info message — both hooks process this");
-  Logger::Debug("debug message — FileHook sees it, FilterDebugHook suppresses it");
-  Logger::Error("error message — both hooks process this");
-
-  // --- 4. Clear hooks and log again ---
-  runtime.SetGlobalHook(nullptr);
-
-  Logger::Info("hooks cleared — back to default stdout only");
+  // Log with the active hook
+  graph::runtime::Logger::Info("info message — FilterDebugHook processes this");
+  graph::runtime::Logger::Debug("debug message — FilterDebugHook suppresses this");
+  graph::runtime::Logger::Error("error message — FilterDebugHook lets this through");
 
   return 0;
 }

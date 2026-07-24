@@ -5,10 +5,42 @@
 #include <vector>
 
 #include "src/log/logger.h"
-#include "src/public/graph_runtime.h"
+#include "src/hook/factory.h"
 #include "gtest/gtest.h"
 
 namespace graph::runtime {
+
+namespace {
+
+bool g_hook_invoked = false;
+std::string g_hook_line;
+bool g_hook_return_value = false;
+
+bool TestHook(const void* data, int) {
+  g_hook_invoked = true;
+  g_hook_line = static_cast<const char*>(data);
+  return g_hook_return_value;
+}
+
+bool ThrowingHook(const void*, int) {
+  throw std::runtime_error("hook failure");
+}
+
+// Test hooks registered via delegate.
+// Each test clears via ClearForTesting in SetUp/TearDown.
+struct HookTests : ::testing::Test {
+  void SetUp() override {
+    g_hook_invoked = false;
+    g_hook_line.clear();
+    g_hook_return_value = false;
+    hook::HookFactory::ClearForTesting();
+  }
+  void TearDown() override {
+    hook::HookFactory::ClearForTesting();
+  }
+};
+
+}  // namespace
 
 // --- LogLevelToString tests ---
 
@@ -38,40 +70,11 @@ TEST(LoggerTest, AllLevelsDoNotCrash) {
   Logger::Fatal("t", "f");
 }
 
-// --- Hook table tests ---
+// --- Hook tests ---
 
-namespace {
-
-bool g_hook_invoked = false;
-std::string g_hook_line;
-bool g_hook_return_value = false;
-
-bool TestHook(const void* data, int flag) {
-  g_hook_invoked = true;
-  g_hook_line = static_cast<const char*>(data);
-  return g_hook_return_value;
-}
-
-const GraphHookEntity kSingleHook[] = {
-  { kHookTypeLogIntercept, TestHook },
-  { kHookTypeSentinel, nullptr },
-};
-
-const GraphHookEntity kMultiHook[] = {
-  { kHookTypeLogIntercept, TestHook },
-  { kHookTypeLogIntercept, TestHook },
-  { kHookTypeSentinel, nullptr },
-};
-
-}  // namespace
-
-TEST(LoggerTest, HookReceivesFormattedLine) {
-  g_hook_invoked = false;
-  g_hook_line.clear();
+TEST_F(HookTests, HookReceivesFormattedLine) {
+  hook::HookFactory::Register(hook::kTypeLog, TestHook);
   g_hook_return_value = false;
-
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kSingleHook);
 
   Logger::Info("graphrt::hooktest", "hook msg");
 
@@ -79,88 +82,51 @@ TEST(LoggerTest, HookReceivesFormattedLine) {
   EXPECT_NE(g_hook_line.find("graphrt::hooktest"), std::string::npos);
   EXPECT_NE(g_hook_line.find(" I "), std::string::npos);
   EXPECT_NE(g_hook_line.find("hook msg"), std::string::npos);
-
-  runtime.SetGlobalHook(nullptr);
 }
 
-TEST(LoggerTest, HookReturnsTrueSuppressesOutput) {
-  g_hook_invoked = false;
-  g_hook_line.clear();
+TEST_F(HookTests, HookReturnsTrueSuppressesOutput) {
+  hook::HookFactory::Register(hook::kTypeLog, TestHook);
   g_hook_return_value = true;
-
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kSingleHook);
 
   Logger::Info("graphrt::test", "suppress me");
 
   EXPECT_TRUE(g_hook_invoked);
-
-  runtime.SetGlobalHook(nullptr);
 }
 
-TEST(LoggerTest, HookReturnsFalseAllowsOutput) {
-  g_hook_invoked = false;
-  g_hook_line.clear();
+TEST_F(HookTests, HookReturnsFalseAllowsOutput) {
+  hook::HookFactory::Register(hook::kTypeLog, TestHook);
   g_hook_return_value = false;
-
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kSingleHook);
 
   Logger::Info("graphrt::test", "let through");
 
   EXPECT_TRUE(g_hook_invoked);
-
-  runtime.SetGlobalHook(nullptr);
 }
 
-TEST(LoggerTest, MultipleHooksBothCalled) {
+TEST_F(HookTests, RegisterReplacesExisting) {
+  static bool s_second_called = false;
+  s_second_called = false;
   g_hook_invoked = false;
-  g_hook_line.clear();
-  g_hook_return_value = false;
+  hook::HookFactory::Register(hook::kTypeLog, TestHook);
 
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kMultiHook);
+  hook::HookFactory::Register(hook::kTypeLog,
+                     [](const void*, int) { s_second_called = true; return false; });
 
-  Logger::Info("graphrt::test", "multi");
-
-  EXPECT_TRUE(g_hook_invoked);
-
-  runtime.SetGlobalHook(nullptr);
-}
-
-TEST(LoggerTest, ClearHookRestoresDefault) {
-  g_hook_invoked = false;
-  g_hook_return_value = false;
-
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kSingleHook);
-  runtime.SetGlobalHook(nullptr);
-
-  Logger::Info("graphrt::test", "no hook");
+  Logger::Info("graphrt::test", "replace");
 
   EXPECT_FALSE(g_hook_invoked);
+  EXPECT_TRUE(s_second_called);
 }
 
-// --- Exception safety ---
-
-bool ThrowingHook(const void*, int) {
-  throw std::runtime_error("hook failure");
+TEST_F(HookTests, NoHookDefaultsToStdout) {
+  // No hooks registered — output must not crash
+  Logger::Info("graphrt::test", "no hook");
 }
 
-TEST(LoggerTest, HookExceptionDoesNotCrash) {
-  const GraphHookEntity kThrowingHook[] = {
-    { kHookTypeLogIntercept, ThrowingHook },
-    { kHookTypeSentinel, nullptr },
-  };
+TEST_F(HookTests, HookExceptionDoesNotCrash) {
+  hook::HookFactory::Register(hook::kTypeLog, ThrowingHook);
 
-  GraphRuntime runtime;
-  runtime.SetGlobalHook(kThrowingHook);
-
-  // Should not crash despite the hook throwing
   Logger::Info("graphrt::test", "after exception");
   Logger::Error("graphrt::test", "still works");
-
-  runtime.SetGlobalHook(nullptr);
 }
 
 // --- Concurrent logging ---
@@ -185,42 +151,6 @@ TEST(LoggerTest, RepeatedCalls) {
   for (int i = 0; i < 1000; ++i) {
     Logger::Info("graphrt::test", "repeat");
   }
-}
-
-TEST(LoggerTest, ConcurrentHookSwapNoCrash) {
-  static constexpr int kThreads = 8;
-  static constexpr int kLogsPerThread = 40;
-
-  GraphRuntime runtime;
-  std::atomic<bool> running{true};
-
-  // Thread that continuously swaps the hook table
-  std::thread swapper([&] {
-    while (running.load()) {
-      runtime.SetGlobalHook(kSingleHook);
-      std::this_thread::yield();
-      runtime.SetGlobalHook(nullptr);
-      std::this_thread::yield();
-    }
-  });
-
-  // Logging threads
-  std::vector<std::thread> loggers;
-  for (int i = 0; i < kThreads; ++i) {
-    loggers.emplace_back([&] {
-      for (int j = 0; j < kLogsPerThread; ++j) {
-        Logger::Info("graphrt::test", "concurrent swap");
-        Logger::Debug("graphrt::test", "debug");
-        Logger::Error("graphrt::test", "err");
-      }
-    });
-  }
-
-  for (auto& t : loggers) t.join();
-  running.store(false);
-  swapper.join();
-
-  runtime.SetGlobalHook(nullptr);
 }
 
 }  // namespace graph::runtime
