@@ -29,9 +29,9 @@
 
 namespace graph::runtime {
 
-class Counter : public Node {
+class DemoCounterNode : public Node {
  public:
-  Counter(const std::string& n, const NodeOptions&) : Node(n) {}
+  DemoCounterNode(const std::string& n, const NodeOptions&) : Node(n) {}
   static absl::Status GetContract(NodeContract* c) {
     c->Inputs().Get("in").Set<std::string>();
     return absl::OkStatus();
@@ -50,15 +50,16 @@ class Counter : public Node {
 
 }  // namespace graph::runtime
 
-namespace { using Counter = graph::runtime::Counter; }
-GRAPH_RUNTIME_REGISTER_NODE("Counter", Counter);
+namespace { using DemoCounterNode = graph::runtime::DemoCounterNode; }
+GRAPH_RUNTIME_REGISTER_NODE("DemoCounterNode", DemoCounterNode);
 
 int main() {
   using namespace graph::runtime;
 
   // Build a minimal graph config with one consumer node and one input stream.
   GraphConfig config;
-  config.nodes.push_back({"counter", "Counter", {"in"}, {}, {}, {}, {}, "", "", 0, 0});
+  config.input_streams.push_back("in");
+  config.nodes.push_back({"counter", "DemoCounterNode", {"in"}, {}, {}, {}, {}, "", "", 0, 0});
 
   Logger::Info("Pipeline starting — will inject 5 packets asynchronously");
 

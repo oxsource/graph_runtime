@@ -48,6 +48,7 @@ int main() {
   using namespace graph::runtime;
 
   GraphConfig config;
+  config.input_streams.push_back("input");
   config.nodes.push_back({"consumer", "DemoConsumer", {"input"}, {}, {}, {}, {}, "", "", 0, 0});
 
   GraphRuntime runtime;
