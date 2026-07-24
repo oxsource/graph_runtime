@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 
+#define GRAPHRT_LOG_TAG "graphrt::scheduler"
 #include "src/public/logger.h"
 #include "src/scheduler/input_stream_handler.h"
 #include "src/stream/output_stream_handler.h"
@@ -63,14 +64,12 @@ absl::Status Scheduler::Schedule() {
                      &input_shards, &output_shards, &opts);
     auto status = node->Open(ctx);
     if (!status.ok()) {
-      Logger::Error("graphrt::scheduler",
-                    std::string("Open failed for " + node->name() + ": " + std::string(status.ToString())).c_str());
+      Logger::Error(std::string("Open failed for " + node->name() + ": " + std::string(status.ToString())).c_str());
       if (error_callback_) error_callback_(status);
       state_ = SchedulerState::kTerminated;
       return status;
     }
-    Logger::Info("graphrt::scheduler",
-                 std::string("Opened " + node->name()).c_str());
+    Logger::Info(std::string("Opened " + node->name()).c_str());
     if (node->input_port_count() == 0) {
       active_sources_.insert(node);
     }
@@ -91,21 +90,18 @@ absl::Status Scheduler::Schedule() {
       GraphContext ctx(source->name(), reinterpret_cast<int64_t>(source),
                        "node", ts, &input_shards, &output_shards, &opts);
 
-      Logger::Info("graphrt::scheduler",
-                   std::string("Process " + source->name() + " at ts=" + std::to_string(ts.Value())).c_str());
+      Logger::Info(std::string("Process " + source->name() + " at ts=" + std::to_string(ts.Value())).c_str());
       auto status = source->Process(ctx);
 
       if (!status.ok() && !IsStopStatus(status)) {
-        Logger::Error("graphrt::scheduler",
-                      std::string("Error in " + source->name() + ": " + std::string(status.ToString())).c_str());
+        Logger::Error(std::string("Error in " + source->name() + ": " + std::string(status.ToString())).c_str());
         if (error_callback_) error_callback_(status);
         has_error_ = true;
         break;
       }
 
       if (IsStopStatus(status)) {
-        Logger::Info("graphrt::scheduler",
-                     std::string(source->name() + " stopped").c_str());
+        Logger::Info(std::string(source->name() + " stopped").c_str());
         active_sources_.erase(source);
         continue;
       }
@@ -125,12 +121,10 @@ absl::Status Scheduler::Schedule() {
         GraphContext dctx(downstream->name(), reinterpret_cast<int64_t>(downstream),
                           "node", ts, &ds_input, &ds_output, &opts);
 
-        Logger::Info("graphrt::scheduler",
-                     std::string("Process " + downstream->name() + " at ts=" + std::to_string(ts.Value())).c_str());
+        Logger::Info(std::string("Process " + downstream->name() + " at ts=" + std::to_string(ts.Value())).c_str());
         auto ds = downstream->Process(dctx);
         if (!ds.ok() && !IsStopStatus(ds)) {
-          Logger::Error("graphrt::scheduler",
-                        std::string("Error in " + downstream->name() + ": " + std::string(ds.ToString())).c_str());
+          Logger::Error(std::string("Error in " + downstream->name() + ": " + std::string(ds.ToString())).c_str());
           if (error_callback_) error_callback_(ds);
           has_error_ = true;
           break;
@@ -150,11 +144,9 @@ absl::Status Scheduler::Schedule() {
                      &input_shards, &output_shards, &opts);
     auto status = node->Close(ctx);
     if (!status.ok()) {
-      Logger::Error("graphrt::scheduler",
-                    std::string("Close error for " + node->name() + ": " + std::string(status.ToString())).c_str());
+      Logger::Error(std::string("Close error for " + node->name() + ": " + std::string(status.ToString())).c_str());
     }
-    Logger::Info("graphrt::scheduler",
-                 std::string("Closed " + node->name()).c_str());
+    Logger::Info(std::string("Closed " + node->name()).c_str());
   }
 
   state_ = SchedulerState::kTerminated;

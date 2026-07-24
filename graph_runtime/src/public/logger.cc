@@ -53,7 +53,7 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
           suppressed = e->hook_fn(formatted, 0) || suppressed;
         } catch (...) {
           // Hook threw — log a warning to stderr and fall back to default.
-          std::fprintf(stderr, "[graphrt] [WARN] Hook threw exception, falling back to default output\n");
+          std::fprintf(stderr, "[graphrt] [W] Hook threw exception, falling back to default output\n");
         }
       }
     }
@@ -67,24 +67,48 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
   std::fflush(out);
 }
 
+#ifndef GRAPHRT_LOG_TAG
+#define GRAPHRT_LOG_TAG "graphrt"
+#endif
+
 void Logger::Debug(const char* tag, const char* content) {
   Instance().Log(LogLevel::kDebug, tag, content);
+}
+
+void Logger::Debug(const char* content) {
+  Instance().Log(LogLevel::kDebug, GRAPHRT_LOG_TAG, content);
 }
 
 void Logger::Info(const char* tag, const char* content) {
   Instance().Log(LogLevel::kInfo, tag, content);
 }
 
+void Logger::Info(const char* content) {
+  Instance().Log(LogLevel::kInfo, GRAPHRT_LOG_TAG, content);
+}
+
 void Logger::Warn(const char* tag, const char* content) {
   Instance().Log(LogLevel::kWarn, tag, content);
+}
+
+void Logger::Warn(const char* content) {
+  Instance().Log(LogLevel::kWarn, GRAPHRT_LOG_TAG, content);
 }
 
 void Logger::Error(const char* tag, const char* content) {
   Instance().Log(LogLevel::kError, tag, content);
 }
 
+void Logger::Error(const char* content) {
+  Instance().Log(LogLevel::kError, GRAPHRT_LOG_TAG, content);
+}
+
 void Logger::Fatal(const char* tag, const char* content) {
   Instance().Log(LogLevel::kFatal, tag, content);
+}
+
+void Logger::Fatal(const char* content) {
+  Instance().Log(LogLevel::kFatal, GRAPHRT_LOG_TAG, content);
 }
 
 }  // namespace graph::runtime

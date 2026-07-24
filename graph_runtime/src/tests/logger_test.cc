@@ -13,15 +13,15 @@ namespace graph::runtime {
 // --- LogLevelToString tests ---
 
 TEST(LoggerTest, LogLevelToString_AllLevels) {
-  EXPECT_STREQ(LogLevelToString(LogLevel::kFatal), "FATAL");
-  EXPECT_STREQ(LogLevelToString(LogLevel::kError), "ERROR");
-  EXPECT_STREQ(LogLevelToString(LogLevel::kWarn), "WARN");
-  EXPECT_STREQ(LogLevelToString(LogLevel::kInfo), "INFO");
-  EXPECT_STREQ(LogLevelToString(LogLevel::kDebug), "DEBUG");
+  EXPECT_STREQ(LogLevelToString(LogLevel::kFatal), "F");
+  EXPECT_STREQ(LogLevelToString(LogLevel::kError), "E");
+  EXPECT_STREQ(LogLevelToString(LogLevel::kWarn), "W");
+  EXPECT_STREQ(LogLevelToString(LogLevel::kInfo), "I");
+  EXPECT_STREQ(LogLevelToString(LogLevel::kDebug), "D");
 }
 
 TEST(LoggerTest, LogLevelToString_OutOfRange) {
-  EXPECT_STREQ(LogLevelToString(static_cast<LogLevel>(99)), "UNKNOWN");
+  EXPECT_STREQ(LogLevelToString(static_cast<LogLevel>(99)), "U");
 }
 
 // --- Default output tests ---
@@ -77,7 +77,7 @@ TEST(LoggerTest, HookReceivesFormattedLine) {
 
   EXPECT_TRUE(g_hook_invoked);
   EXPECT_NE(g_hook_line.find("[graphrt::hooktest]"), std::string::npos);
-  EXPECT_NE(g_hook_line.find("[INFO]"), std::string::npos);
+  EXPECT_NE(g_hook_line.find("[I]"), std::string::npos);
   EXPECT_NE(g_hook_line.find("hook msg"), std::string::npos);
 
   runtime.SetGlobalHook(nullptr);

@@ -15,14 +15,19 @@ enum class LogLevel : int {
 
 inline const char* LogLevelToString(LogLevel level) {
   switch (level) {
-    case LogLevel::kFatal: return "FATAL";
-    case LogLevel::kError: return "ERROR";
-    case LogLevel::kWarn:  return "WARN";
-    case LogLevel::kInfo:  return "INFO";
-    case LogLevel::kDebug: return "DEBUG";
-    default:               return "UNKNOWN";
+    case LogLevel::kFatal: return "F";
+    case LogLevel::kError: return "E";
+    case LogLevel::kWarn:  return "W";
+    case LogLevel::kInfo:  return "I";
+    case LogLevel::kDebug: return "D";
+    default:               return "U";
   }
 }
+
+// Modules define GRAPHRT_LOG_TAG before including this header to set
+// a default tag for no-tag overloads. Example:
+//   #define GRAPHRT_LOG_TAG "graphrt::scheduler"
+//   #include "src/public/logger.h"
 
 class Logger {
  public:
@@ -31,6 +36,13 @@ class Logger {
   static void Warn(const char* tag, const char* content);
   static void Error(const char* tag, const char* content);
   static void Fatal(const char* tag, const char* content);
+
+  // No-tag overloads — use GRAPHRT_LOG_TAG (default "graphrt").
+  static void Debug(const char* content);
+  static void Info(const char* content);
+  static void Warn(const char* content);
+  static void Error(const char* content);
+  static void Fatal(const char* content);
 
  private:
   Logger() = default;
