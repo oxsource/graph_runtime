@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at
-`specs/007-stream-io-implement/plan.md`, the module interaction design at
+`specs/008-core-module-framework/plan.md`, the module interaction design at
 `specs/002-scheduler-stream-packet-design/plan.md`, the config architecture at
 `specs/003-config-architecture/plan.md`, the library public API at
 `specs/004-library-public-api/plan.md`, the project bootstrap at
