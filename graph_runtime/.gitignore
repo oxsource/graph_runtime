@@ -1,0 +1,44 @@
+# Bazel build artifacts
+bazel-*
+*.bazel.lst
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Compiled objects
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.lib
+*.a
+*.class
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+.ijwb/
+.project
+.classpath
+.settings/
+
+# Build outputs
+/tmp/
+/cmake-build-*/
+
+# Environment
+.env
+.venv/
+venv/
+*.log
