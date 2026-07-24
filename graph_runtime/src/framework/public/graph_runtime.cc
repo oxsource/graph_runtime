@@ -83,7 +83,7 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
     }
   }
 
-  // Wire backpressure callbacks on each input stream.
+  // Wire backpressure callbacks and arrival callbacks on each input stream.
   for (const auto& ndef : config_.nodes) {
     for (const auto& input_stream : ndef.input_streams) {
       auto it = stream_managers_.find(input_stream);
@@ -92,6 +92,17 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
         mgr->SetQueueSizeCallbacks(
             [this](InputStreamManager* m, bool*) { OnInputStreamFull(m); },
             [this](InputStreamManager* m, bool*) { OnInputStreamNotFull(m); });
+
+        // When a packet arrives on this stream, schedule the owning node.
+        auto* owning_node = FindNode(ndef.name);
+        if (owning_node) {
+          mgr->SetArrivalCallback([owning_node]() {
+            auto* q = owning_node->GetSchedulerQueue();
+            if (q && q->IsRunning()) {
+              q->AddNode(owning_node);
+            }
+          });
+        }
       }
     }
   }
@@ -167,6 +178,17 @@ absl::Status GraphRuntime::AddPacketToInputStream(
   bool notify = false;
   absl::Status st = it->second->AddPackets(packets, &notify);
   if (!st.ok()) return st;
+
+  // Schedule the owning node for processing.
+  for (auto& node : all_nodes_) {
+    if (node->GetInputPort(stream_name)) {
+      auto* q = node->GetSchedulerQueue();
+      if (q && q->IsRunning()) {
+        q->AddNode(node.get());
+      }
+      break;
+    }
+  }
 
   scheduler_->AddedPacketToGraphInputStream();
   return absl::OkStatus();

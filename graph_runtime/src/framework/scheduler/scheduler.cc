@@ -44,15 +44,11 @@ absl::Status Scheduler::SetNonDefaultExecutor(
 void Scheduler::HandleIdle() {
   if (++handling_idle_ > 1) { --handling_idle_; return; }
 
-  // If graph input streams are open, do not terminate while idle —
-  // external packets may arrive later. Only terminate when all inputs
-  // are closed or the graph has error.
   bool inputs_remaining = total_graph_input_streams_ > 0 &&
                           num_closed_graph_input_streams_ < total_graph_input_streams_;
 
   while (IsIdle() && (state_ == SchedulerState::kRunning ||
                       state_ == SchedulerState::kCancelling)) {
-    // Clean up closed sources
     for (auto it = active_sources_.begin(); it != active_sources_.end();) {
       if (state_ == SchedulerState::kCancelling) {
         active_sources_.erase(it++);
@@ -78,7 +74,6 @@ void Scheduler::HandleIdle() {
       return;
     }
 
-    // If active sources exist, re-schedule them
     if (!active_sources_.empty()) {
       for (auto* source : active_sources_) {
         default_queue_.AddNode(source);
@@ -87,13 +82,11 @@ void Scheduler::HandleIdle() {
       return;
     }
 
-    // External inputs still open — don't terminate, just yield
     if (inputs_remaining) {
       --handling_idle_;
       return;
     }
 
-    // No sources, no inputs, no pending work — terminate
     bool any_pending = false;
     for (auto* q : all_queues_) {
       if (!q->IsIdle()) { any_pending = true; break; }

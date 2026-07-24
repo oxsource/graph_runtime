@@ -49,6 +49,7 @@ class SchedulerQueue : public TaskQueue {
   void SetSourceStoppedCallback(SourceStoppedCallback cb) { source_stopped_callback_ = std::move(cb); }
 
   void SetRunning(bool running);
+  bool IsRunning() const { return running_; }
   void Reset();
   void CleanupAfterRun();
 

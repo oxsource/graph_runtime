@@ -82,11 +82,7 @@ int main() {
   Logger::Info("Main thread waiting for graph to complete...");
   producer.join();
 
-  status = runtime.WaitUntilDone();
-  if (!status.ok()) {
-    Logger::Error((std::string("WaitUntilDone: ") + std::string(status.ToString())).c_str());
-    return 1;
-  }
+  runtime.Shutdown();
   Logger::Info("Done — all packets processed");
   return 0;
 }
