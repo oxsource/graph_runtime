@@ -322,6 +322,16 @@ void Scheduler::SetQueuesRunning(bool running) {
   }
 }
 
+void Scheduler::Cancel() {
+  if (has_error_) return;
+  has_error_ = true;
+  state_ = SchedulerState::kCancelling;
+  if (state_ == SchedulerState::kPaused) {
+    SetQueuesRunning(true);
+  }
+  HandleIdle();
+}
+
 absl::Status Scheduler::Pause() {
   if (state_ != SchedulerState::kRunning) {
     return absl::FailedPreconditionError("Graph is not running");

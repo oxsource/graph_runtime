@@ -207,10 +207,10 @@
 
 ### Layer 6: Cancel()
 
-- [ ] T056 [US7] Implement `Scheduler::Cancel()` in `src/framework/scheduler/scheduler.cc` — set state to kCancelling, set error
-- [ ] T057 [US7] Add `GraphRuntime::Cancel()` public method in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc`
-- [ ] T058 [P] [US7] Handle kCancelling in `HandleIdle()` — drain queues and terminate
-- [ ] T059 [P] [US7] Test: Cancel() + WaitUntilDone() in `src/tests/scheduler_test.cc`
+- [X] T056 [US7] Implement `Scheduler::Cancel()` in `src/framework/scheduler/scheduler.cc` — set state to kCancelling, set error
+- [X] T057 [US7] Add `GraphRuntime::Cancel()` public method in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc`
+- [X] T058 [P] [US7] Handle kCancelling in `HandleIdle()` — drain queues and terminate
+- [X] T059 [P] [US7] Test: Cancel() + WaitUntilDone() in `src/tests/scheduler_test.cc`
 
 **Checkpoint**: All 6 layers implemented — `bazel test //...` all pass ✅
 

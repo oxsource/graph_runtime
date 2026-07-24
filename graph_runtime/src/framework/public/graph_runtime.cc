@@ -183,6 +183,12 @@ void GraphRuntime::Shutdown() {
   }
 }
 
+void GraphRuntime::Cancel() {
+  if (scheduler_) {
+    scheduler_->Cancel();
+  }
+}
+
 absl::Status GraphRuntime::Pause() {
   if (!scheduler_) {
     return absl::FailedPreconditionError("Graph not initialized");

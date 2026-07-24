@@ -51,6 +51,8 @@ class Scheduler {
   virtual absl::Status WaitUntilDone();
   virtual absl::Status WaitForIdle();
   virtual void Shutdown();
+  virtual void Cancel();
+
   virtual absl::Status Pause();
   virtual absl::Status Resume();
 

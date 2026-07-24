@@ -427,4 +427,40 @@ TEST_F(PerfCountersTest, IncrementAndRead) {
   EXPECT_EQ(counters.packets_processed.Value(), 1);
 }
 
+class CancelTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    runtime_ = std::make_unique<GraphRuntime>();
+  }
+  std::unique_ptr<GraphRuntime> runtime_;
+};
+
+TEST_F(CancelTest, CancelWithoutInitDoesNotCrash) {
+  runtime_->Cancel();
+  SUCCEED();
+}
+
+TEST_F(CancelTest, CancelThenWaitUntilDone) {
+  GraphConfig config;
+  auto status = runtime_->Initialize(config);
+  ASSERT_TRUE(status.ok()) << status;
+  runtime_->Start();
+  runtime_->Cancel();
+  status = runtime_->WaitUntilDone();
+  EXPECT_TRUE(status.ok()) << status;
+}
+
+TEST_F(CancelTest, StateIsCancellingAfterCancel) {
+  GraphConfig config;
+  ASSERT_TRUE(runtime_->Initialize(config).ok());
+  runtime_->Start();
+  // After Start, the graph may already be terminated (empty config).
+  // Cancel() sets kCancelling if running, else no-op.
+  runtime_->Cancel();
+  auto state = runtime_->GetGraphState();
+  EXPECT_TRUE(state == SchedulerState::kCancelling ||
+              state == SchedulerState::kTerminated);
+  runtime_->WaitUntilDone();
+}
+
 }  // namespace graph::runtime

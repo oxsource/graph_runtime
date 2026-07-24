@@ -77,6 +77,10 @@ class GraphRuntime {
   /// Force-terminate the graph (async path only).
   void Shutdown();
 
+  /// Cancel graph execution. Sets state to kCancelling and records
+  /// an error. Queues are drained and WaitUntilDone returns.
+  void Cancel();
+
   /// Pause graph execution (async path). Stops all queues. Resume() to
   /// continue. Has no effect if the graph is not running.
   absl::Status Pause();
