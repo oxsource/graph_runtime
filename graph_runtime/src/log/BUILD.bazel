@@ -1,0 +1,20 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "hook_table",
+    hdrs = ["hook_table.h"],
+)
+
+cc_library(
+    name = "log_core",
+    srcs = ["logger.cc"],
+    hdrs = ["logger.h"],
+    copts = [
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+    ],
+    deps = [
+        ":hook_table",
+        "@com_google_absl//absl/synchronization",
+    ],
+)

@@ -8,7 +8,7 @@
 
 #include "absl/status/status.h"
 #include "src/config/graph_config.h"
-#include "src/public/hook_table.h"
+#include "src/log/hook_table.h"
 #include "src/public/types.h"
 #include "src/public/side_packet.h"
 #include "src/scheduler/scheduler.h"

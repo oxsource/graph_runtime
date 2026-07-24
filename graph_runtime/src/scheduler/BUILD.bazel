@@ -49,7 +49,7 @@ cc_library(
         ":scheduler_queue",
         ":thread_pool_executor",
         ":input_stream_handler",
-        "@graph_runtime//src/public:log_interface",
+        "//src/log:log_core",
         "@graph_runtime//src/stream:input_stream_manager",
         "@graph_runtime//src/stream:input_stream",
         "@graph_runtime//src/stream:output_stream_handler",

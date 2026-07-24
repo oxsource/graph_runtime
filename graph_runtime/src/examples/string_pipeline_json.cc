@@ -5,7 +5,7 @@
 #include <vector>
 
 #define GRAPHRT_LOG_TAG "graphrt::example"
-#include "src/public/logger.h"
+#include "src/log/logger.h"
 
 #include "absl/strings/str_cat.h"
 #include "src/config/json/json_parser.h"

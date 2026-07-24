@@ -9,8 +9,8 @@
 #include <string>
 
 #define GRAPHRT_LOG_TAG "graphrt::demo"
-#include "src/public/logger.h"
-#include "src/public/hook_table.h"
+#include "src/log/logger.h"
+#include "src/log/hook_table.h"
 #include "src/public/graph_runtime.h"
 
 namespace {

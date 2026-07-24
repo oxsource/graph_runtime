@@ -4,7 +4,7 @@
 #include <thread>
 #include <vector>
 
-#include "src/public/logger.h"
+#include "src/log/logger.h"
 #include "src/public/graph_runtime.h"
 #include "gtest/gtest.h"
 

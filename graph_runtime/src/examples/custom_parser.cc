@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "src/public/logger.h"
+#include "src/log/logger.h"
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"

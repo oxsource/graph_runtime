@@ -1,6 +1,6 @@
 #include "src/public/graph_runtime.h"
 #include "src/public/graph_builder.h"
-#include "src/public/hook_table.h"
+#include "src/log/hook_table.h"
 
 #include <atomic>
 
