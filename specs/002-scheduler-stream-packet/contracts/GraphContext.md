@@ -64,7 +64,7 @@ class GraphContext {
   GraphContext(
       const std::string& node_name,
       int node_id,
-      const std::string& calculator_type,
+      const std::string& node_type,
       Timestamp input_timestamp,
       InputStreamShardSet inputs,
       OutputStreamShardSet outputs,
@@ -73,7 +73,7 @@ class GraphContext {
   // Identity
   const std::string& NodeName() const;
   int NodeId() const;
-  const std::string& CalculatorType() const;
+  const std::string& NodeType() const;
 
   // Current invocation timestamp
   //   Open()   → Timestamp::Unstarted()
@@ -103,7 +103,7 @@ class GraphContext {
  private:
   std::string node_name_;
   int node_id_;
-  std::string calculator_type_;
+  std::string node_type_;
   Timestamp input_timestamp_;
   InputStreamShardSet inputs_;
   OutputStreamShardSet outputs_;
@@ -139,23 +139,23 @@ class GraphContext {
 
 ### GraphContextManager
 
-Manages lifecycle of `GraphContext` instances. Owned by `CalculatorNode`. Analogous to MediaPipe's `CalculatorContextManager`.
+Manages lifecycle of `GraphContext` instances. Owned by `Node`. Analogous to MediaPipe's `GraphContextManager`.
 
 ```cpp
 class GraphContextManager {
  public:
   void Initialize(
       const std::string& node_name, int node_id,
-      const std::string& calculator_type,
+      const std::string& node_type,
       InputStreamShardSet inputs, OutputStreamShardSet outputs,
       const NodeOptions* options);
 
   // Default context — used for Open(), Close(), and sequential Process()
-  GraphContext* GetDefaultCalculatorContext();
+  GraphContext* GetDefaultContext();
 
   // Parallel execution (Phase 2):
-  GraphContext* PrepareCalculatorContext(Timestamp input_timestamp);
-  void RecycleCalculatorContext();
+  GraphContext* PrepareContext(Timestamp input_timestamp);
+  void RecycleContext();
   void CleanupAfterRun();
 
  private:
@@ -167,7 +167,7 @@ class GraphContextManager {
 
 **Semantics**:
 - One `GraphContextManager` per Node. Manages the per-invocation `GraphContext` instances.
-- `GetDefaultCalculatorContext()` returns a single reusable context. Used for `Open()`, `Close()`, and sequential `Process()` calls. Source Nodes always use this context.
-- `PrepareCalculatorContext(ts)` (Phase 2): for parallel execution, creates or reuses a context per distinct input timestamp. Each active timestamp gets its own `GraphContext` with independent shards.
-- `RecycleCalculatorContext()` (Phase 2): returns a context to the idle pool after its outputs have been propagated.
+- `GetDefaultContext()` returns a single reusable context. Used for `Open()`, `Close()`, and sequential `Process()` calls. Source Nodes always use this context.
+- `PrepareContext(ts)` (Phase 2): for parallel execution, creates or reuses a context per distinct input timestamp. Each active timestamp gets its own `GraphContext` with independent shards.
+- `RecycleContext()` (Phase 2): returns a context to the idle pool after its outputs have been propagated.
 - `CleanupAfterRun()`: destroys all contexts after graph run completes.

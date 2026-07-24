@@ -70,7 +70,7 @@ description: "Task list for Graph Runtime project architecture implementation"
 **3c — Node/Context Chain**: [X] T027–T033
 - NodeContract, Node base class, NodeFactory + NodeFactoryFor<T>
 - NodeFactoryRegistry + GRAPH_RUNTIME_REGISTER_NODE
-- GraphContext (full CalculatorContext alignment), GraphContextManager
+- GraphContext (full GraphContext lifecycle), GraphContextManager
 - node_chain_test.cc
 
 ---

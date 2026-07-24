@@ -124,8 +124,8 @@ Phase 5 (P1) —— Tag/Index Stream
 8. `Node::EndScheduling()` 释放 slot
 
 **Layer 3 — GraphContext 回收:**
-9. 实现 `GraphContextManager::PrepareCalculatorContext()`：从池中取或新建
-10. 实现 `GraphContextManager::RecycleCalculatorContext()`：归还回池
+9. 实现 `GraphContextManager::PrepareContext()`：从池中取或新建
+10. 实现 `GraphContextManager::RecycleContext()`：归还回池
 11. SchedulerQueue 中 Process 完成后调用 Recycle
 
 **Layer 4 — Batch 调度:**

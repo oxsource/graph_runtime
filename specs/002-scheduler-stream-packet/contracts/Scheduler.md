@@ -116,7 +116,7 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
   OutputStreamShardSet output_shards;     // initialized via OutputStreamHandler
   output_stream_handler_->SetupOutputShards(&output_shards);
 
-  GraphContext context(node->name(), node->id(), node->CalculatorType(),
+  GraphContext context(node->name(), node->id(), node->NodeType(),
                        Timestamp::Unstarted(), input_shards, output_shards, &options)
   Node::Open(context)
   output_stream_handler_->Open(&output_shards);   // propagate headers, lock intro data
@@ -132,7 +132,7 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
   // Prepare output shards (reset to manager's current state)
   output_stream_handler_->PrepareOutputs(scheduled_timestamp, &output_shards);
 
-  GraphContext context(node->name(), node->id(), node->CalculatorType(),
+  GraphContext context(node->name(), node->id(), node->NodeType(),
                        scheduled_timestamp, input_shards, output_shards, &options)
 
   InputStreamHandler::FillInputSet(node, context)
@@ -150,7 +150,7 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
 --- CloseNode task runs ---
   output_stream_handler_->PrepareOutputs(Timestamp::Done(), &output_shards);
 
-  GraphContext context(node->name(), node->id(), node->CalculatorType(),
+  GraphContext context(node->name(), node->id(), node->NodeType(),
                        Timestamp::Done(), input_shards, output_shards, &options)
   Node::Close(context)
   output_stream_handler_->Close(&output_shards);

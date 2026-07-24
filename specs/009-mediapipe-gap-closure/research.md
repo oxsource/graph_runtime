@@ -14,7 +14,7 @@
 | `GraphRuntime::ClearOutputStreamCallback()` | `graph_runtime.cc:142` | 空函数体 |
 | `GraphRuntime::SetInputSidePacket()` | `graph_runtime.cc:145` | 空函数体 |
 | `GraphRuntime::SetOutputSidePacketCallback()` | `graph_runtime.cc:150` | 空函数体 |
-| `GraphContextManager::PrepareCalculatorContext()` / `RecycleCalculatorContext()` | `graph_context.h:199` | 标注 Phase 2 |
+| `GraphContextManager::PrepareContext()` / `RecycleContext()` | `graph_context.h:199` | 标注 Phase 2 |
 
 ## 二、功能存在缺陷的部分
 

@@ -193,12 +193,12 @@ class GraphContextManager {
         options);
   }
 
-  GraphContext* GetDefaultCalculatorContext() {
+  GraphContext* GetDefaultContext() {
     return default_context_.get();
   }
 
   // Returns a prepared context from the pool or creates a new one.
-  GraphContext* PrepareCalculatorContext(Timestamp input_timestamp) {
+  GraphContext* PrepareContext(Timestamp input_timestamp) {
     if (pool_.empty()) {
       auto ctx = std::make_unique<GraphContext>(
           default_context_->NodeName(),
@@ -219,7 +219,7 @@ class GraphContextManager {
   }
 
   // Returns a context to the pool for reuse.
-  void RecycleCalculatorContext(GraphContext* ctx) {
+  void RecycleContext(GraphContext* ctx) {
     for (auto it = owned_.begin(); it != owned_.end(); ++it) {
       if (it->get() == ctx) {
         pool_.push_back(std::move(*it));

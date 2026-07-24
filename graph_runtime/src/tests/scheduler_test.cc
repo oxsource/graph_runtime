@@ -352,13 +352,13 @@ TEST_F(GraphContextPoolingTest, PrepareAndRecycle) {
   mgr.Initialize("test", 1, "TestNode", std::move(empty_inputs),
                  std::move(empty_outputs), &opts);
 
-  GraphContext* ctx = mgr.PrepareCalculatorContext(Timestamp(1));
+  GraphContext* ctx = mgr.PrepareContext(Timestamp(1));
   EXPECT_NE(ctx, nullptr);
   EXPECT_EQ(ctx->InputTimestamp().Value(), 1);
 
   // Recycle and re-prepare should reuse the context.
-  mgr.RecycleCalculatorContext(ctx);
-  GraphContext* ctx2 = mgr.PrepareCalculatorContext(Timestamp(2));
+  mgr.RecycleContext(ctx);
+  GraphContext* ctx2 = mgr.PrepareContext(Timestamp(2));
   EXPECT_NE(ctx2, nullptr);
   EXPECT_EQ(ctx2->InputTimestamp().Value(), 2);
 }

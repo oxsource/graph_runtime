@@ -58,7 +58,7 @@ AddPacketToInputStream("s", pkt)
     → InputStreamHandler::AddPackets/MovePackets (per mirror)
       → InputStreamManager queue (thread-safe, arrival_callback)
         → InputStreamHandler::ScheduleInvocations
-          → Node::ProcessNode(CalculatorContext)
+          → Node::Process(GraphContext)
             → OutputStreamShard (node output)
             → OutputStreamHandler::PropagateOutputPackets
               → OutputStreamManager::PropagateUpdatesToMirrors (downstream)
@@ -88,7 +88,7 @@ Dependencies dictate this order:
 2. Implement mirror connections during node init (upstream index from validated graph)
 3. Fix `OutputStreamManager::PropagateUpdatesToMirrors` (two params, MovePackets, bound)
 4. Fix `InputStreamHandler::FillInputSet` through SyncSet (late_preparation_, PopPacketAtTimestamp)
-5. Add `Node::OpenNode()` / `Node::CloseNode()` / `Node::ProcessNode(CalculatorContext*)` with source/non-source paths
+5. Add `Node::OpenNode()` / `Node::CloseNode()` / `Node::ProcessNode(GraphContext*))` with source/non-source paths
 6. Fix `OutputStreamHandler::PropagateOutputPackets` (sequential: direct; parallel: state machine)
 
 ### Phase 2 — Backpressure & Throttling
@@ -105,7 +105,7 @@ Dependencies dictate this order:
 3. `HandleIdle()` — reentrancy-protected, cleanup, schedule layers, unthrottle
 4. `TryToScheduleNextSourceLayer()` — source layer activation
 5. `ScheduleNodeIfNotThrottled()` — throttle check + enqueue
-6. `SchedulerQueue::RunCalculatorNode()` — ProcessNode + StatusStop handling
+6. `SchedulerQueue::RunNode()` — ProcessNode + StatusStop handling
 7. `WaitUntilIdle()` / `WaitUntilDone()` — condition variable + ApplicationThreadAwait
 
 ### Phase 4 — GraphInputStream & Public API

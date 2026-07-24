@@ -11,7 +11,7 @@ class OutputStreamHandler {
  public:
   explicit OutputStreamHandler(
       std::shared_ptr<tool::TagMap> tag_map,
-      CalculatorContextManager* context_manager);
+      GraphContextManager* context_manager);
 
   virtual ~OutputStreamHandler() = default;
 
@@ -21,14 +21,14 @@ class OutputStreamHandler {
   void PrepareForRun(ErrorCallback error_callback);
 
   // --- Lifecycle ---
-  // Open: propagate headers, lock intro data (after Calculator::Open)
+  // Open: propagate headers, lock intro data (after Node::Open)
   void Open(OutputStreamShardSet* shards);
 
   // PrepareOutputs: reset all shards before each Process()
   void PrepareOutputs(Timestamp input_timestamp,
                       OutputStreamShardSet* shards);
 
-  // PostProcess: propagate after Calculator::Process returns
+  // PostProcess: propagate after Node::Process returns
   void PostProcess(Timestamp input_timestamp,
                    OutputStreamShardSet* shards);
 
@@ -41,7 +41,7 @@ class OutputStreamHandler {
 
  protected:
   OutputStreamManagerSet output_stream_managers_;
-  CalculatorContextManager* context_manager_;
+  GraphContextManager* context_manager_;
 
   // Phase 2: parallel propagation state machine
   std::set<Timestamp> completed_input_timestamps_;
@@ -62,10 +62,10 @@ class InOrderOutputStreamHandler : public OutputStreamHandler {
 ```
 
 **Semantics**:
-- One `OutputStreamHandler` per Node. Owned by `CalculatorNode`. Orchestrates all output streams of that node.
+- One `OutputStreamHandler` per Node. Owned by `Node`. Orchestrates all output streams of that node.
 - `InitializeOutputStreamManagers(flat)` receives a pointer into a flat `OutputStreamManager[]` array owned by `Graph`. Each handler's slice is determined by its node's output stream count.
 - `SetupOutputShards(shards)` assigns each `OutputStreamShard` its corresponding `OutputStreamSpec` from the manager.
-- `Open()`: propagates any packets/bounds set during `Calculator::Open()`, then calls `PropagateHeader()` and `LockIntroData()` on each manager.
+- `Open()`: propagates any packets/bounds set during `Node::Open()`, then calls `PropagateHeader()` and `LockIntroData()` on each manager.
 - `PrepareOutputs(ts, shards)`: calls `OutputStreamManager::ResetShard()` for each output stream.
 - `PostProcess(ts, shards)`: core propagation entry point. For Phase 1 (sequential):
   1. For each `OutputStreamManager`:

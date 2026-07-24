@@ -5,7 +5,7 @@
 ```cpp
 namespace graph::runtime {
 
-// Pure abstract interface — the only class that Calculator code sees.
+// Pure abstract interface — the only class that Node code sees.
 // Implemented by OutputStreamShard (per-invocation buffer).
 class OutputStream {
  public:
@@ -37,7 +37,7 @@ class OutputStream {
 ```
 
 **Semantics**:
-- This is the **only interface calculators interact with** when writing output. The concrete implementation is `OutputStreamShard` (per-invocation buffer).
+- This is the **only interface nodes interact with** when writing output. The concrete implementation is `OutputStreamShard` (per-invocation buffer).
 - `AddPacket()` enqueues a data packet. Timestamp and type are validated. On error, the error callback is triggered (graph termination).
 - `SetNextTimestampBound(bound)` advances the output timestamp bound without sending data. This signals downstream that no packet will arrive before `bound`.
 - `Close()` marks the stream as closed. Sets bound to `Timestamp::Done()`.

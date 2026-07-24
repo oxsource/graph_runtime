@@ -168,9 +168,9 @@
 
 ## Phase 10: User Story 7 — Runtime Engine Hardening (Priority: P1)
 
-**Goal**: Implement InputStreamHandler strategies, MaxInFlight enforcement, CalculatorContext pooling, batch scheduling, PerfCounters wiring, and graceful Cancel().
+**Goal**: Implement InputStreamHandler strategies, MaxInFlight enforcement, GraphContext pooling, batch scheduling, PerfCounters wiring, and graceful Cancel().
 
-**Independent Test**: MaxInFlight limits concurrency, CalculatorContexts are recycled, Cancel() drains gracefully, counters increment.
+**Independent Test**: MaxInFlight limits concurrency, GraphContexts are recycled, Cancel() drains gracefully, counters increment.
 
 ### Layer 1: InputStreamHandler Strategies
 
@@ -188,8 +188,8 @@
 
 ### Layer 3: GraphContext Pooling
 
-- [X] T046 [US7] Implement `PrepareCalculatorContext()` in `src/framework/node/graph_context.cc` — create or reuse from pool
-- [X] T047 [US7] Implement `RecycleCalculatorContext()` in `src/framework/node/graph_context.cc` — return context to pool
+- [X] T046 [US7] Implement `PrepareContext()` in `src/framework/node/graph_context.cc` — create or reuse from pool
+- [X] T047 [US7] Implement `RecycleContext()` in `src/framework/node/graph_context.cc` — return context to pool
 - [X] T048 [P] [US7] Wire context lifecycle in `SchedulerQueue::RunNode()` — call Recycle after Process
 - [X] T049 [P] [US7] Test: context pooling reuse in `src/tests/scheduler_test.cc`
 

@@ -98,11 +98,11 @@ As a library user, I want input and output streams to support MediaPipe-compatib
 
 ### User Story 7 — Runtime Engine Hardening (Priority: P1)
 
-As a library user, I want the runtime to properly handle InputStreamHandler strategies, MaxInFlight constraints, CalculatorContext pooling, batch scheduling, performance counters, and graceful cancellation, so that the graph execution matches MediaPipe's robustness and performance characteristics.
+As a library user, I want the runtime to properly handle InputStreamHandler strategies, MaxInFlight constraints, GraphContext pooling, batch scheduling, performance counters, and graceful cancellation, so that the graph execution matches MediaPipe's robustness and performance characteristics.
 
 **Why this priority**: These are declared stubs or missing features that affect correctness and performance in production scenarios.
 
-**Independent Test**: A test verifies that MaxInFlight limits concurrent node executions; a test verifies that CalculatorContexts are pooled and recycled; a test verifies that Cancel() drains pending work gracefully.
+**Independent Test**: A test verifies that MaxInFlight limits concurrent node executions; a test verifies that GraphContexts are pooled and recycled; a test verifies that Cancel() drains pending work gracefully.
 
 **Acceptance Scenarios**:
 
@@ -115,7 +115,7 @@ As a library user, I want the runtime to properly handle InputStreamHandler stra
 4. **Given** a node with `max_in_flight: 2`, **When** the node is scheduled twice concurrently, **Then** a third schedule attempt is deferred
 
 **Context Pooling:**
-5. **Given** a running graph, **When** a node's Process completes, **Then** its GraphContext is recycled via RecycleCalculatorContext and reused
+5. **Given** a running graph, **When** a node's Process completes, **Then** its GraphContext is recycled via RecycleContext and reused
 
 **Batch Scheduling:**
 6. **Given** `ScheduleInvocations` with max_allowance, **When** multiple nodes are ready, **Then** up to max_allowance invocations are scheduled

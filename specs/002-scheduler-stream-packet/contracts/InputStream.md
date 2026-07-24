@@ -5,7 +5,7 @@
 ```cpp
 namespace graph::runtime {
 
-// Pure abstract interface — the class that Calculator code reads from.
+// Pure abstract interface — the class that Node code reads from.
 // Implemented by InputStreamShard (per-invocation view).
 class InputStream {
  public:
@@ -34,8 +34,8 @@ class InputStream {
 ```
 
 **Semantics**:
-- This is the **only interface calculators interact with** when reading input. The concrete implementation is `InputStreamShard` (per-invocation view).
+- This is the **only interface nodes interact with** when reading input. The concrete implementation is `InputStreamShard` (per-invocation view).
 - `Value()` returns the current packet for this invocation. If no packet was sent at the current timestamp, returns an empty Packet (`IsEmpty() == true`).
 - `IsDone()` returns true when the underlying stream is closed and all packets have been consumed. Guaranteed true during `Close()`.
-- `Header()` returns the header packet set by the upstream calculator's `Open()`.
+- `Header()` returns the header packet set by the upstream node's `Open()`.
 - `Get<T>()` is syntactic sugar for `Value().Get<T>()`.

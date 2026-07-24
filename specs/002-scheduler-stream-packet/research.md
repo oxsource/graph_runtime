@@ -112,7 +112,7 @@
 
 **MediaPipe reference**:
 - `InputStreamManager` wraps `InputStream` with notification callback and `MinTimestampOrBound()`.
-- `OutputStreamHandler::PostProcess()` corresponds to `CalculatorNode::ProcessNode()`'s output shard processing.
+- `OutputStreamHandler::PostProcess()` corresponds to `Node::ProcessNode()`'s output shard processing.
 - Fan-out is handled internally by `OutputStreamManager::PropagateUpdatesToMirrors()`.
 
 ### 10. Scheduler Completeness — State Machine, Stopping, Idle Tracking
@@ -168,7 +168,7 @@
 - ThreadPoolExecutor in Phase 1 eliminates the Phase 2 deferral risk — multi-thread support is foundational, not optional.
 
 **Key differences from MediaPipe**:
-- Our `SchedulerQueue` is simplified: no `CalculatorNode` scheduling state machine (kIdle/kScheduling/kSchedulingPending) — Phase 1 single-queue-single-thread safety is sufficient. Phase 2 may add it for fine-grained flow control.
+- Our `SchedulerQueue` is simplified: no `Node` scheduling state machine (kIdle/kScheduling/kSchedulingPending) — Phase 1 single-queue-single-thread safety is sufficient. Phase 2 may add it for fine-grained flow control.
 - `Executor::AddTask(TaskQueue*)` default implementation matches MediaPipe's. No custom overrides needed in Phase 1.
 
 ### 10. Stream Layer Removal — Direct OutputStream → InputStreamManager Write (Align with MediaPipe)
@@ -223,7 +223,7 @@
 | Back-pressure recovery | Auto-unthrottle via becomes_not_full + HandleIdle deadlock break | Prevents deadlock without manual tuning |
 | Node registry | GlobalFactoryRegistry<unique_ptr<NodeFactory>> | MediaPipe CalculatorBaseRegistry, singleton, thread-safe |
 | Registration macro | `GRAPH_RUNTIME_REGISTER_NODE(type, class)` — file-scope static | Prefixed to avoid symbol conflicts; RAII NodeRegistrationToken |
-| Factory pattern | NodeFactory (base) + NodeFactoryFor<T> (template) | GetContract + CreateNode; analogous to CalculatorBaseFactoryFor<T> |
+| Factory pattern | NodeFactory (base) + NodeFactoryFor<T> (template) | GetContract + CreateNode; analogous to NodeFactoryFor<T> |
 | Port validation | NodeContract + static Node::GetContract() | Called at graph construction; type mismatches caught at build time |
 | GraphContext | Aligned with MediaPipe CalculatorContext — InputStreamShard, OutputStreamShard, tag/index Sets, InputTimestamp, Options, identity | Per-invocation context with full port access and lifecycle phase distinction |
 | Input shard | InputStreamShard with Value/Get/IsEmpty/IsDone/Header | One per port per Process call; populated by FillInputSet |
@@ -239,7 +239,7 @@
 | GraphRuntime | Top-level API — Initialize/Start/Wait/Shutdown + AddPacketToInputStream/SetOutputStreamCallback | Entry point for users; owns Scheduler + all runtime state |
 | GraphInputStream | Virtual Source Node for external data injection | Packets injected directly into OutputStreamManager, no Process() overhead |
 | GraphOutputStream | Virtual Sink Node for external output observation | Callback invoked per received packet; silent sink when no callback |
-| GraphContextManager | Context pool — GetDefaultCalculatorContext for sequential, Prepare/Recycle for Phase 2 parallel | MediaPipe CalculatorContextManager; Source always uses default context |
+| GraphContextManager | Context pool — GetDefaultContext for sequential, Prepare/Recycle for Phase 2 parallel | MediaPipe GraphContextManager; Source always uses default context |
 | GraphConfig | Config data: NodeDef, StreamDef, ExecutorDef, input/output_streams, max_queue_size, report_deadlock | Input contract for GraphBuilder::Build() |
 | GraphBuilder | Static builder: ValidateContracts → Create → Wire → Return GraphRuntime | Validates stream + side packet types, options |
 | NodeOptions | Key-value map (std::any) + OptionsRegistry typed deserialization | GRAPH_RUNTIME_REGISTER_OPTIONS macro for compile-time field access |

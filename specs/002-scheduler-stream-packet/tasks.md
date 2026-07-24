@@ -122,8 +122,8 @@ Foundational (Phase 2)
 - [X] T028 [P] [US1] Implement `Node` base class (`graph_runtime/src/node/node.h/.cc`): name, input_port_managers_, output_streams_, executor_name_, scheduler_queue_, source_layer_, Open/Process/Close virtual, SetInputPort/SetOutputPort, SetExecutorName, SetSchedulerQueue, SetSourceLayer, SourceProcessOrder
 - [X] T029 [P] [US1] Implement `NodeFactory` + `NodeFactoryFor<T>` (`graph_runtime/src/node/node_factory.h/.cc`): GetContract, CreateNode, NodeFactoryFor<T> template with static_assert for HasGetContract
 - [X] T030 [P] [US1] Implement `NodeFactoryRegistry` (`graph_runtime/src/node/node_registry.h/.cc`): Register, Unregister, CreateByName, CreateByNameInNamespace, GetFactory, IsRegistered, RegisteredTypes, GRAPH_RUNTIME_REGISTER_NODE macro, NodeRegistrationToken
-- [X] T031 [P] [US1] Implement `GraphContext` (`graph_runtime/src/node/graph_context.h/.cc`): NodeName/NodeId/CalculatorType/InputTimestamp, InputStreamShardSet/OutputStreamShardSet, Options<T>, InputSidePackets/OutputSidePackets, SetOffset
-- [X] T032 [US1] Implement `GraphContextManager` (`graph_runtime/src/node/graph_context.h/.cc`): GetDefaultCalculatorContext, PrepareCalculatorContext (Phase 2 stub), RecycleCalculatorContext (Phase 2 stub), CleanupAfterRun
+- [X] T031 [P] [US1] Implement `GraphContext` (`graph_runtime/src/node/graph_context.h/.cc`): NodeName/NodeId/node_type/InputTimestamp, InputStreamShardSet/OutputStreamShardSet, Options<T>, InputSidePackets/OutputSidePackets, SetOffset
+- [X] T032 [US1] Implement `GraphContextManager` (`graph_runtime/src/node/graph_context.h/.cc`): GetDefaultContext, PrepareContext (Phase 2 stub), RecycleContext (Phase 2 stub), CleanupAfterRun
 - [X] T033 [US1] Create node chain test (`graph_runtime/src/tests/node_chain_test.cc`): NodeFactoryRegistry::CreateByName → NodeFactory::CreateNode → Node::Open/Process/Close lifecycle with GraphContext
 
 **Checkpoint**: All module interfaces are implemented and independently testable. `bazel test //src/tests:input_chain_test && bazel test //src/tests:output_chain_test && bazel test //src/tests:node_chain_test` passes.

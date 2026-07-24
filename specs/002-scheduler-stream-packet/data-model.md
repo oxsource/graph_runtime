@@ -143,7 +143,7 @@ Per-invocation context passed to Node lifecycle methods. Aligns with MediaPipe's
 |-------|------|-------------|
 | `node_name_` | `string` | Node's name in the graph |
 | `node_id_` | `int` | Node's unique ID |
-| `calculator_type_` | `string` | Registered type name (from NodeFactory) |
+| `node_type_` | `string` | Registered type name (from NodeFactory) |
 | `input_timestamp_` | `Timestamp` | Unstarted() for Open, scheduled ts for Process, Done() for Close |
 | `inputs_` | `InputStreamShardSet` | Per-input-port shards with current packet |
 | `outputs_` | `OutputStreamShardSet` | Per-output-port shards for writing |
@@ -265,7 +265,7 @@ Owns the `std::deque<Packet>` for one downstream Node input port. Data is writte
 
 ### OutputStream
 
-Pure abstract interface seen by Calculator code. No mirrors or propagation logic.
+Pure abstract interface seen by Node code. No mirrors or propagation logic.
 
 | Method | Description |
 |--------|-------------|

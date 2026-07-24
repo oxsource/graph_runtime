@@ -55,7 +55,7 @@ struct GraphConfig {
 ```
 
 **Semantics**:
-- `NodeDef` describes one calculator node. `type` must match a registered name in `NodeFactoryRegistry`. `input_streams` and `output_streams` use the format `"port_name:stream_name"` (e.g., `"input:audio_stream"`). `executor` assigns the node to a named executor defined in `executors`.
+- `NodeDef` describes one node. `type` must match a registered name in `NodeFactoryRegistry`. `input_streams` and `output_streams` use the format `"port_name:stream_name"` (e.g., `"input:audio_stream"`). `executor` assigns the node to a named executor defined in `executors`.
 - `StreamDef` connects one node's output port to another node's input port. All referenced node names must exist in `nodes`. No duplicate stream names.
 - `ExecutorDef` defines a named executor pool. `""` (empty string) is the default executor name. `num_threads = 0` means auto-detect based on `min(CPUs, node_count)`.
 - `input_streams` and `output_streams` declare external I/O ports. Each name in `input_streams` creates a virtual `GraphInputStream` source node that accepts data via `GraphRuntime::AddPacketToInputStream()`. Each name in `output_streams` creates a virtual `GraphOutputStream` sink node that fires callbacks registered via `GraphRuntime::SetOutputStreamCallback()`.

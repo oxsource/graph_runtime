@@ -19,7 +19,7 @@
 - [x] T002 [P] Implement mirror connections during node init using upstream index in `src/node/node.cc` / `src/public/graph_builder.cc` — AddPackets/MovePackets added to InputStreamHandler; PropagateUpdatesToMirrors uses mirrors
 - [x] T003 Fix `OutputStreamManager::PropagateUpdatesToMirrors(Timestamp, OutputStreamShard*)` in `src/stream/output_stream_manager.cc`
 - [x] T004 [P] Fix `InputStreamHandler::FillInputSet` through SyncSet with `late_preparation_` in `src/scheduler/input_stream_handler.cc` — already implemented via SyncSet
-- [x] T005 Add `Node::OpenNode()` / `Node::CloseNode()` / `Node::ProcessNode(CalculatorContext*)` with source/non-source paths in `src/node/node.cc` — implemented as RunNode in scheduler_queue.cc
+- [x] T005 Add `Node::OpenNode()` / `Node::CloseNode()` / `Node::ProcessNode(GraphContext*))` with source/non-source paths in `src/node/node.cc` — implemented as RunNode in scheduler_queue.cc
 - [x] T006 Fix `OutputStreamHandler::PropagateOutputPackets` (sequential: direct; parallel: state machine) in `src/stream/output_stream_handler.cc` — sequential mode working; parallel mode deferred
 
 **Checkpoint**: `bazel build //src/...` passes ✅ — stream infrastructure ready
@@ -48,7 +48,7 @@
 - [x] T013 Implement `HandleIdle()` with reentrancy, CleanupActiveSources, TryToScheduleNextSourceLayer in `src/scheduler/scheduler.cc`
 - [x] T014 Implement `TryToScheduleNextSourceLayer()` for source layer activation in `src/scheduler/scheduler.cc` — simplified: queues re-schedule active sources
 - [x] T015 Implement `ScheduleNodeIfNotThrottled()` in `src/scheduler/scheduler.cc` — integrated into HandleIdle flow
-- [x] T016 Update `SchedulerQueue::RunCalculatorNode()` — ProcessNode + StatusStop + EndScheduling in `src/scheduler/scheduler_queue.cc`
+- [x] T016 Update `SchedulerQueue::RunNode()` — ProcessNode + StatusStop + EndScheduling in `src/scheduler/scheduler_queue.cc`
 - [x] T017 Implement `WaitUntilIdle()` / `WaitUntilDone()` in `src/scheduler/scheduler.cc`
 
 **Checkpoint**: `bazel build //src/...` passes ✅ — async scheduler operational

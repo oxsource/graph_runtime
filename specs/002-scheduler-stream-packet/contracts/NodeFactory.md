@@ -9,7 +9,7 @@ class NodeContract;
 class Node;
 struct NodeOptions;
 
-// Abstract factory base — analogous to MediaPipe's CalculatorBaseFactory.
+// Abstract factory base — analogous to MediaPipe's NodeFactory.
 // Each registered node type has one factory instance.
 class NodeFactory {
  public:
@@ -24,7 +24,7 @@ class NodeFactory {
       const std::string& name, const NodeOptions& options) = 0;
 };
 
-// Template implementation — analogous to MediaPipe's CalculatorBaseFactoryFor<T>.
+// Template implementation — analogous to MediaPipe's NodeFactoryFor<T>.
 // T must inherit from Node and define a static GetContract method.
 template <typename T>
 class NodeFactoryFor : public NodeFactory {
