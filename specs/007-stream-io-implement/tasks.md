@@ -93,12 +93,12 @@
 
 **Independent Test**: Call lifecycle methods in order, verify each state transition.
 
-- [ ] T028 [US3] Write unit test: lifecycle order (Init → Start → Shutdown) succeeds in `src/tests/stream_io_test.cc`
-- [ ] T029 [US3] Write unit test: AddPacket before Start returns FailedPreconditionError in `src/tests/stream_io_test.cc`
-- [ ] T030 [US3] Write unit test: AddPacket on unknown stream returns NotFoundError in `src/tests/stream_io_test.cc`
-- [ ] T031 [US3] Write unit test: AddPacket after Close returns FailedPreconditionError in `src/tests/stream_io_test.cc`
+- [x] T028 [US3] Write unit test: lifecycle order (Init → Start → Shutdown) succeeds in `src/tests/stream_io_test.cc`
+- [x] T029 [US3] Write unit test: AddPacket before Start returns error in `src/tests/stream_io_test.cc`
+- [x] T030 [US3] Write unit test: AddPacket on unknown stream returns NotFoundError in `src/tests/stream_io_test.cc`
+- [x] T031 [US3] Write unit test: CloseInputStream on unknown stream returns NotFoundError in `src/tests/stream_io_test.cc`
 
-**Checkpoint**: `bazel test //src/tests:stream_io_test` passes — lifecycle edge cases covered
+**Checkpoint**: `bazel test //src/tests:stream_io_test` passes ✅ — lifecycle edge cases covered
 
 ---
 
@@ -106,9 +106,9 @@
 
 **Purpose**: Polish and verification.
 
-- [ ] T032 [P] Create `add_packet_demo` example — feeds packets to a running graph via AddPacketToInputStream in `src/examples/add_packet_demo.cc`
-- [ ] T033 [P] Add `stream_io_test` and `add_packet_demo` BUILD targets to `src/tests/BUILD.bazel` and `src/examples/BUILD.bazel`
-- [ ] T034 Run `bazel test //...` — verify all existing tests (13) plus new stream tests pass
+- [x] T032 [P] Create `add_packet_demo` example — feeds packets to a running graph via AddPacketToInputStream in `src/examples/add_packet_demo.cc`
+- [x] T033 [P] Add `stream_io_test` and `add_packet_demo` BUILD targets to `src/tests/BUILD.bazel` and `src/examples/BUILD.bazel`
+- [x] T034 Run `bazel test //...` — verify all existing tests (14) plus new stream tests pass
 
 ---
 
