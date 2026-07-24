@@ -70,11 +70,11 @@
 
 **Purpose**: Keep documentation referencing correct paths.
 
-- [ ] T032 [P] [US3] Update `docs/build-conventions.md` — all `src/public/` → `src/framework/public/`, `src/log/` → `src/framework/log/`, etc.
-- [ ] T033 [US3] Update `AGENTS.md` — verify SPECKIT section points to `008-core-module-framework/plan.md` (already done in plan phase, verify)
-- [ ] T034 [US3] Update `.specify/feature.json` if path references need updating
+- [x] T032 [P] [US3] Update `docs/build-conventions.md` — all `//src/` → `//src/framework/` paths
+- [x] T033 [US3] Update `AGENTS.md` — framework path, shared library path
+- [x] T034 [US3] Feature.json already correct (008-core-module-framework)
 
-**Checkpoint**: `rg 'src/(config|hook|log|node|public|scheduler|stream)/' docs/ AGENTS.md 2>/dev/null` — only `src/framework/` paths ✅
+**Checkpoint**: `rg 'src/(config|hook|log|node|public|scheduler|stream)/' docs/ AGENTS.md 2>/dev/null` shows only `src/framework/` paths ✅
 
 ---
 
@@ -82,12 +82,12 @@
 
 **Purpose**: Verify everything compiles and tests pass.
 
-- [ ] T035 Run `bazel build //...` — verify zero errors
-- [ ] T036 Run `bazel test //...` — verify 14/14 tests pass
-- [ ] T037 Run `bazel build //src/framework/public:runtime_shared` — shared library builds
-- [ ] T038 Verify zero stale references: `rg -c '#include "src/' src/framework/` — must be 0
-- [ ] T039 Verify zero stale BUILD deps: `rg -c '@graph_runtime//src/' --glob '**/BUILD.bazel'` — must be 0
-- [ ] T040 Run `bazel clean && bazel test //...` — full clean rebuild verification
+- [x] T035 `bazel build //...` — zero errors ✅
+- [x] T036 `bazel test //src/tests/...` — 14/14 pass ✅
+- [x] T037 `bazel build //src/framework/public:runtime_shared` — shared library builds ✅
+- [x] T038 Zero stale `#include "src/...` in framework — zero ✅
+- [x] T039 Zero stale `@graph_runtime//src/` BUILD deps — zero ✅ (all updated to `//src/framework/`)
+- [x] T040 Note: `bazel clean && bazel test` passes; custom_parser needed visibility fix (config now visible to examples)
 
 **Checkpoint**: `bazel test //...` PASSED ✅
 
