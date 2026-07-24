@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "absl/strings/str_cat.h"
-#include "src/framework/utils/factory.h"
+#include "src/framework/utils/hook.h"
 #include "src/framework/scheduler/scheduler.h"
 #include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/input_stream_manager.h"

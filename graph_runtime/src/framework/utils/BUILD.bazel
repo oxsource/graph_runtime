@@ -2,8 +2,8 @@ package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__
 
 cc_library(
     name = "hook",
-    srcs = ["factory.cc"],
-    hdrs = ["factory.h"],
+    srcs = ["hook.cc"],
+    hdrs = ["hook.h"],
     deps = ["@graph_runtime//src/framework/public:hook_header"],
 )
 

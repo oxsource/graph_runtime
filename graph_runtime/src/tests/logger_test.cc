@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "src/framework/utils/logger.h"
-#include "src/framework/utils/factory.h"
+#include "src/framework/utils/hook.h"
 #include "gtest/gtest.h"
 
 namespace graph::runtime {
