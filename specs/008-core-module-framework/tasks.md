@@ -43,17 +43,13 @@
 
 **Purpose**: Update all Bazel dep labels from `//src/...` to `//src/framework/...`.
 
-- [ ] T015 [P] [US1] Update `src/framework/config/BUILD.bazel` deps
-- [ ] T016 [US1] Update `src/framework/hook/BUILD.bazel` deps
-- [ ] T017 [US1] Update `src/framework/log/BUILD.bazel` deps
-- [ ] T018 [US1] Update `src/framework/node/BUILD.bazel` deps
-- [ ] T019 [US1] Update `src/framework/public/BUILD.bazel` deps
-- [ ] T020 [US1] Update `src/framework/scheduler/BUILD.bazel` deps
-- [ ] T021 [US1] Update `src/framework/stream/BUILD.bazel` deps
-- [ ] T022 [US1] Update `src/examples/BUILD.bazel` deps (now point to `//src/framework/...`)
-- [ ] T023 [US1] Update `src/tests/BUILD.bazel` deps (now point to `//src/framework/...`)
+- [x] T015-T023 [US1] Bulk update all `@graph_runtime//src/...` → `@graph_runtime//src/framework/...` deps in BUILD.bazel via sed (~94 refs)
+- [x] Fix `testdata` visibility override that was incorrectly rewritten
+- [x] Fix `config_parser_test.cc` testdata paths (src/ → src/framework/)
 
-**Checkpoint**: `rg '@graph_runtime//src/' --glob '**/BUILD.bazel'` returns zero matches ✅
+**Checkpoint**: `bazel build //src/framework/public:runtime` passes ✅
+`bazel test //src/tests/...` — 14/14 pass ✅
+`bazel build //src/examples:all` passes ✅
 
 ---
 

@@ -4,7 +4,7 @@ cc_binary(
     name = "string_pipeline",
     srcs = ["string_pipeline.cc"],
     deps = [
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/public:runtime",
     ],
 )
 
@@ -12,8 +12,8 @@ cc_binary(
     name = "custom_parser",
     srcs = ["custom_parser.cc"],
     deps = [
-        "@graph_runtime//src/config:config",
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/config:config",
+        "@graph_runtime//src/framework/public:runtime",
     ],
 )
 
@@ -21,7 +21,7 @@ cc_binary(
     name = "log_intercept_demo",
     srcs = ["log_intercept_demo.cc"],
     deps = [
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/public:runtime",
     ],
 )
 
@@ -29,7 +29,7 @@ cc_binary(
     name = "string_pipeline_json",
     srcs = ["string_pipeline_json.cc"],
     deps = [
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/public:runtime",
     ],
 )
 
@@ -37,7 +37,7 @@ cc_binary(
     name = "async_pipeline_demo",
     srcs = ["async_pipeline_demo.cc"],
     deps = [
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/public:runtime",
     ],
 )
 
@@ -45,6 +45,6 @@ cc_binary(
     name = "add_packet_demo",
     srcs = ["add_packet_demo.cc"],
     deps = [
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/public:runtime",
     ],
 )

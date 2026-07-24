@@ -21,8 +21,8 @@ cc_library(
     name = "side_packet",
     hdrs = ["side_packet.h"],
     deps = [
-        "@graph_runtime//src/stream:packet",
-        "@graph_runtime//src/public:types",
+        "@graph_runtime//src/framework/stream:packet",
+        "@graph_runtime//src/framework/public:types",
     ],
 )
 
@@ -33,11 +33,11 @@ cc_library(
     visibility = ["//src:__subpackages__"],
     deps = [
         ":runtime_internal",
-        "@graph_runtime//src/config:config",
-        "@graph_runtime//src/config:graph_config",
-        "@graph_runtime//src/scheduler:scheduler",
-        "@graph_runtime//src/scheduler:thread_pool_executor",
-        "@graph_runtime//src/node:node_factory_registry",
+        "@graph_runtime//src/framework/config:config",
+        "@graph_runtime//src/framework/config:graph_config",
+        "@graph_runtime//src/framework/scheduler:scheduler",
+        "@graph_runtime//src/framework/scheduler:thread_pool_executor",
+        "@graph_runtime//src/framework/node:node_factory_registry",
     ],
 )
 
@@ -51,11 +51,11 @@ cc_library(
     visibility = ["//src:__subpackages__"],
     deps = [
         ":hook_header",
-        "@graph_runtime//src/config:graph_config",
-        "@graph_runtime//src/scheduler:scheduler",
-        "@graph_runtime//src/node:graph_context",
-        "@graph_runtime//src/public:types",
-        "@graph_runtime//src/stream:packet",
+        "@graph_runtime//src/framework/config:graph_config",
+        "@graph_runtime//src/framework/scheduler:scheduler",
+        "@graph_runtime//src/framework/node:graph_context",
+        "@graph_runtime//src/framework/public:types",
+        "@graph_runtime//src/framework/stream:packet",
     ],
 )
 
@@ -81,10 +81,10 @@ cc_library(
     deps = [
         ":graph_builder",
         ":runtime_internal",
-        "@graph_runtime//src/log:log_core",
-        "@graph_runtime//src/scheduler:scheduler",
-        "@graph_runtime//src/config:graph_config",
-        "@graph_runtime//src/public:types",
+        "@graph_runtime//src/framework/log:log_core",
+        "@graph_runtime//src/framework/scheduler:scheduler",
+        "@graph_runtime//src/framework/config:graph_config",
+        "@graph_runtime//src/framework/public:types",
     ],
 )
 

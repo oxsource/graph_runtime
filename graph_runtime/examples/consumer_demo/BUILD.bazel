@@ -1,14 +1,14 @@
 cc_binary(
     name = "demo",
     srcs = ["main.cc"],
-    deps = ["@graph_runtime//src/public:runtime"],
+    deps = ["@graph_runtime//src/framework/public:runtime"],
 )
 
 cc_test(
     name = "demo_test",
     srcs = ["demo_test.cc"],
     deps = [
-        "@graph_runtime//src/public:runtime",
+        "@graph_runtime//src/framework/public:runtime",
         "@com_google_googletest//:gtest_main",
     ],
 )

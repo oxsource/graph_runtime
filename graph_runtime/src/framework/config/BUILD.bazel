@@ -4,7 +4,7 @@ cc_library(
     name = "graph_config",
     hdrs = ["graph_config.h"],
     deps = [
-        "@graph_runtime//src/node:node_options",
+        "@graph_runtime//src/framework/node:node_options",
     ],
 )
 
@@ -24,6 +24,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@graph_runtime//src/public:types",
+        "@graph_runtime//src/framework/public:types",
     ],
 )

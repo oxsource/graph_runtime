@@ -9,7 +9,7 @@ namespace graph::runtime {
 TEST(ConfigParserTest, ValidConfig) {
   JsonParser parser;
   auto result = parser.Parse(
-      "src/config/json/testdata/string_pipeline.json");
+      "src/framework/config/json/testdata/string_pipeline.json");
   ASSERT_TRUE(result.ok());
   const auto& config = *result;
   ASSERT_EQ(config.nodes.size(), 3);
@@ -21,7 +21,7 @@ TEST(ConfigParserTest, ValidConfig) {
 TEST(ConfigParserTest, EmptyConfig) {
   JsonParser parser;
   auto result = parser.Parse(
-      "src/config/json/testdata/empty.json");
+      "src/framework/config/json/testdata/empty.json");
   ASSERT_TRUE(result.ok());
   EXPECT_TRUE(result->nodes.empty());
 }
@@ -36,7 +36,7 @@ TEST(ConfigParserTest, FileNotFound) {
 TEST(ConfigParserTest, DuplicateNodeError) {
   JsonParser parser;
   auto result = parser.Parse(
-      "src/config/json/testdata/duplicate_node.json");
+      "src/framework/config/json/testdata/duplicate_node.json");
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.status().code(), absl::StatusCode::kInvalidArgument);
 }
@@ -44,7 +44,7 @@ TEST(ConfigParserTest, DuplicateNodeError) {
 TEST(ConfigParserTest, CorrectStructure) {
   JsonParser parser;
   auto result = parser.Parse(
-      "src/config/json/testdata/string_pipeline.json");
+      "src/framework/config/json/testdata/string_pipeline.json");
   ASSERT_TRUE(result.ok());
   const auto& config = *result;
   EXPECT_EQ(config.max_queue_size, 100);

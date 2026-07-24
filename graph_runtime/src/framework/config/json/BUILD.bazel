@@ -10,7 +10,7 @@ cc_library(
     srcs = ["json_parser.cc"],
     hdrs = ["json_parser.h"],
     deps = [
-        "@graph_runtime//src/config:config",
+        "@graph_runtime//src/framework/config:config",
         "@nlohmann_json//:json",
     ],
 )

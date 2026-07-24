@@ -9,7 +9,7 @@ cc_library(
         "-fvisibility-inlines-hidden",
     ],
     deps = [
-        "@graph_runtime//src/hook:hook",
+        "@graph_runtime//src/framework/hook:hook",
         "@com_google_absl//absl/synchronization",
     ],
 )
