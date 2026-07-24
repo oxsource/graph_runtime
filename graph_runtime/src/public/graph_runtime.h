@@ -15,6 +15,16 @@
 
 namespace graph::runtime {
 
+enum HookType : int {
+  kHookTypeSentinel = 0,
+  kHookTypeLogIntercept = 1,
+};
+
+struct GraphHook {
+  int type;
+  bool (*hook_fn)(const void* data, int flag);
+};
+
 class GraphRuntime {
  public:
   GraphRuntime();
@@ -35,6 +45,9 @@ class GraphRuntime {
   void SetOutputSidePacketCallback(
       const std::string& name,
       std::function<void(const Packet&)> callback);
+
+  void SetGlobalHook(const GraphHook* table);
+  const GraphHook* GetGlobalHook(int type) const;
 
  private:
   friend class GraphBuilder;

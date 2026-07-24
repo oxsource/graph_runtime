@@ -20,13 +20,13 @@
 
 **Purpose**: Create logger module structure, Bazel targets, and internal headers
 
-- [ ] T001 Add `HookType` enum and `GraphHook` struct to `graph_runtime/graph_runtime/src/public/graph_runtime.h`
-- [ ] T002 Create internal logger header at `graph_runtime/graph_runtime/src/public/logger.h` with `LogLevel` enum, `LogMessage` struct, and `Logger` class (singleton + `Log(LogLevel, tag, content)` + convenience methods)
-- [ ] T003 Create public logger header at `graph_runtime/graph_runtime/src/public/include/graph_runtime/logger.h` with `Logger` class exposing only 5 convenience methods (Debug, Info, Warn, Error, Fatal)
-- [ ] T004 [P] Update umbrella header `graph_runtime/graph_runtime/src/public/include/graph_runtime/graph_runtime.h` to include `graph_runtime/logger.h`
-- [ ] T005 Update `graph_runtime/graph_runtime/src/public/BUILD.bazel` — add `cc_library` target `log_interface` with public headers, internal headers, and absl_Mutex dep; add `log_interface` to `runtime` target deps
+- [x] T001 Add `HookType` enum and `GraphHook` struct to `graph_runtime/graph_runtime/src/public/graph_runtime.h`
+- [x] T002 Create internal logger header at `graph_runtime/graph_runtime/src/public/logger.h` with `LogLevel` enum, `LogMessage` struct, and `Logger` class (singleton + `Log(LogLevel, tag, content)` + convenience methods)
+- [x] T003 Create public logger header at `graph_runtime/graph_runtime/src/public/include/graph_runtime/logger.h` with `Logger` class exposing only 5 convenience methods (Debug, Info, Warn, Error, Fatal)
+- [x] T004 [P] Update umbrella header `graph_runtime/graph_runtime/src/public/include/graph_runtime/graph_runtime.h` to include `graph_runtime/logger.h`
+- [x] T005 Update `graph_runtime/graph_runtime/src/public/BUILD.bazel` — add `cc_library` target `log_interface`, add `log_interface` to `runtime_internal` and `runtime` deps; add `include/graph_runtime/logger.h` to `runtime` hdrs
 
-**Checkpoint**: Logger module compiles as a standalone target `//src/public:log_interface`
+**Checkpoint**: `bazel build //src/public:log_interface` and `bazel build //src/public:runtime` both pass ✅
 
 ---
 

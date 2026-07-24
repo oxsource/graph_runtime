@@ -9,6 +9,18 @@ cc_library(
 )
 
 cc_library(
+    name = "log_interface",
+    hdrs = ["logger.h"],
+    copts = [
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+    ],
+    deps = [
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_library(
     name = "side_packet",
     hdrs = ["side_packet.h"],
     deps = [
@@ -43,6 +55,7 @@ cc_library(
         "-fvisibility-inlines-hidden",
     ],
     deps = [
+        ":log_interface",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/scheduler:scheduler",
         "@graph_runtime//src/node:graph_context",
@@ -65,6 +78,7 @@ cc_library(
         "include/graph_runtime/packet.h",
         "include/graph_runtime/graph_config.h",
         "include/graph_runtime/side_packet.h",
+        "include/graph_runtime/logger.h",
     ],
     strip_include_prefix = "include",
     copts = [
@@ -74,6 +88,7 @@ cc_library(
     alwayslink = 1,
     deps = [
         ":graph_builder",
+        ":log_interface",
         ":runtime_internal",
         "@graph_runtime//src/scheduler:scheduler",
         "@graph_runtime//src/config:graph_config",
