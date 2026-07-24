@@ -16,20 +16,34 @@ class PacketType {
   template <typename T>
   PacketType& Set() {
     has_type_ = true;
+    type_name_ = typeid(T).name();
     return *this;
   }
   PacketType& SetAny() { return Set<void>(); }
   PacketType& SetNone() { return *this; }
-  PacketType& SetSameAs(const PacketType& other) { return *this; }
+  PacketType& SetSameAs(const PacketType& other) {
+    has_type_ = other.has_type_;
+    type_name_ = other.type_name_;
+    return *this;
+  }
   bool IsSet() const { return has_type_; }
+  const std::string& TypeName() const { return type_name_; }
+
  private:
   bool has_type_ = false;
+  std::string type_name_;
 };
 
 class PacketTypeSet {
  public:
   PacketType& Get(const std::string& port_name) {
     return ports_[port_name];
+  }
+  const PacketType& Get(const std::string& port_name) const {
+    static const PacketType kEmpty;
+    auto it = ports_.find(port_name);
+    if (it != ports_.end()) return it->second;
+    return kEmpty;
   }
   PacketType& Get(CollectionItemId id) {
     return ports_[std::to_string(id)];
@@ -44,7 +58,9 @@ class PacketTypeSet {
 class NodeContract {
  public:
   PacketTypeSet& Inputs() { return inputs_; }
+  const PacketTypeSet& Inputs() const { return inputs_; }
   PacketTypeSet& Outputs() { return outputs_; }
+  const PacketTypeSet& Outputs() const { return outputs_; }
   PacketTypeSet& InputSidePackets() { return input_side_packets_; }
   PacketTypeSet& OutputSidePackets() { return output_side_packets_; }
 

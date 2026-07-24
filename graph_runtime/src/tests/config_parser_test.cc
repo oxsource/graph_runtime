@@ -51,4 +51,81 @@ TEST(ConfigParserTest, CorrectStructure) {
   EXPECT_FALSE(config.report_deadlock);
 }
 
+// --- US5: Config Validation Tests ---
+
+TEST(ConfigValidatorTest, ValidConnectivityPasses) {
+  GraphConfig config;
+  config.nodes.push_back(
+      {"a", "A", {}, {"out:x"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back(
+      {"b", "B", {"in:x"}, {}, {}, {}, {}, "", "", 0, 0});
+  auto status = ConfigValidator::Validate(config);
+  ASSERT_TRUE(status.ok()) << status.message();
+}
+
+TEST(ConfigValidatorTest, MissingOutputStreamFails) {
+  GraphConfig config;
+  config.nodes.push_back(
+      {"a", "A", {"in:missing"}, {}, {}, {}, {}, "", "", 0, 0});
+  auto status = ConfigValidator::Validate(config);
+  ASSERT_FALSE(status.ok());
+  EXPECT_TRUE(status.message().find("missing") != std::string::npos);
+}
+
+TEST(ConfigValidatorTest, GraphInputStreamIsExempt) {
+  GraphConfig config;
+  config.input_streams.push_back("external");
+  config.nodes.push_back(
+      {"a", "A", {"in:external"}, {}, {}, {}, {}, "", "", 0, 0});
+  EXPECT_TRUE(ConfigValidator::Validate(config).ok());
+}
+
+TEST(ConfigValidatorTest, NoCyclesPasses) {
+  GraphConfig config;
+  config.nodes.push_back(
+      {"a", "A", {}, {"out:x"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back(
+      {"b", "B", {"in:x"}, {"out:y"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back(
+      {"c", "C", {"in:y"}, {}, {}, {}, {}, "", "", 0, 0});
+  auto status = ConfigValidator::Validate(config);
+  EXPECT_TRUE(status.ok()) << status;
+}
+
+TEST(ConfigValidatorTest, SimpleCycleDetected) {
+  GraphConfig config;
+  // A → B → A cycle.
+  config.nodes.push_back(
+      {"a", "A", {"in:y"}, {"out:x"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back(
+      {"b", "B", {"in:x"}, {"out:y"}, {}, {}, {}, "", "", 0, 0});
+  auto status = ConfigValidator::Validate(config);
+  ASSERT_FALSE(status.ok());
+  EXPECT_TRUE(status.message().find("cycle") != std::string::npos);
+}
+
+TEST(ConfigValidatorTest, SelfLoopDetected) {
+  GraphConfig config;
+  // A → A self-loop.
+  config.nodes.push_back(
+      {"a", "A", {"in:x"}, {"out:x"}, {}, {}, {}, "", "", 0, 0});
+  auto status = ConfigValidator::Validate(config);
+  ASSERT_FALSE(status.ok());
+  EXPECT_TRUE(status.message().find("cycle") != std::string::npos);
+}
+
+TEST(ConfigValidatorTest, TransitiveCycleDetected) {
+  GraphConfig config;
+  // A → B → C → A cycle (3 nodes).
+  config.nodes.push_back(
+      {"a", "A", {"in:z"}, {"out:x"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back(
+      {"b", "B", {"in:x"}, {"out:y"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back(
+      {"c", "C", {"in:y"}, {"out:z"}, {}, {}, {}, "", "", 0, 0});
+  auto status = ConfigValidator::Validate(config);
+  ASSERT_FALSE(status.ok());
+  EXPECT_TRUE(status.message().find("cycle") != std::string::npos);
+}
+
 }  // namespace graph::runtime

@@ -39,6 +39,7 @@ cc_library(
         "@graph_runtime//src/framework/node:graph_context",
         "@graph_runtime//src/framework/node:node_base",
         "@graph_runtime//src/framework/stream:output_stream_handler",
+        "@graph_runtime//src/framework/utils:logger",
     ],
 )
 

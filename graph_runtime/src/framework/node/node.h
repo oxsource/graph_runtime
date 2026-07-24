@@ -69,6 +69,10 @@ class Node {
   void SetOutputStreamHandler(OutputStreamHandler* h) { output_stream_handler_ = h; }
   OutputStreamHandler* GetOutputStreamHandler() const { return output_stream_handler_; }
 
+  // Node contract for type checking.
+  void SetContract(const NodeContract& c) { contract_ = c; }
+  const NodeContract& GetContract() const { return contract_; }
+
   virtual Timestamp SourceProcessOrder(const GraphContext& context) const {
     return Timestamp::Min();
   }
@@ -84,6 +88,7 @@ class Node {
   int source_layer_ = 0;
   InputStreamHandler* input_stream_handler_ = nullptr;
   OutputStreamHandler* output_stream_handler_ = nullptr;
+  NodeContract contract_;
 };
 
 }  // namespace graph::runtime

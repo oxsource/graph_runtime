@@ -119,10 +119,10 @@
 
 ### Implementation for User Story 5
 
-- [ ] T022 [P] [US5] Add connectivity validation in `src/framework/config/config_validator.cc` — each `NodeDef::input_stream` must trace to an upstream node's output stream
-- [ ] T023 [P] [US5] Add cycle detection in `src/framework/config/config_validator.cc` — DFS-based directed cycle detection on node graph
-- [ ] T024 [US5] Add runtime type checks in `src/framework/scheduler/scheduler.cc` — validate `Packet` type against `NodeContract` during `Process` invocation
-- [ ] T025 [P] [US5] Test: Connectivity error, cycle error, and type mismatch detection in `src/tests/config_parser_test.cc`
+- [X] T022 [P] [US5] Add connectivity validation in `src/framework/config/config_validator.cc` — each `NodeDef::input_stream` must trace to an upstream node's output stream
+- [X] T023 [P] [US5] Add cycle detection in `src/framework/config/config_validator.cc` — DFS-based directed cycle detection on node graph
+- [X] T024 [US5] Add runtime type checks in `src/framework/scheduler/scheduler.cc` — validate `Packet` type against `NodeContract` during `Process` invocation
+- [X] T025 [P] [US5] Test: Connectivity error, cycle error, and type mismatch detection in `src/tests/config_parser_test.cc`
 
 **Checkpoint**: `ConfigValidator` detects connectivity/cycle errors — test verifies clear error messages ✅
 
@@ -132,9 +132,9 @@
 
 **Purpose**: Build cleanliness and full validation.
 
-- [ ] T026 [P] Run `bazel build //...` — zero errors, zero warnings
-- [ ] T027 Run `bazel test //...` — all tests pass (both existing 14+ and new)
-- [ ] T028 [P] Verify no stale `UnimplementedError` or empty stub bodies remain in `src/framework/`
+- [X] T026 [P] Run `bazel build //...` — zero errors, zero warnings
+- [X] T027 Run `bazel test //...` — all tests pass (both existing 14+ and new)
+- [X] T028 [P] Verify no stale `UnimplementedError` or empty stub bodies remain in `src/framework/`
 
 **Checkpoint**: `bazel build //... && bazel test //...` zero errors, zero warnings ✅
 

@@ -18,6 +18,8 @@ class ConfigValidator {
 
   static absl::Status ValidateUniqueNames(const GraphConfig& config);
   static absl::Status ValidateUniqueExecutors(const GraphConfig& config);
+  static absl::Status ValidateConnectivity(const GraphConfig& config);
+  static absl::Status ValidateNoCycles(const GraphConfig& config);
 };
 
 }  // namespace graph::runtime

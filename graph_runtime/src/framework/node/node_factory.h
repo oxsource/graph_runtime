@@ -51,7 +51,13 @@ class NodeFactoryFor : public NodeFactory {
 
   std::unique_ptr<Node> CreateNode(
       const std::string& name, const NodeOptions& options) override {
-    return std::make_unique<T>(name, options);
+    auto node = std::make_unique<T>(name, options);
+    NodeContract contract;
+    auto status = T::GetContract(&contract);
+    if (status.ok()) {
+      node->SetContract(contract);
+    }
+    return node;
   }
 };
 

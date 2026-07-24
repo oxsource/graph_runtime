@@ -2,6 +2,9 @@
 #include "src/framework/node/graph_context.h"
 #include "src/framework/stream/output_stream_handler.h"
 
+#define GRAPHRT_LOG_TAG "graphrt::scheduler_queue"
+#include "src/framework/utils/logger.h"
+
 namespace graph::runtime {
 
 SchedulerQueue::SchedulerQueue(std::string name) : name_(std::move(name)) {}
@@ -82,6 +85,15 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     bool stream_is_done = false;
     Packet pkt = mgr->PopQueueHead(&stream_is_done);
     if (!pkt.IsEmpty()) {
+      // Best-effort runtime type check against NodeContract.
+      if (!pkt.DebugTypeName().empty()) {
+        const auto& expected = node->GetContract().Inputs().Get(port_name);
+        if (expected.IsSet() && expected.TypeName() != pkt.DebugTypeName()) {
+          Logger::Warn(std::string("Type mismatch on '").append(port_name)
+              .append("': expected ").append(expected.TypeName())
+              .append(", got ").append(pkt.DebugTypeName()).c_str());
+        }
+      }
       auto& shard = inputs.Get(port_name);
       shard.PushPacket(std::move(pkt));
     }
