@@ -34,15 +34,15 @@
 
 **Purpose**: Core logger implementation that all user stories depend on
 
-- [ ] T006 Implement `LogLevel` enum and `LogLevelToString` in `graph_runtime/graph_runtime/src/public/logger.h`/`logger.cc` with kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4 (syslog order)
-- [ ] T007 Implement `LogMessage` struct in `graph_runtime/graph_runtime/src/public/logger.h` with fields: `LogLevel level`, `const char* tag`, `const char* message`, `int64_t timestamp_ms`
-- [ ] T008 Implement `Logger::Instance()` — Meyer singleton (C++11 function-local static) in `graph_runtime/graph_runtime/src/public/logger.cc`
-- [ ] T009 Implement timestamp formatting helper (ISO 8601 with milliseconds) in `graph_runtime/graph_runtime/src/public/logger.cc`
-- [ ] T010 Implement log line format assembly: `[TAG] [LEVEL] YYYY-MM-DD HH:MM:SS.mmm content\n` in `graph_runtime/graph_runtime/src/public/logger.cc`
-- [ ] T011 Implement `Logger::Log(LogLevel, tag, content)` — format the log line, write to stdout (kDebug/kInfo/kWarn) or stderr (kError/kFatal) protected by `absl::Mutex` in `graph_runtime/graph_runtime/src/public/logger.cc`
-- [ ] T012 [P] Implement 5 static convenience methods (Debug, Info, Warn, Error, Fatal) as thin wrappers calling Instance().Log() with the corresponding level in `graph_runtime/graph_runtime/src/public/logger.cc`
+- [x] T006 Implement `LogLevel` enum and `LogLevelToString` in `graph_runtime/graph_runtime/src/public/logger.h`/`logger.cc` with kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4 (syslog order)
+- [x] T007 Implement `LogMessage` struct in `graph_runtime/graph_runtime/src/public/logger.h` with fields: `LogLevel level`, `const char* tag`, `const char* message`, `int64_t timestamp_ms`
+- [x] T008 Implement `Logger::Instance()` — Meyer singleton (C++11 function-local static) in `graph_runtime/graph_runtime/src/public/logger.cc`
+- [x] T009 Implement timestamp formatting helper (ISO 8601 with milliseconds) in `graph_runtime/graph_runtime/src/public/logger.cc`
+- [x] T010 Implement log line format assembly: `[TAG] [LEVEL] YYYY-MM-DD HH:MM:SS.mmm content\n` in `graph_runtime/graph_runtime/src/public/logger.cc`
+- [x] T011 Implement `Logger::Log(LogLevel, tag, content)` — format the log line, write to stdout (kDebug/kInfo/kWarn) or stderr (kError/kFatal) protected by `absl::Mutex` in `graph_runtime/graph_runtime/src/public/logger.cc`
+- [x] T012 [P] Implement 5 static convenience methods (Debug, Info, Warn, Error, Fatal) as thin wrappers calling Instance().Log() with the corresponding level in `graph_runtime/graph_runtime/src/public/logger.cc`
 
-**Checkpoint**: `Logger::Info("graphrt::test", "hello")` produces `[graphrt::test] [INFO] 2026-07-24 12:00:00.000 hello` on stdout
+**Checkpoint**: `bazel build //src/public:runtime` passes ✅ — logger.cc compiled with LogLevelToString, singleton, timestamp, format assembly, mutex-protected output, and convenience wrappers
 
 ---
 

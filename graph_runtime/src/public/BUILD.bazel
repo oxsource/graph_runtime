@@ -10,6 +10,7 @@ cc_library(
 
 cc_library(
     name = "log_interface",
+    srcs = ["logger.cc"],
     hdrs = ["logger.h"],
     copts = [
         "-fvisibility=hidden",
