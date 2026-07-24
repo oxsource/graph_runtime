@@ -34,7 +34,7 @@ int main() {
   using namespace graph::runtime;
 
   GraphConfig config;
-  config.nodes.push_back({"consumer", "DemoConsumer", {}, {"input"}, {}, {}, {}, "", "", 0, 0});
+  config.nodes.push_back({"consumer", "DemoConsumer", {"input"}, {}, {}, {}, {}, "", "", 0, 0});
 
   GraphRuntime runtime;
   auto status = runtime.Initialize(config);
@@ -54,7 +54,7 @@ int main() {
   Logger::Info(status.ok() ? "AddPacket OK" : std::string(status.ToString()).c_str());
 
   (void)runtime.CloseInputStream("input");
-  (void)runtime.WaitUntilDone();
+  runtime.Shutdown();
   Logger::Info("Demo done");
   return 0;
 }

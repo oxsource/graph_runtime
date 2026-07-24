@@ -31,23 +31,26 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
   }
   scheduler_->SetNodes(node_ptrs);
 
-  // Build input stream manager map for AddPacketToInputStream lookup.
-  // Each input stream declared in the config maps to its node's InputStreamManager.
+  // Create InputStreamManagers for each declared input stream and register
+  // them on their owning node. This enables AddPacketToInputStream to find
+  // the correct queue by stream name.
   for (const auto& ndef : config_.nodes) {
     for (const auto& input_stream : ndef.input_streams) {
-      if (stream_managers_.find(input_stream) == stream_managers_.end()) {
-        auto* node = FindNode(ndef.name);
-        if (node) {
-          auto* mgr = node->GetInputPort(input_stream);
-          if (mgr) {
-            stream_managers_[input_stream] = mgr;
-            if (graph_input_streams_set_.find(input_stream) ==
-                graph_input_streams_set_.end()) {
-              graph_input_streams_set_.insert(input_stream);
-              ++num_open_input_streams_;
-            }
-          }
-        }
+      if (stream_managers_.find(input_stream) != stream_managers_.end()) continue;
+
+      auto* node = FindNode(ndef.name);
+      if (!node) continue;
+
+      auto mgr = std::make_unique<InputStreamManager>(input_stream);
+      auto* raw = mgr.get();
+      node->SetInputPort(input_stream, raw);
+      owned_stream_managers_.push_back(std::move(mgr));
+      stream_managers_[input_stream] = raw;
+
+      if (graph_input_streams_set_.find(input_stream) ==
+          graph_input_streams_set_.end()) {
+        graph_input_streams_set_.insert(input_stream);
+        ++num_open_input_streams_;
       }
     }
   }

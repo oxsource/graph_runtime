@@ -66,6 +66,7 @@ class GraphRuntime {
   GraphConfig config_;
   std::unique_ptr<Scheduler> scheduler_;
   std::vector<std::unique_ptr<Node>> all_nodes_;
+  std::vector<std::unique_ptr<InputStreamManager>> owned_stream_managers_;
   std::map<std::string, InputStreamManager*> stream_managers_;
   std::set<std::string> graph_input_streams_set_;
   int num_open_input_streams_ = 0;
