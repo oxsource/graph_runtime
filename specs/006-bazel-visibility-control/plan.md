@@ -1,68 +1,80 @@
 # Implementation Plan: Bazel Visibility Control
 
-**Branch**: `006-bazel-visibility-control` | **Date**: 2026-07-24 | **Spec**: [spec.md](./spec.md)
+**Date**: 2026-07-24 | **Spec**: [spec.md](./spec.md)
 
 ## Summary
 
-Restrict Bazel target visibility so that external consumers can only depend on `//src/public:runtime`. All internal targets (`//src/scheduler/...`, `//src/stream/...`, `//src/node/...`, `//src/config/...`, and auxiliary targets under `//src/public/`) get explicit visibility lists limited to `//src/...`. Examples must only use public API. Document the strategy in `docs/build-conventions.md`.
-
-## Technical Context
-
-**Language/Version**: N/A (Bazel BUILD configuration only)
-**Primary Dependencies**: None
-**Testing**: `bazel build //...` + `bazel test //...`
-**Target Platform**: All (Bazel BUILD semantics)
-**Project Type**: Bazel visibility configuration
+Restrict Bazel target visibility so external consumers can only depend on `//src/public:runtime`. Internal packages get `//src:__subpackages__` visibility. Fix 4 dep prefix violations. Rewrite `string_pipeline_json` to use only public API. Re-export `timestamp`/`packet` through public headers. Document in `docs/build-conventions.md`.
 
 ## Constitution Check
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| V. Build System Integrity | ✅ PASS | This feature directly enforces V's mandate that `//src/public:runtime` is the sole external entry point |
+| Principle | Status |
+|-----------|--------|
+| V. Build System Integrity | ✅ PASS — directly enforces sole external entry point mandate |
 
-## Project Structure
+## Affected BUILD Files
 
-### Affected BUILD files
+### Phase 1 — Dep Prefix Fixes (4 files)
 
-```text
-src/
-├── public/BUILD.bazel       # Add visibility to hook_table, log_interface, runtime_internal, graph_builder, types, side_packet
-├── scheduler/BUILD.bazel    # Add visibility = ["//src:__subpackages__"]
-├── stream/BUILD.bazel       # Same
-├── node/BUILD.bazel         # Same
-├── config/BUILD.bazel       # Same
-├── config/json/BUILD.bazel  # Same
-├── examples/BUILD.bazel     # Verify all deps are //src/public:runtime only
-└── tests/BUILD.bazel        # Already depends on internal targets (acceptable)
-docs/
-└── build-conventions.md     # NEW — document visibility strategy
-```
+| File | Line | Change |
+|------|------|--------|
+| `src/public/BUILD.bazel` | `runtime` deps | `"//src/log:log_core"` → `"@graph_runtime//src/log:log_core"` |
+| `src/log/BUILD.bazel` | `log_core` deps | `"//src/hook:hook"` → `"@graph_runtime//src/hook:hook"` |
+| `src/scheduler/BUILD.bazel` | `scheduler` deps | `"//src/log:log_core"` → `"@graph_runtime//src/log:log_core"` |
+| `src/hook/BUILD.bazel` | `hook` deps | `"//src/public:hook_header"` → `"@graph_runtime//src/public:hook_header"` |
 
-## Tasks
+### Phase 2 — Visibility Changes (7 files)
 
-### Phase 1: Audit & Analysis
+| File | Current | New |
+|------|---------|-----|
+| `src/log/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/scheduler/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/stream/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/node/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/config/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/config/json/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/public/BUILD.bazel` | per-target: add explicit visibility for `runtime_internal` and `graph_builder` as `["//src:__subpackages__"]` |
 
-- List all `cc_library` targets under `//src/` and classify as Public / Internal / Test
-- Record current `default_visibility` settings
+### Phase 3 — Example Rewrite
 
-### Phase 2: Visibility Changes
+- Rewrite `string_pipeline_json.cc` to not inline Node subclasses; instead use only `//src/public:runtime` API
+- Verify `custom_parser.cc` uses only `//src/public:runtime` and `//src/config:config` via re-export
 
-- Change each internal BUILD's `package(default_visibility = ...)` to `["//src:__subpackages__"]`
-- For `//src/public`: add explicit visibility per target
-- Add `//src/public:runtime` as `//visibility:public`
+### Phase 4 — Re-export Headers (if needed)
 
-### Phase 3: Example Cleanup
+- Verify `include/graph_runtime/timestamp.h` and `include/graph_runtime/packet.h` exist and include from `src/stream/`
+- If missing, create them
 
-- Audit example deps; replace internal deps with `//src/public:runtime` where needed
-- Move any required internal symbols into the public API if examples legitimately need them
-
-### Phase 4: Documentation
+### Phase 5 — Documentation
 
 - Write `docs/build-conventions.md`
-- Update `AGENTS.md` to document visibility conventions
+- Include: visibility strategy, how to add new modules, how to expose new public API
 
-### Phase 5: Validation
+### Phase 6 — Visibility Test
 
-- `bazel build //...` passes
-- `bazel test //...` passes
-- Manual test: external-style build with invalid dep fails
+- Write `src/tests/visibility_test.sh` — shell script using `bazel query`:
+  ```bash
+  # Internal targets should NOT be visible to external
+  if bazel query 'visible(//external:target, //src/scheduler:scheduler)' 2>/dev/null \
+     | grep -q .; then echo "FAIL: scheduler visible externally"; exit 1; fi
+  # Public target SHOULD be visible to external
+  if ! bazel query 'visible(//external:target, //src/public:runtime)' 2>/dev/null \
+     | grep -q "//src/public:runtime"; then echo "FAIL: runtime not visible"; exit 1; fi
+  ```
+- Add `sh_test` target to `src/tests/BUILD.bazel`
+
+### Phase 7 — Validation
+
+- `bazel build //src/...` passes
+- `bazel test //src/tests/...` passes (13 old + 1 new visibility test)
+- `grep '//src/' src/**/BUILD.bazel` — 0 prefix violations
+- All examples build successfully with public API only
+
+## Pre-checks Before Code Changes
+
+All design decisions confirmed with user:
+- [x] string_pipeline_json → only src/public:runtime
+- [x] timestamp/packet → re-exported through public headers
+- [x] consumer_demo → keep FR but not a gate
+- [x] 4 dep prefix violations must be fixed
+- [x] graph_builder → internal visibility

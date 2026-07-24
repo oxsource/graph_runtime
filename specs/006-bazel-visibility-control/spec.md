@@ -1,95 +1,115 @@
 # Feature Specification: Bazel Visibility Control
 
 **Created**: 2026-07-24
-**Status**: Draft
+**Status**: Draft (refined)
 
 **Input**: 新建提案控制工程可见性 — 限制 Bazel target 可见性，防止外部消费者引用内部模块
+
+## Clarifications
+
+- `string_pipeline_json` 示例改为只依赖 `//src/public:runtime`，不直接引用内部模块
+- `src/stream:timestamp` / `src/stream:packet` 通过 `include/graph_runtime/` 重新导出
+- FR-005 (consumer_demo) 保留但不作为 gate — 存在预存 workspace 问题
+- 4 处 dep 前缀 `//src/` 须改为 `@graph_runtime//src/`
 
 ## User Scenarios & Testing
 
 ### User Story 1 - External Consumer Uses Only Public API (Priority: P1)
 
-As an external project integrating graph_runtime, I want Bazel to prevent me from depending on internal targets (`//src/scheduler`, `//src/public:log_interface`, etc.), so that I only use the documented public API surface (`//src/public:runtime`).
+As an external project integrating graph_runtime, I want Bazel to prevent me from depending on internal targets, so that I only use the documented public API surface (`//src/public:runtime`).
 
-**Why this priority**: Constitutional principle V mandates that the sole external entry point is `//src/public:runtime`. Current flat visibility makes violations undetectable at build time.
+**Why this priority**: Constitutional principle V mandates that the sole external entry point is `//src/public:runtime`.
 
-**Independent Test**: An external project that adds `deps = ["@graph_runtime//src/scheduler:scheduler"]` must fail to build with a visibility error.
+**Independent Test**: An external project adding `deps = ["@graph_runtime//src/scheduler:scheduler"]` must fail with a visibility error.
 
 **Acceptance Scenarios**:
-1. **Given** an external Bazel project depending on `@graph_runtime//src/public:runtime`, **When** building, **Then** it succeeds
-2. **Given** an external Bazel project depending on `@graph_runtime//src/scheduler:scheduler`, **When** building, **Then** Bazel rejects with a visibility violation
-3. **Given** an external Bazel project depending on `@graph_runtime//src/public:log_interface`, **When** building, **Then** Bazel rejects with a visibility violation
-
----
+1. **Given** an external project depending on `@graph_runtime//src/public:runtime`, **When** building, **Then** it succeeds
+2. **Given** an external project depending on `@graph_runtime//src/scheduler:scheduler`, **When** building, **Then** Bazel rejects with a visibility violation
+3. **Given** an external project depending on `@graph_runtime//src/log:log_core`, **When** building, **Then** Bazel rejects
 
 ### User Story 2 - Internal Modules Can Still Cross-Reference (Priority: P1)
 
-As an internal module developer (e.g., scheduler), I want to depend on other internal modules (e.g., `//src/public:log_interface`) without visibility restrictions, so that development velocity is not impacted.
+As an internal developer, I want to depend on other internal modules without restriction.
 
-**Why this priority**: Internal cross-references must continue to work for the library to function.
-
-**Independent Test**: `bazel build //src/scheduler:scheduler` must succeed, pulling in logger via internal deps.
+**Independent Test**: `bazel build //src/scheduler:scheduler` succeeds via internal deps.
 
 **Acceptance Scenarios**:
-1. **Given** the scheduler target depends on `//src/public:log_interface`, **When** building `//src/scheduler:scheduler`, **Then** it succeeds
-2. **Given** the runtime target depends on `//src/scheduler:scheduler`, **When** building `//src/public:runtime`, **Then** it succeeds
+1. **Given** scheduler depends on `//src/log:log_core`, **When** building `//src/scheduler:scheduler`, **Then** it succeeds
+2. **Given** runtime depends on scheduler, **When** building `//src/public:runtime`, **Then** it succeeds
 
----
+### User Story 3 - Examples Use Only Public API (Priority: P2)
 
-### User Story 3 - Examples Build Against Public API Only (Priority: P2)
+As a CI system, I want example binaries to compile using only `//src/public:runtime`.
 
-As a CI system, I want all example binaries to compile using only `//src/public:runtime` (not internal targets), so that the examples serve as valid consumer references.
-
-**Why this priority**: Examples currently may pull internal targets, setting a bad pattern for external consumers.
-
-**Independent Test**: `bazel build //src/examples/...` must succeed with each example using only public API deps.
+**Independent Test**: `bazel build //src/examples/...` succeeds with each example using only public API deps.
 
 **Acceptance Scenarios**:
-1. **Given** an example BUILD file with `deps = ["@graph_runtime//src/scheduler:scheduler"]`, **When** building, **Then** it fails
-2. **Given** an example BUILD file with `deps = ["@graph_runtime//src/public:runtime"]`, **When** building, **Then** it succeeds
-
----
+1. **Given** an example BUILD with deps to internal targets, **When** building, **Then** it fails
+2. **Given** an example BUILD with `deps = ["@graph_runtime//src/public:runtime"]`, **When** building, **Then** it succeeds
 
 ### Edge Cases
 
-- What about third_party packages that need internal access? They should go through the same public API.
-- How do unit tests access internal headers? Tests under `//src/tests/` are considered internal — they already depend on internal targets and that's acceptable.
-- What happens when a new internal module is added but its targets default to `//visibility:public`? The default must be changed project-wide.
-- How does `bazel query` visibility analysis work? A `bazel query 'visible(//external:target, //src/public:runtime)'` style check should be documented.
+- `consumer_demo` (external workspace) has pre-existing Bazel issue — not a gate for this proposal
+- `src/tests/` has visibility to all internal targets for testing
+- New modules added in the future must follow the same visibility convention
+- `bazel query 'visible(//external:target, //src/public:runtime)'` should be in CI
+
+### Visibility Testing
+
+A dedicated `sh_test` target verifies visibility constraints via `bazel query`:
+
+```python
+sh_test(
+    name = "visibility_test",
+    srcs = ["visibility_test.sh"],
+    data = ["//src/public:runtime", "//src/scheduler:scheduler"],
+)
+```
+
+The script queries visibility relationships:
+- `bazel query 'visible(//external:target, //src/scheduler:scheduler)'` → empty (not visible)
+- `bazel query 'visible(//external:target, //src/public:runtime)'` → returns runtime (visible)
 
 ## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: All targets under `//src/` MUST use explicit visibility lists instead of `package(default_visibility = ["//visibility:public"])`
-- **FR-002**: The target `//src/public:runtime` MUST remain visible to external consumers (`//visibility:public`)
-- **FR-003**: Internal targets (`//src/scheduler/...`, `//src/stream/...`, `//src/node/...`, `//src/config/...`, `//src/public:log_interface`, `//src/public:hook_table`, `//src/public:runtime_internal`) MUST be visible only to `//src/...` (internal package group)
-- **FR-004**: Example targets under `//src/examples/...` MUST depend only on `//src/public:runtime`. If an example needs internal symbols, those symbols MUST be exposed through the public API first.
-- **FR-005**: The external consumer demo (`//examples/consumer_demo/...`) MUST continue to compile with only `@graph_runtime//src/public:runtime` deps
-- **FR-006**: Tests under `//src/tests/...` MUST have visibility to all internal targets for testing purposes
-- **FR-007**: A BUILD convention document MUST be added to `docs/` explaining the visibility strategy and how to add new modules
-- **FR-008**: `bazel build //...` and `bazel test //...` MUST continue to pass after visibility changes
+- **FR-001**: All internal packages (`src/log/`, `src/hook/`, `src/scheduler/`, `src/stream/`, `src/node/`, `src/config/`, `src/config/json/`) MUST set `package(default_visibility = ["//src:__subpackages__"])`
+- **FR-002**: `src/public/BUILD.bazel` MUST have per-target visibility: `runtime` as `//visibility:public`, `runtime_internal`/`graph_builder` as `["//src:__subpackages__"]`
+- **FR-003**: `src/hook/BUILD.bazel` visibility is already correct — keep `["//src:__subpackages__", "//src/tests:__subpackages__"]`
+- **FR-004**: `src/stream:timestamp` and `src/stream:packet` MUST be re-exported via `include/graph_runtime/timestamp.h` and `include/graph_runtime/packet.h` (already exist)
+- **FR-005**: All 4 dep prefix violations (`//src/` → `@graph_runtime//src/`) MUST be fixed:
+  - `src/public/BUILD.bazel` → `//src/log:log_core`
+  - `src/log/BUILD.bazel` → `//src/hook:hook`
+  - `src/scheduler/BUILD.bazel` → `//src/log:log_core`
+  - `src/hook/BUILD.bazel` → `//src/public:hook_header`
+- **FR-006**: Example `string_pipeline_json` MUST be rewritten to use only `//src/public:runtime`
+- **FR-007**: `consumer_demo` FR kept but not a gate — pre-existing workspace issue documented
+- **FR-008**: A BUILD convention document MUST be added to `docs/build-conventions.md`
+- **FR-009**: A `visibility_test.sh` + `sh_test` target MUST be added to `src/tests/` that verifies:
+  - Internal targets (`//src/scheduler:scheduler`) are NOT visible to `//external:target`
+  - Public target (`//src/public:runtime`) IS visible to `//external:target`
+  - Runs as part of `bazel test //src/tests/...`
+- **FR-010**: `bazel build //...` and `bazel test //...` MUST pass after visibility changes
 
 ### Key Entities
 
-- **Visibility Group** (`//visibility:public`, `//visibility:private`, package list): Bazel's access control mechanism for cc_library targets
-- **Internal Package Group** (`//src/...`): The set of packages that constitute the internal implementation. Internal targets are visible to each other but not to external consumers.
-- **Public API Surface** (`//src/public:runtime`): The sole target that external consumers may depend on. All public symbols are exported here.
+- **Public API Surface** (`//src/public:runtime`): Sole external entry point; `//visibility:public`
+- **Internal Package Group** (`//src:__subpackages__`): Internal targets visible to each other
+- **Re-exported Headers** (`include/graph_runtime/timestamp.h`, `packet.h`): Public wrappers for internal types
 
 ## Success Criteria
 
-### Measurable Outcomes
-
-- **SC-001**: An external project with `deps = ["@graph_runtime//src/scheduler:scheduler"]` fails to build with a clear visibility error message
-- **SC-002**: `bazel build //src/... --//:enforce_visibility` (or equivalent check) passes with zero errors
-- **SC-003**: All example binaries compile successfully after migration to `//src/public:runtime`-only deps
-- **SC-004**: `bazel test //...` passes with zero regressions after visibility changes
-- **SC-005**: The visibility strategy is documented in `docs/build-conventions.md` with examples for adding new modules
+- **SC-001**: External project with internal dep fails with clear visibility error
+- **SC-002**: `bazel build //src/... && bazel test //src/...` both pass
+- **SC-003**: All examples build after migration to `//src/public:runtime`-only deps
+- **SC-004**: Dep prefix violations resolved (grep count goes from 4 to 0)
+- **SC-005**: Visibility strategy documented in `docs/build-conventions.md`
+- **SC-006**: `src/tests:visibility_test` passes in CI, confirming internal targets are hidden
 
 ## Assumptions
 
-- Bazel's `default_visibility` on `package()` is the primary mechanism; individual target override only where necessary
-- Internal modules that need to be shared across internal packages use `visibility = ["//src:__subpackages__"]` pattern
-- External consumers always depend on the workspace-level `@graph_runtime//` alias
-- Tests are considered internal — they exist within the same repo and can access internal targets
-- Examples are considered semi-external — they should mirror external consumer behavior
+- `default_visibility` on `package()` is the primary mechanism
+- `//src:__subpackages__` covers all internal cross-references
+- Tests under `//src/tests/` are internal — access to internal targets is allowed
+- Examples under `//src/examples/` are semi-external — should only use public API
