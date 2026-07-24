@@ -107,6 +107,42 @@ Phase 5 (P1) —— Tag/Index Stream
 
 **Verification**: `bazel test //...` 全部通过，新增索引投递测试通过
 
+### Phase 10 — Runtime Engine Hardening (P1)
+
+**Target**: `src/framework/scheduler/input_stream_handler.h/cc`, `src/framework/node/graph_context.h/cc`, `src/framework/scheduler/scheduler_queue.h/cc`, `src/framework/scheduler/counters.h`
+
+**Layer 1 — InputStreamHandler Strategies:**
+1. DefaultInputStreamHandler 完善同步逻辑（当前已基本可用）
+2. **ImmediateInputStreamHandler**: 任何输入到达立即调度节点，不等待其他输入
+3. **SyncSetInputStreamHandler**: 所有输入在同一 timestamp 都有数据时才调度
+4. **FixedSizeInputStreamHandler**: 每个输入队列固定大小，超限丢弃或阻塞
+5. 为每种 handler 注册工厂/配置支持
+
+**Layer 2 — MaxInFlight 约束:**
+6. 在 `SchedulerQueue::AddNode()` 检查 `node->GetContract().MaxInFlight()`
+7. 同一节点已运行的实例数达到上限时推迟调度
+8. `Node::EndScheduling()` 释放 slot
+
+**Layer 3 — GraphContext 回收:**
+9. 实现 `GraphContextManager::PrepareCalculatorContext()`：从池中取或新建
+10. 实现 `GraphContextManager::RecycleCalculatorContext()`：归还回池
+11. SchedulerQueue 中 Process 完成后调用 Recycle
+
+**Layer 4 — Batch 调度:**
+12. `ScheduleInvocations(max_allowance)` 根据 allowance 批量调度节点
+13. 替代单次 `AddNode` → `SubmitToExecutor` 循环
+
+**Layer 5 — Performance Counters:**
+14. `PerfCounters` 实例化并挂接到 Scheduler 和 SchedulerQueue
+15. `tasks_submitted` / `tasks_completed` / `packets_processed` 在工作流中 Increment
+
+**Layer 6 — Cancel 机制:**
+16. `Scheduler::Cancel()` 实现：state → kCancelling，SetQueuesRunning(false)
+17. `HandleIdle()` 中 kCancelling 状态下 drain 待处理工作并终止
+18. `GraphRuntime::Cancel()` 公开方法
+
+**Verification**: `bazel test //...` 全部通过，新增 15+ 测试
+
 ## Dependencies & Execution Order
 
 ```

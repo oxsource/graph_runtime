@@ -96,6 +96,38 @@ As a library user, I want input and output streams to support MediaPipe-compatib
 
 ---
 
+### User Story 7 — Runtime Engine Hardening (Priority: P1)
+
+As a library user, I want the runtime to properly handle InputStreamHandler strategies, MaxInFlight constraints, CalculatorContext pooling, batch scheduling, performance counters, and graceful cancellation, so that the graph execution matches MediaPipe's robustness and performance characteristics.
+
+**Why this priority**: These are declared stubs or missing features that affect correctness and performance in production scenarios.
+
+**Independent Test**: A test verifies that MaxInFlight limits concurrent node executions; a test verifies that CalculatorContexts are pooled and recycled; a test verifies that Cancel() drains pending work gracefully.
+
+**Acceptance Scenarios**:
+
+**InputStreamHandler Strategies:**
+1. **Given** a node with `input_stream_handler: "immediate"`, **When** a packet arrives on any input, **Then** the node is scheduled immediately without waiting for other inputs
+2. **Given** a node with `input_stream_handler: "sync_set"`, **When** packets arrive on multiple inputs, **Then** the node is scheduled only when all inputs have packets at the same timestamp
+3. **Given** a node with `input_stream_handler: "fixed_size"` and max_queue_size set, **When** packets arrive, **Then** only up to max_queue_size packets are queued per input
+
+**MaxInFlight:**
+4. **Given** a node with `max_in_flight: 2`, **When** the node is scheduled twice concurrently, **Then** a third schedule attempt is deferred
+
+**Context Pooling:**
+5. **Given** a running graph, **When** a node's Process completes, **Then** its GraphContext is recycled via RecycleCalculatorContext and reused
+
+**Batch Scheduling:**
+6. **Given** `ScheduleInvocations` with max_allowance, **When** multiple nodes are ready, **Then** up to max_allowance invocations are scheduled
+
+**PerfCounters:**
+7. **Given** a running graph, **When** nodes are processed, **Then** `tasks_submitted`, `tasks_completed`, `packets_processed`, `nodes_opened`, `nodes_closed` counters are non-zero
+
+**Cancel:**
+8. **Given** a running graph, **When** `Cancel()` is called, **Then** state transitions to `kCancelling`, pending work drains, and `WaitUntilDone()` returns
+
+---
+
 ## General Notes
 
 - The grpah Runtime "WaitUntilDone" does not work because the scheduler's asynchronous path does not naturally drive the graph to termination state. The `WaitUntilDone` method is already functional in the synchronous path but not with multi-input processing. This is a specific defect to address.
@@ -122,3 +154,4 @@ As a library user, I want input and output streams to support MediaPipe-compatib
 - **SC-006**: `bazel build //...` and `bazel test //...` pass with zero warnings
 - **SC-007**: All existing tests continue to pass
 - **SC-008**: Tag/index streams supported: ParseTagIndexName, TagMap, PacketTypeSet::Get(tag,index), AddPacketToInputStream(tag,index), AddPacketToInputStream("TAG:index")
+- **SC-009**: Runtime hardened: Immediate/SyncSet/FixedSize InputStreamHandler, MaxInFlight enforcement, GraphContext pooling, ScheduleInvocations batch, PerfCounters wired, Cancel() implemented

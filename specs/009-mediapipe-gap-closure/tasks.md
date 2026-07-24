@@ -166,6 +166,58 @@
 
 **Checkpoint**: TagMap, ParseTagIndexName, indexed AddPacketToInputStream all functional — `bazel test //...` all pass ✅
 
+## Phase 10: User Story 7 — Runtime Engine Hardening (Priority: P1)
+
+**Goal**: Implement InputStreamHandler strategies, MaxInFlight enforcement, CalculatorContext pooling, batch scheduling, PerfCounters wiring, and graceful Cancel().
+
+**Independent Test**: MaxInFlight limits concurrency, CalculatorContexts are recycled, Cancel() drains gracefully, counters increment.
+
+### Layer 1: InputStreamHandler Strategies
+
+- [ ] T038 [P] [US7] Implement `SyncSetInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — schedules node only when all inputs have packets at the same timestamp
+- [ ] T039 [P] [US7] Implement `ImmediateInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — schedules node as soon as any input has a packet
+- [ ] T040 [P] [US7] Implement `FixedSizeInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — fixed per-input queue size with backpressure
+- [ ] T041 [US7] Integrate InputStreamHandler choice from `NodeDef::input_stream_handler` during `GraphRuntime::Initialize` in `src/framework/public/graph_runtime.cc`
+- [ ] T042 [P] [US7] Test: each handler strategy end-to-end in `src/tests/scheduler_test.cc`
+
+### Layer 2: MaxInFlight Constraint
+
+- [ ] T043 [P] [US7] Add `Node::pending_count_` tracking in `src/framework/scheduler/scheduler_queue.cc` — track number of in-flight invocations for each node
+- [ ] T044 [US7] Check `GetContract().MaxInFlight()` in `AddNode()` — defer scheduling if pending >= allowed
+- [ ] T045 [P] [US7] Test: MaxInFlight limits concurrent processing in `src/tests/scheduler_test.cc`
+
+### Layer 3: GraphContext Pooling
+
+- [ ] T046 [US7] Implement `PrepareCalculatorContext()` in `src/framework/node/graph_context.cc` — create or reuse from pool
+- [ ] T047 [US7] Implement `RecycleCalculatorContext()` in `src/framework/node/graph_context.cc` — return context to pool
+- [ ] T048 [P] [US7] Wire context lifecycle in `SchedulerQueue::RunNode()` — call Recycle after Process
+- [ ] T049 [P] [US7] Test: context pooling reuse in `src/tests/scheduler_test.cc`
+
+### Layer 4: Batch Scheduling — ScheduleInvocations
+
+- [ ] T050 [PS] [US7] Implement `ScheduleInvocations(max_allowance)` in `DefaultInputStreamHandler` — schedule up to max_allowance nodes per invocation
+- [ ] T051 [US7] Wire `ScheduleInvocations` in `SchedulerQueue::RunNode()` — call after Process to continue scheduling
+- [ ] T052 [P] [US7] Test: batch scheduling behavior in `src/tests/scheduler_test.cc`
+
+### Layer 5: Performance Counters
+
+- [ ] T053 [P] [US7] Instantiate `PerfCounters` in `Scheduler` and pass to `SchedulerQueue` in `src/framework/scheduler/scheduler.cc`
+- [ ] T054 [US7] Wire `tasks_submitted` / `tasks_completed` / `packets_processed` counters in `SchedulerQueue` in `src/framework/scheduler/scheduler_queue.cc`
+- [ ] T055 [P] [US7] Test: counters increment in `src/tests/scheduler_test.cc`
+
+### Layer 6: Cancel()
+
+- [ ] T056 [US7] Implement `Scheduler::Cancel()` in `src/framework/scheduler/scheduler.cc` — set state to kCancelling, set error
+- [ ] T057 [US7] Add `GraphRuntime::Cancel()` public method in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc`
+- [ ] T058 [P] [US7] Handle kCancelling in `HandleIdle()` — drain queues and terminate
+- [ ] T059 [P] [US7] Test: Cancel() + WaitUntilDone() in `src/tests/scheduler_test.cc`
+
+**Checkpoint**: All 6 layers implemented — `bazel test //...` all pass ✅
+
+---
+
+
+
 ---
 
 ## Dependencies & Execution Order
