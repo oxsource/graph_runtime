@@ -1,3 +1,23 @@
+// string_pipeline.cc
+// Demonstrates a source-only graph running in sync mode (RunOnce).
+//
+// Source nodes (nodes with zero input ports) generate data in Process()
+// and signal completion by returning StatusStop(). The scheduler processes
+// sources until all return Stop, then closes all nodes and returns.
+//
+// This is the "pure source graph" pattern — no external packet injection
+// needed. For async/streaming use with AddPacketToInputStream, see the
+// add_packet_demo and async_pipeline_demo examples.
+//
+// Key points:
+//   - Process() returns StatusStop() when the source is done.
+//   - Process() returns OkStatus (empty {}) when it has more data.
+//   - Data is written to ctx.Outputs().Get("port").AddPacket(pkt).
+//   - Downstream nodes receive data via ctx.Inputs().Get("port").
+//
+// Build: bazel build //src/examples:string_pipeline
+// Run:   bazel run //src/examples:string_pipeline
+
 #include <cctype>
 #include <string>
 #include <vector>

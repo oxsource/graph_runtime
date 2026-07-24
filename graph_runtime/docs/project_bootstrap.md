@@ -350,7 +350,7 @@ WaitUntilDone()  ← 阻塞直到图执行完成
 
 | 场景 | 推荐模式 | 原因 |
 |------|----------|------|
-| Batch pipeline，纯 source 驱动 | `Schedule()` | 同步，简单，无需外部输入 |
+| Batch pipeline，纯 source 驱动 | `Schedule()` | 同步，简单，无需外部输入。参考 `src/examples/string_pipeline.cc` |
 | 外部输入流驱动 | `Start()` | 支持运行时注入数据包 |
 | 交互式/流式处理 | `Start()` | 可边运行边注入 |
 | 需要 WaitForIdle / HasGraphFinished | `Start()` | 这些 API 只在异步路径有意义 |
