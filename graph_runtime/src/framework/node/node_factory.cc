@@ -3,4 +3,5 @@
 namespace graph::runtime {
 // NodeFactory is template-based and header-only.
 // This file exists for BUILD completeness.
+int __node_factory_dummy = 0;
 }  // namespace graph::runtime

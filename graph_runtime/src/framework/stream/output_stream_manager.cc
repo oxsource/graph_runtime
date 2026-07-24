@@ -75,11 +75,11 @@ void OutputStreamManager::PropagateUpdatesToMirrors(
       if (idx == mirrors_.size() - 1) {
         // Last mirror: move packets (transfer ownership)
         bool notify = false;
-        mirror.handler->MovePacketsToStream(mirror.id, packets, &notify);
+        (void)mirror.handler->MovePacketsToStream(mirror.id, packets, &notify);
       } else {
         // Other mirrors: copy packets
         bool notify = false;
-        mirror.handler->AddPacketsToStream(mirror.id, *packets, &notify);
+        (void)mirror.handler->AddPacketsToStream(mirror.id, *packets, &notify);
       }
     }
     if (set_bound) {

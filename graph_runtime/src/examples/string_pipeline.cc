@@ -94,9 +94,9 @@ int main() {
 
   // Open
   Logger::Info("--- Open ---");
-  { GraphContext ctx("p",1,"SP",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); producer->Open(ctx); }
-  { GraphContext ctx("t",2,"SU",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); transformer->Open(ctx); }
-  { GraphContext ctx("c",3,"SC",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); consumer->Open(ctx); }
+  { GraphContext ctx("p",1,"SP",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); (void)producer->Open(ctx); }
+  { GraphContext ctx("t",2,"SU",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); (void)transformer->Open(ctx); }
+  { GraphContext ctx("c",3,"SC",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); (void)consumer->Open(ctx); }
 
   // Process loop
   Logger::Info("--- Process ---");
@@ -117,7 +117,7 @@ int main() {
     // Transformer
     InputStreamShardSet ti; ti.Get("input").PushPacket(std::move(pkt));
     OutputStreamShardSet to;
-    { GraphContext ctx("t",2,"SU",ts,&ti,&to,&opts); transformer->Process(ctx); }
+    { GraphContext ctx("t",2,"SU",ts,&ti,&to,&opts); (void)transformer->Process(ctx); }
 
     Packet tp;
     auto& tq = to.Get("output").OutputQueue();
@@ -127,14 +127,14 @@ int main() {
     // Consumer
     InputStreamShardSet ci; ci.Get("input").PushPacket(std::move(tp));
     OutputStreamShardSet co;
-    { GraphContext ctx("c",3,"SC",ts,&ci,&co,&opts); consumer->Process(ctx); }
+    { GraphContext ctx("c",3,"SC",ts,&ci,&co,&opts); (void)consumer->Process(ctx); }
   }
 
   // Close
   Logger::Info("--- Close ---");
-  { GraphContext ctx("p",1,"SP",Timestamp::Done(),&dummy_i,&dummy_o,&opts); producer->Close(ctx); }
-  { GraphContext ctx("t",2,"SU",Timestamp::Done(),&dummy_i,&dummy_o,&opts); transformer->Close(ctx); }
-  { GraphContext ctx("c",3,"SC",Timestamp::Done(),&dummy_i,&dummy_o,&opts); consumer->Close(ctx); }
+  { GraphContext ctx("p",1,"SP",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)producer->Close(ctx); }
+  { GraphContext ctx("t",2,"SU",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)transformer->Close(ctx); }
+  { GraphContext ctx("c",3,"SC",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)consumer->Close(ctx); }
 
   Logger::Info("=== Done ===");
   return 0;

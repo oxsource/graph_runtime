@@ -24,9 +24,9 @@ absl::StatusOr<std::unique_ptr<GraphRuntime>> GraphBuilder::Build(
     auto executor = ThreadPoolExecutor::Create(opts);
     if (!executor.ok()) return executor.status();
     if (edef.name.empty()) {
-      runtime->scheduler_->SetDefaultExecutor(*executor);
+      (void)runtime->scheduler_->SetDefaultExecutor(*executor);
     } else {
-      runtime->scheduler_->SetNonDefaultExecutor(edef.name, *executor);
+      (void)runtime->scheduler_->SetNonDefaultExecutor(edef.name, *executor);
     }
   }
 
@@ -38,7 +38,7 @@ absl::StatusOr<std::unique_ptr<GraphRuntime>> GraphBuilder::Build(
         std::max(1, static_cast<int>(config.nodes.size())));
     auto executor = ThreadPoolExecutor::Create(opts);
     if (!executor.ok()) return executor.status();
-    runtime->scheduler_->SetDefaultExecutor(*executor);
+    (void)runtime->scheduler_->SetDefaultExecutor(*executor);
   }
 
   // Create nodes via NodeFactoryRegistry

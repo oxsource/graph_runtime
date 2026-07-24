@@ -54,7 +54,7 @@ TEST(InputChainTest, MinTimestampOrBound) {
   auto p = Packet::MakePacket<int>(42).At(Timestamp(500));
   std::list<Packet> packets = {p};
   bool notify = false;
-  mgr.AddPackets(packets, &notify);
+  (void)mgr.AddPackets(packets, &notify);
 
   ts = mgr.MinTimestampOrBound(&empty);
   EXPECT_FALSE(empty);

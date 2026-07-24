@@ -81,7 +81,7 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
                    "node", ts, &inputs, &outputs, &opts);
 
   if (is_open) {
-    node->Open(ctx);
+    (void)node->Open(ctx);
     return;
   }
 

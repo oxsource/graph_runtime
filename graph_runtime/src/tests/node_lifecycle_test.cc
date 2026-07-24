@@ -216,11 +216,11 @@ TEST(NodeLifecycleTest, DisconnectedSubgraphs) {
   // Open both
   {
     GraphContext c("a",1,"Src",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts);
-    src_a.Open(c);
+    (void)src_a.Open(c);
   }
   {
     GraphContext c("b",2,"Src",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts);
-    src_b.Open(c);
+    (void)src_b.Open(c);
   }
 
   // Run both independently
@@ -244,8 +244,8 @@ TEST(NodeLifecycleTest, DisconnectedSubgraphs) {
   EXPECT_EQ(src_a.Produced(), 5);
   EXPECT_EQ(src_b.Produced(), 5);
 
-  { GraphContext c("a",1,"Src",Timestamp::Done(),&dummy_i,&dummy_o,&opts); src_a.Close(c); }
-  { GraphContext c("b",2,"Src",Timestamp::Done(),&dummy_i,&dummy_o,&opts); src_b.Close(c); }
+  { GraphContext c("a",1,"Src",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)src_a.Close(c); }
+  { GraphContext c("b",2,"Src",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)src_b.Close(c); }
 }
 
 // --- T055: Combined lifecycle test ---
@@ -299,7 +299,7 @@ TEST(NodeLifecycleTest, CloseNodeIdempotency) {
 
   {
     GraphContext c("n",1,"T",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts);
-    n.Open(c);
+    (void)n.Open(c);
   }
   {
     GraphContext c("n",1,"T",Timestamp::Done(),&dummy_i,&dummy_o,&opts);
