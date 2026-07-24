@@ -111,4 +111,11 @@ void Logger::Fatal(const char* content) {
   Instance().Log(LogLevel::kFatal, GRAPHRT_LOG_TAG, content);
 }
 
+// Thin public wrappers called by GRAPHRT_LOGD / GRAPHRT_LOGI / etc.
+void LogDebug(const char* tag, const char* content) { Logger::Debug(tag, content); }
+void LogInfo(const char* tag, const char* content)  { Logger::Info(tag, content); }
+void LogWarn(const char* tag, const char* content)  { Logger::Warn(tag, content); }
+void LogError(const char* tag, const char* content) { Logger::Error(tag, content); }
+void LogFatal(const char* tag, const char* content) { Logger::Fatal(tag, content); }
+
 }  // namespace graph::runtime
