@@ -56,6 +56,17 @@ void OutputStreamHandler::TryPropagateTimestampBound(
   }
 }
 
+void OutputStreamHandler::SetOutputStreamCallback(
+    const std::string& stream_name,
+    std::function<void(const Packet&)> callback) {
+  output_stream_callbacks_[stream_name] = std::move(callback);
+}
+
+void OutputStreamHandler::ClearOutputStreamCallback(
+    const std::string& stream_name) {
+  output_stream_callbacks_.erase(stream_name);
+}
+
 void OutputStreamHandler::PropagateOutputPackets(
     Timestamp input_timestamp, OutputStreamShardSet* shards) {
   for (size_t i = 0; i < managers_.size(); ++i) {
@@ -66,6 +77,14 @@ void OutputStreamHandler::PropagateOutputPackets(
     Timestamp output_bound =
         mgr->ComputeOutputTimestampBound(shard, input_timestamp);
     mgr->PropagateUpdatesToMirrors(output_bound, &shard);
+
+    // Fire registered callbacks for this output stream.
+    auto cb_it = output_stream_callbacks_.find(mgr->Name());
+    if (cb_it != output_stream_callbacks_.end()) {
+      for (const auto& packet : shard.OutputQueue()) {
+        cb_it->second(packet);
+      }
+    }
 
     if (shard.IsClosed()) {
       mgr->Close();

@@ -47,14 +47,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T002 [P] [US1] Add output callback storage map to `GraphRuntime` in `src/framework/public/graph_runtime.h` — `std::map<std::string, std::function<void(const Packet&)>> output_stream_callbacks_`
-- [ ] T003 [P] [US1] Add `side_packet_map_` to `GraphRuntime` in `src/framework/public/graph_runtime.h` — `std::map<std::string, Packet> side_packet_map_`
-- [ ] T004 [P] [US1] Implement `SetOutputStreamCallback` in `src/framework/public/graph_runtime.cc` — store callback in `output_stream_callbacks_`; wire into `OutputStreamHandler::PostProcess` in `src/framework/stream/output_stream_handler.cc`
-- [ ] T005 [P] [US1] Implement `ClearOutputStreamCallback` in `src/framework/public/graph_runtime.cc` — remove from `output_stream_callbacks_`
-- [ ] T006 [P] [US1] Implement `SetInputSidePacket` in `src/framework/public/graph_runtime.cc` — store in `side_packet_map_`; wire into `GraphContext` via `Scheduler::Start()` in `src/framework/scheduler/scheduler.cc`
-- [ ] T007 [US1] Implement `SetOutputSidePacketCallback` in `src/framework/public/graph_runtime.cc` — store callback; trigger during `Node::Close()` via `GraphContext::OutputSidePackets()` in `src/framework/node/node.cc`
-- [ ] T008 [P] [US1] Test: OutputStreamCallback registration/firing/clearing in `src/tests/scheduler_test.cc`
-- [ ] T009 [P] [US1] Test: InputSidePacket injection and reading in `src/tests/integration_test.cc`
+- [X] T002 [P] [US1] Add output callback storage map to `GraphRuntime` in `src/framework/public/graph_runtime.h` — `std::map<std::string, std::function<void(const Packet&)>> output_stream_callbacks_`
+- [X] T003 [P] [US1] Add `side_packet_map_` to `GraphRuntime` in `src/framework/public/graph_runtime.h` — `std::map<std::string, Packet> side_packet_map_`
+- [X] T004 [P] [US1] Implement `SetOutputStreamCallback` in `src/framework/public/graph_runtime.cc` — store callback in `output_stream_callbacks_`; wire into `OutputStreamHandler::PostProcess` in `src/framework/stream/output_stream_handler.cc`
+- [X] T005 [P] [US1] Implement `ClearOutputStreamCallback` in `src/framework/public/graph_runtime.cc` — remove from `output_stream_callbacks_`
+- [X] T006 [P] [US1] Implement `SetInputSidePacket` in `src/framework/public/graph_runtime.cc` — store in `side_packet_map_`; wire into `GraphContext` via `Scheduler::Start()` in `src/framework/scheduler/scheduler.cc`
+- [X] T007 [US1] Implement `SetOutputSidePacketCallback` in `src/framework/public/graph_runtime.cc` — store callback; trigger during `Node::Close()` via `GraphContext::OutputSidePackets()` in `src/framework/node/node.cc`
+- [X] T008 [P] [US1] Test: OutputStreamCallback registration/firing/clearing in `src/tests/scheduler_test.cc`
+- [X] T009 [P] [US1] Test: InputSidePacket injection and reading in `src/tests/integration_test.cc`
 
 **Checkpoint**: All 4 stub methods implemented and tested — `bazel test //src/tests:scheduler_test` and `bazel test //src/tests:integration_test` pass with callback verification ✅
 

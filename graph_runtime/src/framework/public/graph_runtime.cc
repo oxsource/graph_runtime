@@ -9,6 +9,7 @@
 #include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/input_stream_manager.h"
 #include "src/framework/stream/output_stream_manager.h"
+#include "src/framework/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 
@@ -137,19 +138,42 @@ absl::Status GraphRuntime::CloseInputStream(
 
 void GraphRuntime::SetOutputStreamCallback(
     const std::string& stream_name,
-    std::function<void(const Packet&)> callback) {}
+    std::function<void(const Packet&)> callback) {
+  output_stream_callbacks_[stream_name] = callback;
+
+  // Register on the OutputStreamHandler that manages this stream.
+  for (auto& node : all_nodes_) {
+    auto* handler = node->GetOutputStreamHandler();
+    if (handler) {
+      handler->SetOutputStreamCallback(stream_name, callback);
+    }
+  }
+}
 
 void GraphRuntime::ClearOutputStreamCallback(
-    const std::string& stream_name) {}
+    const std::string& stream_name) {
+  output_stream_callbacks_.erase(stream_name);
+
+  // Clear on all OutputStreamHandlers.
+  for (auto& node : all_nodes_) {
+    auto* handler = node->GetOutputStreamHandler();
+    if (handler) {
+      handler->ClearOutputStreamCallback(stream_name);
+    }
+  }
+}
 
 absl::Status GraphRuntime::SetInputSidePacket(
     const std::string& tag_name, Packet packet) {
+  side_packet_map_[tag_name] = std::move(packet);
   return absl::OkStatus();
 }
 
 void GraphRuntime::SetOutputSidePacketCallback(
     const std::string& name,
-    std::function<void(const Packet&)> callback) {}
+    std::function<void(const Packet&)> callback) {
+  output_side_packet_callbacks_[name] = std::move(callback);
+}
 
 void GraphRuntime::SetHook(int type, hook::HookFn fn) {
   hook::HookFactory::Register(type, fn);

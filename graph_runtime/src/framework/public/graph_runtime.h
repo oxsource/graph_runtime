@@ -74,6 +74,15 @@ class GraphRuntime {
   // Throttle tracking: full input streams per node.
   std::map<Node*, std::set<InputStreamManager*>> full_input_streams_;
   std::set<std::string> closed_streams_;
+
+  // Output stream callback storage.
+  std::map<std::string, std::function<void(const Packet&)>> output_stream_callbacks_;
+
+  // Input side packet storage (tag_name → Packet).
+  std::map<std::string, Packet> side_packet_map_;
+
+  // Output side packet callback storage (name → callback).
+  std::map<std::string, std::function<void(const Packet&)>> output_side_packet_callbacks_;
 };
 
 }  // namespace graph::runtime

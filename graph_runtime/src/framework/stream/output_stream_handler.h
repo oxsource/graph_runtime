@@ -28,6 +28,11 @@ class OutputStreamHandler {
   void UpdateTaskTimestampBound(Timestamp bound);
   void TryPropagateTimestampBound(Timestamp input_bound);
 
+  // Callback registration for output stream packets.
+  void SetOutputStreamCallback(const std::string& stream_name,
+                               std::function<void(const Packet&)> callback);
+  void ClearOutputStreamCallback(const std::string& stream_name);
+
  protected:
   void PropagateOutputPackets(Timestamp input_timestamp,
                                OutputStreamShardSet* shards);
@@ -35,6 +40,9 @@ class OutputStreamHandler {
   std::vector<OutputStreamManager*> managers_;
   std::set<Timestamp> completed_input_timestamps_;
   Timestamp task_timestamp_bound_;
+
+  // Output stream callbacks (stream_name → callback).
+  std::map<std::string, std::function<void(const Packet&)>> output_stream_callbacks_;
 };
 
 }  // namespace graph::runtime
