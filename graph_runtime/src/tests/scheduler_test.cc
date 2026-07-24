@@ -363,4 +363,45 @@ TEST_F(GraphContextPoolingTest, PrepareAndRecycle) {
   EXPECT_EQ(ctx2->InputTimestamp().Value(), 2);
 }
 
+class BatchSchedulingTest : public ::testing::Test {
+ protected:
+  class TestBatchNode : public Node {
+   public:
+    TestBatchNode(const std::string& n, const NodeOptions& opts) : Node(n) {}
+    absl::Status Open(GraphContext&) override { return absl::OkStatus(); }
+    absl::Status Process(GraphContext&) override { return absl::OkStatus(); }
+    absl::Status Close(GraphContext&) override { return absl::OkStatus(); }
+  };
+};
+
+TEST_F(BatchSchedulingTest, ScheduleInvocationsOnDefaultHandler) {
+  DefaultInputStreamHandler handler;
+  int callback_count = 0;
+  handler.SetScheduleCallback([&](Node&) { ++callback_count; });
+
+  NodeOptions opts;
+  TestBatchNode node("test", opts);
+  NodeContract contract;
+  contract.SetMaxInFlight(3);
+  contract.Inputs().Get("in").Set<std::string>();
+  node.SetContract(contract);
+
+  auto mgr = std::make_unique<InputStreamManager>("in");
+  std::list<Packet> packets;
+  packets.push_back(Packet::MakePacket<std::string>("hello"));
+  bool notify = false;
+  mgr->AddPackets(packets, &notify);
+  node.SetInputPort("in", mgr.get());
+  handler.SetInputStreamManagers({mgr.get()});
+
+  InputStreamShardSet inputs;
+  OutputStreamShardSet outputs;
+  Timestamp input_bound;
+  GraphContext ctx("test", 1, "TestNode", Timestamp(1), &inputs, &outputs, &opts);
+
+  bool result = handler.ScheduleInvocations(3, &input_bound, node, ctx);
+  EXPECT_TRUE(result);
+  EXPECT_GT(callback_count, 0);
+}
+
 }  // namespace graph::runtime

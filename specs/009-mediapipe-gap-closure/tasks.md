@@ -195,9 +195,9 @@
 
 ### Layer 4: Batch Scheduling — ScheduleInvocations
 
-- [ ] T050 [PS] [US7] Implement `ScheduleInvocations(max_allowance)` in `DefaultInputStreamHandler` — schedule up to max_allowance nodes per invocation
-- [ ] T051 [US7] Wire `ScheduleInvocations` in `SchedulerQueue::RunNode()` — call after Process to continue scheduling
-- [ ] T052 [P] [US7] Test: batch scheduling behavior in `src/tests/scheduler_test.cc`
+- [X] T050 [PS] [US7] Implement `ScheduleInvocations(max_allowance)` in `DefaultInputStreamHandler` — schedule up to max_allowance nodes per invocation
+- [X] T051 [US7] Wire `ScheduleInvocations` in `SchedulerQueue::RunNode()` — call after Process to continue scheduling
+- [X] T052 [P] [US7] Test: batch scheduling behavior in `src/tests/scheduler_test.cc`
 
 ### Layer 5: Performance Counters
 

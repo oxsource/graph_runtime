@@ -1,5 +1,6 @@
 #include "src/framework/scheduler/scheduler_queue.h"
 #include "src/framework/node/graph_context.h"
+#include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/output_stream_handler.h"
 
 #define GRAPHRT_LOG_TAG "graphrt::scheduler_queue"
@@ -124,27 +125,24 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   absl::Status status = node->Process(ctx);
 
   if (IsStopStatus(status)) {
-    // Propagate any output packets produced by this process cycle.
     if (node->GetOutputStreamHandler()) {
       node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
     }
     node->DecrementPending();
-    // Non-source returning StatusStop triggers graceful shutdown.
     if (node->input_port_count() > 0) {
-      if (idle_callback_) {
-        idle_callback_(true);
+      if (node->GetInputStreamHandler()) {
+        Timestamp input_bound;
+        int ma = std::max(1, node->GetContract().MaxInFlight());
+        node->GetInputStreamHandler()->ScheduleInvocations(ma, &input_bound, *node, ctx);
       }
+      if (idle_callback_) idle_callback_(true);
     } else {
-      // Source returning Stop — notify scheduler to remove from active_sources_.
-      if (source_stopped_callback_) {
-        source_stopped_callback_(node);
-      }
+      if (source_stopped_callback_) source_stopped_callback_(node);
     }
     return;
   }
 
   if (!status.ok()) {
-    // Error during processing — propagate.
     if (node->GetOutputStreamHandler()) {
       node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
     }
@@ -157,6 +155,14 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
   }
   node->DecrementPending();
+
+  // Batch scheduling: if the node has more data, schedule next invocations.
+  if (node->GetInputStreamHandler()) {
+    Timestamp input_bound;
+    int max_allowance = std::max(1, node->GetContract().MaxInFlight());
+    node->GetInputStreamHandler()->ScheduleInvocations(
+        max_allowance, &input_bound, *node, ctx);
+  }
 }
 
 void SchedulerQueue::UpdateIdleState() {
