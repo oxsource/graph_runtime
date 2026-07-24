@@ -33,6 +33,9 @@ Phase 3 (P2) —— 新增图生命周期查询
 Phase 4 (P2) —— 强化校验与扩展
   ConfigValidator 连通性/循环检测
   运行时类型检查
+
+Phase 5 (P1) —— Tag/Index Stream
+  TagMap / ParseTagIndexName / 索引 AddPacketToInputStream
 ```
 
 ## Impact — Quantified
@@ -91,6 +94,18 @@ Phase 4 (P2) —— 强化校验与扩展
 3. 可选：类型匹配运行时检查（在 `Process` 调用时验证 packet 类型）
 
 **Verification**: `bazel test //...` 全部通过
+
+### Phase 9 — Tag/Index Stream Support (P1)
+
+**Target**: `src/framework/tool/tag_map.h`, `src/framework/tool/validate_name.h`, `src/framework/node/node_contract.h`, `src/framework/public/graph_runtime.h`
+
+1. **TagMap**: 新建 `src/framework/tool/tag_map.h`，解析 `"TAG:index:name"` → `{tag, index, name}`，维护 `tag → {first_id, count}` 映射
+2. **ParseTagIndexName**: 新建 `src/framework/tool/validate_name.h`，提供 `ParseTagIndexName("VIDEO:2:left")` → `{tag="VIDEO", index=2, name="left"}`
+3. **PacketTypeSet 索引访问**: `node_contract.h` 增加 `Get(tag, index)` const 和非 const 重载
+4. **AddPacketToInputStream 索引重载**: `graph_runtime.h` 增加 `AddPacketToInputStream(tag, index, packet)`，同时保留 `AddPacketToInputStream("TAG:index", packet)` 字符串解析
+5. **Test**: TagMap 单元测试、索引投递集成测试
+
+**Verification**: `bazel test //...` 全部通过，新增索引投递测试通过
 
 ## Dependencies & Execution Order
 

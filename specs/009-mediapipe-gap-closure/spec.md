@@ -79,6 +79,23 @@ As a library user, I want `ConfigValidator` to detect more configuration errors,
 
 ---
 
+### User Story 6 — Tag/Index Stream Support (Priority: P1)
+
+As a library user, I want input and output streams to support MediaPipe-compatible `TAG:index` notation, so that I can address multiple streams of the same logical type by tag and index.
+
+**Why this priority**: Required for interoperability with MediaPipe graph definitions and multi-stream calculators (e.g., stereo video, multi-channel audio).
+
+**Independent Test**: A test configures a node with `{"VIDEO:0", "VIDEO:1"}` as input streams, injects packets to each index separately via `AddPacketToInputStream("VIDEO", 0, pkt)` and `AddPacketToInputStream("VIDEO:1", pkt)`, and verifies each index receives the correct packet.
+
+**Acceptance Scenarios**:
+1. **Given** a config where input_streams contains `"VIDEO:0"`, **When** the graph builds, **Then** a TagMap is created indexing streams by tag
+2. **Given** `SetInputSidePacket("CONFIG:0", packet)` called before Start, **When** a node's Open() reads its side packet by `InputSidePackets().Get("CONFIG", 0)`, **Then** the packet is available
+3. **Given** a graph with `output_streams: ["OUTPUT:0", "OUTPUT:1"]`, **When** a node writes to `ctx.Outputs().Get("OUTPUT", 1)`, **Then** the packet arrives on the correct indexed output
+4. **Given** `GetGraphState()` exposed, **When** `AddPacketToInputStream("DATA", 5, pkt)` is called, **Then** the packet arrives at the correct index
+5. **Given** `ParseTagIndexName("VIDEO:2:left_cam")`, **When** parsed, **Then** result is `{tag="VIDEO", index=2, name="left_cam"}`
+
+---
+
 ## General Notes
 
 - The grpah Runtime "WaitUntilDone" does not work because the scheduler's asynchronous path does not naturally drive the graph to termination state. The `WaitUntilDone` method is already functional in the synchronous path but not with multi-input processing. This is a specific defect to address.
@@ -93,6 +110,7 @@ As a library user, I want `ConfigValidator` to detect more configuration errors,
 - **GraphContext**: Per-invocation context passed to `Open()` / `Process()` / `Close()`
 - **ConfigValidator**: Configuration validation in `src/framework/config/config_validator.h`
 - **NodeContract**: Type contract declarations on each node
+- **TagMap**: Tag/index mapping (new) in `src/framework/tool/tag_map.h` — maps `"VIDEO"` → indices `[0, 2)` for `VIDEO:0, VIDEO:1`
 
 ## Success Criteria
 
@@ -103,3 +121,4 @@ As a library user, I want `ConfigValidator` to detect more configuration errors,
 - **SC-005**: ConfigValidator detects connectivity and cycle errors
 - **SC-006**: `bazel build //...` and `bazel test //...` pass with zero warnings
 - **SC-007**: All existing tests continue to pass
+- **SC-008**: Tag/index streams supported: ParseTagIndexName, TagMap, PacketTypeSet::Get(tag,index), AddPacketToInputStream(tag,index), AddPacketToInputStream("TAG:index")

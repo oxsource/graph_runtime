@@ -140,6 +140,34 @@
 
 ---
 
+## Phase 9: User Story 6 — Tag/Index Stream Support (Priority: P1)
+
+**Goal**: Support MediaPipe-compatible `TAG:index` notation for input/output streams. Enable `AddPacketToInputStream("TAG:index", pkt)` and `AddPacketToInputStream(tag, index, pkt)`, plus `PacketTypeSet::Get(tag, index)` in NodeContract.
+
+**Independent Test**: A test configures a node with `{"VIDEO:0", "VIDEO:1"}` as input streams, injects packets to each index, and verifies each index receives the correct packet.
+
+### Layer 1: Infrastructure — TagMap + ParseTagIndexName
+
+- [ ] T029 [P] [US6] Create `src/framework/tool/tag_map.h` — `TagMap` class with `Create()`, `GetId(tag, index)`, `NumEntries(tag)`, `HasTag()`, `GetTags()`, `Names()`
+- [ ] T030 [P] [US6] Create `src/framework/tool/validate_name.h` — `ParseTagIndexName()` utility that parses `"TAG:index:name"` → `{tag, index, name}`
+- [ ] T031 [P] [US6] Create `src/framework/tool/BUILD.bazel` — build target for tag_map + validate_name
+- [ ] T032 [P] [US6] Test: TagMap creation and tag/index resolution in `src/tests/scheduler_test.cc`
+
+### Layer 2: PacketTypeSet Indexed Access
+
+- [ ] T033 [P] [US6] Add `PacketTypeSet::Get(tag, index)` overloads in `src/framework/node/node_contract.h` — const and non-const, delegates to internal `Get(tag_name)`
+- [ ] T034 [US6] Test: indexed type access in `src/tests/scheduler_test.cc`
+
+### Layer 3: AddPacketToInputStream Indexed Overload
+
+- [ ] T035 [US6] Add `AddPacketToInputStream(tag, index, packet)` to `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` — locate stream manager by tag map, delegate to `AddPackets`
+- [ ] T036 [US6] Support string-form `AddPacketToInputStream("TAG:index", packet)` — parse with ParseTagIndexName, route to correct manager
+- [ ] T037 [P] [US6] Test: indexed AddPacketToInputStream with both (tag, index) and ("TAG:index") forms in `src/tests/integration_test.cc`
+
+**Checkpoint**: TagMap, ParseTagIndexName, indexed AddPacketToInputStream all functional — `bazel test //...` all pass ✅
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -154,6 +182,8 @@ Phase 1 (Setup)
     │                                          └──▶ Phase 6 [US4] (Pause/Resume)
     │
     └──▶ Phase 7 [US5] (Config Validation) ──▶ Phase 8 (Polish)
+    │
+    └──▶ Phase 9 [US6] (Tag/Index) ── Independent — can start in parallel with US5
 ```
 
 - **Phase 1 (Setup)**: No dependencies — start immediately
