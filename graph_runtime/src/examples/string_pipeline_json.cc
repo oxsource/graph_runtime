@@ -157,9 +157,9 @@ int main() {
 
   // Open
   Logger::Info("--- Open ---");
-  { GraphContext c("p",1,"SP",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); producer->Open(c); }
-  { GraphContext c("t",2,"SU",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); transformer->Open(c); }
-  { GraphContext c("c",3,"SC",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); consumer->Open(c); }
+  { GraphContext c("p",1,"SP",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); (void)producer->Open(c); }
+  { GraphContext c("t",2,"SU",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); (void)transformer->Open(c); }
+  { GraphContext c("c",3,"SC",Timestamp::Unstarted(),&dummy_i,&dummy_o,&opts); (void)consumer->Open(c); }
 
   // Process loop — same RunOnce pattern as string_pipeline.cc
   Logger::Info("--- Process ---");
@@ -178,7 +178,7 @@ int main() {
 
     InputStreamShardSet ti; ti.Get("input").PushPacket(std::move(pkt));
     OutputStreamShardSet to;
-    { GraphContext c("t",2,"SU",ts,&ti,&to,&opts); transformer->Process(c); }
+    { GraphContext c("t",2,"SU",ts,&ti,&to,&opts); (void)transformer->Process(c); }
 
     Packet tp;
     auto& tq = to.Get("output").OutputQueue();
@@ -187,13 +187,13 @@ int main() {
 
     InputStreamShardSet ci; ci.Get("input").PushPacket(std::move(tp));
     OutputStreamShardSet co;
-    { GraphContext c("c",3,"SC",ts,&ci,&co,&opts); consumer->Process(c); }
+    { GraphContext c("c",3,"SC",ts,&ci,&co,&opts); (void)consumer->Process(c); }
   }
 
   Logger::Info("--- Close ---");
-  { GraphContext c("p",1,"SP",Timestamp::Done(),&dummy_i,&dummy_o,&opts); producer->Close(c); }
-  { GraphContext c("t",2,"SU",Timestamp::Done(),&dummy_i,&dummy_o,&opts); transformer->Close(c); }
-  { GraphContext c("c",3,"SC",Timestamp::Done(),&dummy_i,&dummy_o,&opts); consumer->Close(c); }
+  { GraphContext c("p",1,"SP",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)producer->Close(c); }
+  { GraphContext c("t",2,"SU",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)transformer->Close(c); }
+  { GraphContext c("c",3,"SC",Timestamp::Done(),&dummy_i,&dummy_o,&opts); (void)consumer->Close(c); }
 
   std::remove(tmp_path);
   Logger::Info("=== Done (JSON config driven) ===");
