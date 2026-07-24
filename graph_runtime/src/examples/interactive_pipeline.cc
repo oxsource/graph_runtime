@@ -1,12 +1,12 @@
-// interactive_pipeline_demo.cc
+// interactive_pipeline.cc
 // Demonstrates callback-driven async interaction:
 //   1. Graph config from JSON string (not file).
 //   2. Start() + WaitUntilDone() async execution.
 //   3. OutputStreamCallback drives the next packet injection.
 //   4. After 5 rounds, Cancel() terminates the graph.
 //
-// Build: bazel build //src/examples:interactive_pipeline_demo
-// Run:   bazel run //src/examples:interactive_pipeline_demo
+// Build: bazel build //src/examples:interactive_pipeline
+// Run:   bazel run //src/examples:interactive_pipeline
 
 #include <string>
 
