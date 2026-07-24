@@ -17,7 +17,7 @@ Logger::Warn("graphrt::config", "Using default config path");
 Logger::Fatal("graphrt::runtime", "Unrecoverable error");
 ```
 
-**Default output**: `[graphrt::scheduler] [I] 2026-07-24 14:30:00.123 Pipeline started`
+**Default output**: `graphrt::scheduler I 2026-07-24 14:30:00.123 Pipeline started`
 
 ## Custom Hook (intercept logs)
 

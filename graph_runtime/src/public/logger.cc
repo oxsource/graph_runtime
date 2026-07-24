@@ -37,7 +37,7 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
 
   char formatted[2048];
   int n = std::snprintf(formatted, sizeof(formatted),
-                        "[%s] [%s] %s.%03d %s",
+                        "%s %s %s.%03d %s",
                         tag, LogLevelToString(level),
                         timestamp, msec, content);
 
@@ -53,7 +53,7 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
           suppressed = e->hook_fn(formatted, 0) || suppressed;
         } catch (...) {
           // Hook threw — log a warning to stderr and fall back to default.
-          std::fprintf(stderr, "[graphrt] [W] Hook threw exception, falling back to default output\n");
+          std::fprintf(stderr, "graphrt W Hook threw exception, falling back to default output\n");
         }
       }
     }

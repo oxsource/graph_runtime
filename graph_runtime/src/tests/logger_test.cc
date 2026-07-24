@@ -76,8 +76,8 @@ TEST(LoggerTest, HookReceivesFormattedLine) {
   Logger::Info("graphrt::hooktest", "hook msg");
 
   EXPECT_TRUE(g_hook_invoked);
-  EXPECT_NE(g_hook_line.find("[graphrt::hooktest]"), std::string::npos);
-  EXPECT_NE(g_hook_line.find("[I]"), std::string::npos);
+  EXPECT_NE(g_hook_line.find("graphrt::hooktest"), std::string::npos);
+  EXPECT_NE(g_hook_line.find(" I "), std::string::npos);
   EXPECT_NE(g_hook_line.find("hook msg"), std::string::npos);
 
   runtime.SetGlobalHook(nullptr);

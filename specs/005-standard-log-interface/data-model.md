@@ -25,9 +25,9 @@ The structured log entry used internally by Logger to assemble the formatted str
 | `message` | `const char*` | Log message content text |
 | `timestamp_ms` | `int64_t` | Epoch milliseconds (UTC) |
 
-**Default output format**: `[TAG] [L] YYYY-MM-DD HH:MM:SS.mmm content\n`
+**Default output format**: `TAG L YYYY-MM-DD HH:MM:SS.mmm content\n`
 
-- Example: `[graphrt::scheduler] [I] 2026-07-24 14:30:00.123 Pipeline started\n`
+- Example: `graphrt::scheduler I 2026-07-24 14:30:00.123 Pipeline started\n`
 - Error/Fatal level routes to stderr instead of stdout.
 
 ## GraphHookEntity
