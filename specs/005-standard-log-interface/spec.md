@@ -78,14 +78,14 @@ As a developer, I want my hook's return value to control whether default stdout 
 - **FR-010**: Performance within 10% of raw std::cout with no hooks
 - **FR-011**: TAG uses `graphrt::<module_name>` convention
 - **FR-012**: Timestamp ISO 8601 with millisecond precision
-- **FR-013**: Logger implementation in `src/log/` (internal); `src/log/factory.h` contains HookFactory
+- **FR-013**: Logger implementation in `src/framework/utils/` (internal); `src/framework/utils/hook.h` contains HookFactory
 
 ### Key Entities
 
-- **LogLevel** (internal, `src/log/logger.h`): kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4
+- **LogLevel** (internal, `src/framework/utils/logger.h`): kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4
 - **LogMessage** (removed): Formatting is done inline; hooks receive `const char*`
-- **HookFactory** (`src/hook/factory.h`): Static class managing `vector<{type, fn}>`. `Register()`, `ForEachAccept()`
-- **Logger** (internal, `src/log/`): Singleton, formats log lines, dispatches to HookFactory::ForEachAccept
+- **HookFactory** (`src/framework/utils/hook.h`): Static class managing `vector<{type, fn}>`. `Register()`, `ForEachAccept()`
+- **Logger** (internal, `src/framework/utils/`): Singleton, formats log lines, dispatches to HookFactory::ForEachAccept
 - **HookFn** (`include/graph_runtime/hook.h`): `bool (*)(const void* data, int flags)`
 - **kTypeLog** (`include/graph_runtime/hook.h`): Hook type constant for log interception (value 1)
 

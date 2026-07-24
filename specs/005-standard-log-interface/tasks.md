@@ -28,7 +28,7 @@ The design went through several refinements during implementation:
 |------|---------|
 | `src/log/logger.h` | Internal: LogLevel, Logger class |
 | `src/log/logger.cc` | Logger implementation |
-| `src/log/BUILD.bazel` | log_core target |
+| `src/log/BUILD.bazel` | logger target |
 | `src/hook/factory.h` | HookFactory class |
 | `src/hook/factory.cc` | Hook registration + dispatch |
 | `src/hook/BUILD.bazel` | hook target |

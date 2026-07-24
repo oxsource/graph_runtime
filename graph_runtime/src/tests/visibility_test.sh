@@ -9,8 +9,8 @@ set -euo pipefail
 PUBLIC_TARGET="//src/public:runtime"
 INTERNAL_TARGETS=(
   "//src/scheduler:scheduler"
-  "//src/log:log_core"
-  "//src/hook:hook"
+  "//src/framework/utils:logger"
+  "//src/framework/utils:hook"
   "//src/node:node_base"
   "//src/stream:timestamp"
   "//src/config:config"

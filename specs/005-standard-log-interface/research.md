@@ -20,11 +20,11 @@
 - **Rationale**: Eliminates repetitive tag passing, keeps TAG declaration at module top.
 - **Alternatives considered**: Per-call TAG parameter (verbose), class-level TAG (not thread-safe).
 
-### Decision 4: Logger in src/log/ (internal module)
+### Decision 4: Logger in src/framework/utils/ (internal module)
 
-- **Decision**: Logger lives in `src/log/` (not `src/public/`). Public headers only contain macros.
-- **Rationale**: Aligns with constitutional principle V — only `//src/public:runtime` exposed externally.
-- **Alternatives considered**: Logger in `src/public/` (removed — leaked internal API).
+- **Decision**: Logger lives in `src/framework/utils/` (not `src/framework/public/`). Public headers only contain macros.
+- **Rationale**: Aligns with constitutional principle V — only `//src/framework/public:runtime` exposed externally.
+- **Alternatives considered**: Logger in `src/framework/public/` (removed — leaked internal API).
 
 ### Decision 5: GraphRuntime::SetHook for Public Registration
 

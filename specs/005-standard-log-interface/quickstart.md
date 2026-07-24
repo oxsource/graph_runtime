@@ -21,7 +21,7 @@ Internal modules can use `Logger::Info(...)` directly:
 
 ```cpp
 #define GRAPHRT_LOG_TAG "graphrt::scheduler"
-#include "src/log/logger.h"
+#include "src/framework/utils/logger.h"
 
 Logger::Info("Pipeline started");
 Logger::Error("Error: something failed");

@@ -25,7 +25,7 @@ As an external project integrating graph_runtime, I want Bazel to prevent me fro
 **Acceptance Scenarios**:
 1. **Given** an external project depending on `@graph_runtime//src/public:runtime`, **When** building, **Then** it succeeds
 2. **Given** an external project depending on `@graph_runtime//src/scheduler:scheduler`, **When** building, **Then** Bazel rejects with a visibility violation
-3. **Given** an external project depending on `@graph_runtime//src/log:log_core`, **When** building, **Then** Bazel rejects
+3. **Given** an external project depending on `@graph_runtime//src/framework/utils:logger`, **When** building, **Then** Bazel rejects
 
 ### User Story 2 - Internal Modules Can Still Cross-Reference (Priority: P1)
 
@@ -34,7 +34,7 @@ As an internal developer, I want to depend on other internal modules without res
 **Independent Test**: `bazel build //src/scheduler:scheduler` succeeds via internal deps.
 
 **Acceptance Scenarios**:
-1. **Given** scheduler depends on `//src/log:log_core`, **When** building `//src/scheduler:scheduler`, **Then** it succeeds
+1. **Given** scheduler depends on `//src/framework/utils:logger`, **When** building `//src/scheduler:scheduler`, **Then** it succeeds
 2. **Given** runtime depends on scheduler, **When** building `//src/public:runtime`, **Then** it succeeds
 
 ### User Story 3 - Examples Use Only Public API (Priority: P2)
@@ -74,13 +74,13 @@ The script uses `bazel query` to verify:
 ### Functional Requirements
 
 - **FR-001**: All internal packages (`src/log/`, `src/hook/`, `src/scheduler/`, `src/stream/`, `src/node/`, `src/config/`, `src/config/json/`) MUST set `package(default_visibility = ["//src:__subpackages__"])`
-- **FR-002**: `src/public/BUILD.bazel` MUST have per-target visibility: `runtime` as `//visibility:public`, `runtime_internal`/`graph_builder` as `["//src:__subpackages__"]`
+- **FR-002**: `src/framework/public/BUILD.bazel` MUST have per-target visibility: `runtime` as `//visibility:public`, `runtime_internal`/`graph_builder` as `["//src:__subpackages__"]`
 - **FR-003**: `src/hook/BUILD.bazel` visibility is already correct — keep `["//src:__subpackages__", "//src/tests:__subpackages__"]`
 - **FR-004**: `src/stream:timestamp` and `src/stream:packet` MUST be re-exported via `include/graph_runtime/timestamp.h` and `include/graph_runtime/packet.h` (already exist)
 - **FR-005**: All 4 dep prefix violations (`//src/` → `@graph_runtime//src/`) MUST be fixed:
-  - `src/public/BUILD.bazel` → `//src/log:log_core`
-  - `src/log/BUILD.bazel` → `//src/hook:hook`
-  - `src/scheduler/BUILD.bazel` → `//src/log:log_core`
+  - `src/framework/public/BUILD.bazel` → `//src/framework/utils:logger`
+  - `src/framework/utils/BUILD.bazel` → `//src/framework/utils:hook`
+  - `src/framework/scheduler/BUILD.bazel` → `//src/framework/utils:logger`
   - `src/hook/BUILD.bazel` → `//src/public:hook_header`
 - **FR-006**: Example `string_pipeline_json` MUST be rewritten to use only `//src/public:runtime`
 - **FR-007**: `consumer_demo` FR kept but not a gate — pre-existing workspace issue documented

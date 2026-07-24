@@ -21,8 +21,8 @@ All internal packages under `src/framework/` use `//src/framework:__subpackages_
 
 | Package | Visibility |
 |---------|-----------|
-| `src/framework/utils/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
-| `src/framework/utils/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
+| `src/framework/utils:hook` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
+| `src/framework/utils:logger` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
 | `src/framework/scheduler/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
 | `src/framework/stream/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
 | `src/framework/node/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
@@ -37,10 +37,10 @@ All internal deps MUST use the `@graph_runtime//` prefix:
 
 ```python
 # Correct
-deps = ["@graph_runtime//src/framework/log:log_core"]
+deps = ["@graph_runtime//src/framework/utils:logger"]
 
 # Wrong
-deps = ["//src/framework/log:log_core"]
+deps = ["//src/framework/utils:logger"]
 ```
 
 ### Adding a New Framework Module

@@ -1,6 +1,6 @@
 # Data Model: Standard Log Interface
 
-## LogLevel (Internal, `src/log/logger.h`)
+## LogLevel (Internal, `src/framework/utils/logger.h`)
 
 Enumeration of log levels in syslog order: lower value = more severe.
 
@@ -20,7 +20,7 @@ Enumeration of log levels in syslog order: lower value = more severe.
 
 Example: `graphrt::scheduler I 2026-07-24 14:30:00.123 Pipeline started`
 
-## HookFactory (`src/hook/factory.h`)
+## HookFactory (`src/framework/utils/hook.h`)
 
 Static class managing registered hooks. Storage is a `vector<{type, fn}>`.
 
@@ -30,7 +30,7 @@ Static class managing registered hooks. Storage is a `vector<{type, fn}>`.
 | `ForEachAccept(int type, const void* data, int flags)` | Call the hook of given type, return its result |
 | `ClearForTesting()` | Test only: clear all hooks |
 
-## Logger (`src/log/logger.h`)
+## Logger (`src/framework/utils/logger.h`)
 
 Central logging interface. Meyer singleton.
 

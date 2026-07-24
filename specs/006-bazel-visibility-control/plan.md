@@ -18,22 +18,22 @@ Restrict Bazel target visibility so external consumers can only depend on `//src
 
 | File | Line | Change |
 |------|------|--------|
-| `src/public/BUILD.bazel` | `runtime` deps | `"//src/log:log_core"` → `"@graph_runtime//src/log:log_core"` |
-| `src/log/BUILD.bazel` | `log_core` deps | `"//src/hook:hook"` → `"@graph_runtime//src/hook:hook"` |
-| `src/scheduler/BUILD.bazel` | `scheduler` deps | `"//src/log:log_core"` → `"@graph_runtime//src/log:log_core"` |
+| `src/framework/public/BUILD.bazel` | `runtime` deps | `"//src/framework/utils:logger"` → `"@graph_runtime//src/framework/utils:logger"` |
+| `src/framework/utils/BUILD.bazel` | `logger` deps | `"//src/framework/utils:hook"` → `"@graph_runtime//src/framework/utils:hook"` |
+| `src/framework/scheduler/BUILD.bazel` | `scheduler` deps | `"//src/framework/utils:logger"` → `"@graph_runtime//src/framework/utils:logger"` |
 | `src/hook/BUILD.bazel` | `hook` deps | `"//src/public:hook_header"` → `"@graph_runtime//src/public:hook_header"` |
 
 ### Phase 2 — Visibility Changes (7 files)
 
 | File | Current | New |
 |------|---------|-----|
-| `src/log/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
-| `src/scheduler/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/framework/utils/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
+| `src/framework/scheduler/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
 | `src/stream/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
 | `src/node/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
 | `src/config/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
 | `src/config/json/BUILD.bazel` | `//visibility:public` | `["//src:__subpackages__"]` |
-| `src/public/BUILD.bazel` | per-target: add explicit visibility for `runtime_internal` and `graph_builder` as `["//src:__subpackages__"]` |
+| `src/framework/public/BUILD.bazel` | per-target: add explicit visibility for `runtime_internal` and `graph_builder` as `["//src:__subpackages__"]` |
 
 ### Phase 3 — Example Rewrite
 

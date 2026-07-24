@@ -65,7 +65,7 @@ As an external consumer of the graph_runtime library, I want the public API head
 
 ### Functional Requirements
 
-- **FR-001**: Move `src/config/`, `src/hook/`, `src/log/`, `src/node/`, `src/public/`, `src/scheduler/`, `src/stream/` to `src/framework/{config,hook,log,node,public,scheduler,stream}/`
+- **FR-001**: Move `src/config/`, `src/hook/`, `src/log/`, `src/node/`, `src/public/`, `src/scheduler/`, `src/stream/` to `src/framework/`, with `hook/` and `log/` merged into `src/framework/utils/`
 - **FR-002**: Update all `#include "src/..."` paths in moved files to `#include "src/framework/..."`
 - **FR-003**: Update all `//src/...` Bazel dep references to `//src/framework/...` across ALL BUILD.bazel files
 - **FR-004**: Update all `@graph_runtime//src/...` dep references to `@graph_runtime//src/framework/...`
@@ -79,7 +79,7 @@ As an external consumer of the graph_runtime library, I want the public API head
 ### Key Entities
 
 - **Source tree layout**: The directory structure under `graph_runtime/graph_runtime/src/`
-- **Bazel BUILD paths**: Workspace-relative labels used in `deps` attributes (e.g., `//src/framework/log:log_core`)
+- **Bazel BUILD paths**: Workspace-relative labels used in `deps` attributes (e.g., `//src/framework/utils:logger`)
 - **Include paths**: C++ preprocessor include directives in source files (e.g., `#include "src/framework/logger.h"`)
 - **Workspace root**: `graph_runtime/graph_runtime/` containing the WORKSPACE file
 
