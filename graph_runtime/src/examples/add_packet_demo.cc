@@ -1,5 +1,19 @@
 // add_packet_demo.cc
-// Demonstrates AddPacketToInputStream: feed packets to a running graph.
+// Demonstrates the async execution path (Start + WaitUntilDone):
+//   1. Initialize graph with a consumer node.
+//   2. Start() — begins async execution on a thread pool.
+//   3. AddPacketToInputStream("input", pkt) — injects a packet.
+//   4. CloseInputStream("input") — signals no more packets.
+//   5. WaitUntilDone() — blocks until the graph reaches kTerminated.
+//
+// In the async path, Source nodes are scheduled automatically. For
+// input-only graphs (no sources), the scheduler schedules nodes when
+// packets arrive via AddedPacketToGraphInputStream.
+//
+// The synchronous path (Schedule) is used for batch/static graphs:
+//   - Runs entirely on the calling thread.
+//   - Does NOT support AddPacketToInputStream.
+//   - Returns only after all nodes finish.
 //
 // Build: bazel build //src/examples:add_packet_demo
 // Run:   bazel run //src/examples:add_packet_demo

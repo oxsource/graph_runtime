@@ -310,6 +310,51 @@ Runtime 负责：
 
 Runtime 不负责任何业务算法。
 
+### 3.5.1 两种执行模式
+
+Runtime 提供两种执行模式：
+
+#### 同步模式 (`Schedule()`)
+
+```
+Initialize(config)
+  ↓
+Schedule()  ← 当前线程阻塞直到完成
+  ↓
+返回
+
+- 所有节点在当前线程串行执行
+- 不支持 AddPacketToInputStream
+- 适用于纯 Source 驱动的批处理场景
+```
+
+#### 异步模式 (`Start() + WaitUntilDone()`)
+
+```
+Initialize(config)
+  ↓
+Start()  ← 启动后台线程池，立即返回
+  ↓
+AddPacketToInputStream(name, pkt)  ← 动态注入数据包
+CloseInputStream(name)              ← 关闭输入流
+  ↓
+WaitUntilDone()  ← 阻塞直到图执行完成
+
+- 节点在 ThreadPoolExecutor 工作线程上执行
+- 支持运行时通过 AddPacketToInputStream 注入数据
+- 事件驱动：数据包到达时自动调度目标节点
+- 通过 CloseInputStream 触发终止检测
+```
+
+#### 选择指南
+
+| 场景 | 推荐模式 | 原因 |
+|------|----------|------|
+| Batch pipeline，纯 source 驱动 | `Schedule()` | 同步，简单，无需外部输入 |
+| 外部输入流驱动 | `Start()` | 支持运行时注入数据包 |
+| 交互式/流式处理 | `Start()` | 可边运行边注入 |
+| 需要 WaitForIdle / HasGraphFinished | `Start()` | 这些 API 只在异步路径有意义 |
+
 ---
 
 ## 3.6 Extension Points

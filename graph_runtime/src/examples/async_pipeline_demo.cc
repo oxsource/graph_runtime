@@ -1,6 +1,18 @@
 // async_pipeline_demo.cc
 // Demonstrates async packet injection: a producer thread feeds packets
-// while the main thread waits for completion.
+// into a running graph (Start path) while the main thread waits for
+// completion via WaitUntilDone().
+//
+// Pattern:
+//   1. Initialize → Start (async, ThreadPool-backed).
+//   2. Producer thread adds packets + closes input stream.
+//   3. Main thread calls WaitUntilDone() — returns once the scheduler
+//      reaches kTerminated (all inputs closed, all work drained).
+//
+// Contrast with Schedule() (synchronous path):
+//   - Used for batch pipelines with only source nodes.
+//   - No external AddPacketToInputStream support.
+//   - Blocks the calling thread until done.
 //
 // Build:  bazel build //src/examples:async_pipeline_demo
 // Run:    bazel run //src/examples:async_pipeline_demo

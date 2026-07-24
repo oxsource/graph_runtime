@@ -55,6 +55,15 @@ deps = ["//src/framework/utils:logger"]
 
 Tests under `src/tests/` can access any internal framework target. Examples under `src/examples/` should only use `//src/framework/public:runtime`.
 
+### Execution Modes
+
+The runtime supports two execution paths (see `docs/project_bootstrap.md` §3.5.1):
+
+| Mode | Method | Threading | External Input |
+|------|--------|-----------|---------------|
+| **Sync** | `Schedule()` | Caller's thread | ❌ |
+| **Async** | `Start() + WaitUntilDone()` | ThreadPoolExecutor | ✅ |
+
 ### Checking Visibility
 
 ```bash
