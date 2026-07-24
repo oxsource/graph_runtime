@@ -1,6 +1,7 @@
 #ifndef GRAPH_RUNTIME_NODE_H_
 #define GRAPH_RUNTIME_NODE_H_
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
@@ -73,6 +74,11 @@ class Node {
   void SetContract(const NodeContract& c) { contract_ = c; }
   const NodeContract& GetContract() const { return contract_; }
 
+  // In-flight execution tracking for MaxInFlight constraint.
+  int pending_count() const { return pending_count_.load(); }
+  void IncrementPending() { pending_count_.fetch_add(1); }
+  void DecrementPending() { pending_count_.fetch_sub(1); }
+
   virtual Timestamp SourceProcessOrder(const GraphContext& context) const {
     return Timestamp::Min();
   }
@@ -89,6 +95,7 @@ class Node {
   InputStreamHandler* input_stream_handler_ = nullptr;
   OutputStreamHandler* output_stream_handler_ = nullptr;
   NodeContract contract_;
+  std::atomic<int> pending_count_{0};
 };
 
 }  // namespace graph::runtime

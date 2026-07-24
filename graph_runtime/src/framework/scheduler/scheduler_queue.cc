@@ -28,6 +28,12 @@ void SchedulerQueue::CleanupAfterRun() {
 }
 
 void SchedulerQueue::AddNode(Node* node) {
+  // Check MaxInFlight constraint.
+  int max_in_flight = node ? node->GetContract().MaxInFlight() : 1;
+  if (node && node->pending_count() >= max_in_flight) {
+    // Node has reached its concurrency limit; defer scheduling.
+    return;
+  }
   Item item;
   item.node = node;
   item.is_open_node = false;
@@ -111,6 +117,9 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     return;
   }
 
+  // Mark node as in-flight (MaxInFlight tracking).
+  node->IncrementPending();
+
   // Process the node
   absl::Status status = node->Process(ctx);
 
@@ -119,6 +128,7 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     if (node->GetOutputStreamHandler()) {
       node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
     }
+    node->DecrementPending();
     // Non-source returning StatusStop triggers graceful shutdown.
     if (node->input_port_count() > 0) {
       if (idle_callback_) {
@@ -138,6 +148,7 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     if (node->GetOutputStreamHandler()) {
       node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
     }
+    node->DecrementPending();
     return;
   }
 
@@ -145,6 +156,7 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (node->GetOutputStreamHandler()) {
     node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
   }
+  node->DecrementPending();
 }
 
 void SchedulerQueue::UpdateIdleState() {

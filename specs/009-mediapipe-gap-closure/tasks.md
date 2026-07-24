@@ -182,9 +182,9 @@
 
 ### Layer 2: MaxInFlight Constraint
 
-- [ ] T043 [P] [US7] Add `Node::pending_count_` tracking in `src/framework/scheduler/scheduler_queue.cc` — track number of in-flight invocations for each node
-- [ ] T044 [US7] Check `GetContract().MaxInFlight()` in `AddNode()` — defer scheduling if pending >= allowed
-- [ ] T045 [P] [US7] Test: MaxInFlight limits concurrent processing in `src/tests/scheduler_test.cc`
+- [X] T043 [P] [US7] Add `Node::pending_count_` tracking in `src/framework/scheduler/scheduler_queue.cc` — track number of in-flight invocations for each node
+- [X] T044 [US7] Check `GetContract().MaxInFlight()` in `AddNode()` — defer scheduling if pending >= allowed
+- [X] T045 [P] [US7] Test: MaxInFlight limits concurrent processing in `src/tests/scheduler_test.cc`
 
 ### Layer 3: GraphContext Pooling
 

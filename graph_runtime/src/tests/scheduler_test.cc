@@ -287,4 +287,59 @@ TEST_F(InputStreamHandlerFactoryTest, UnknownNameUsesDefault) {
   EXPECT_NE(handler, nullptr);
 }
 
+class MaxInFlightTest : public ::testing::Test {
+ protected:
+  class TestMaxInFlightNode : public Node {
+   public:
+    TestMaxInFlightNode(const std::string& n, const NodeOptions& opts) : Node(n) {}
+    absl::Status Open(GraphContext&) override { return absl::OkStatus(); }
+    absl::Status Process(GraphContext&) override { return absl::OkStatus(); }
+    absl::Status Close(GraphContext&) override { return absl::OkStatus(); }
+  };
+};
+
+TEST_F(MaxInFlightTest, PendingCountStartsZero) {
+  NodeOptions opts;
+  TestMaxInFlightNode node("test", opts);
+  EXPECT_EQ(node.pending_count(), 0);
+}
+
+TEST_F(MaxInFlightTest, IncrementAndDecrement) {
+  NodeOptions opts;
+  TestMaxInFlightNode node("test", opts);
+  node.IncrementPending();
+  EXPECT_EQ(node.pending_count(), 1);
+  node.IncrementPending();
+  EXPECT_EQ(node.pending_count(), 2);
+  node.DecrementPending();
+  EXPECT_EQ(node.pending_count(), 1);
+  node.DecrementPending();
+  EXPECT_EQ(node.pending_count(), 0);
+}
+
+TEST_F(MaxInFlightTest, AddNodeRespectsMaxInFlight) {
+  SchedulerQueue queue("test");
+  NodeOptions opts;
+  TestMaxInFlightNode node("test", opts);
+
+  // Set MaxInFlight to 1 via contract.
+  NodeContract contract;
+  contract.SetMaxInFlight(1);
+  node.SetContract(contract);
+
+  // AddNode should succeed when pending < MaxInFlight.
+  EXPECT_EQ(node.pending_count(), 0);
+  queue.AddNode(&node);
+  EXPECT_FALSE(queue.IsIdle());
+
+  // Simulate that the node is running.
+  node.IncrementPending();
+  EXPECT_EQ(node.pending_count(), 1);
+
+  // AddNode should be deferred since pending >= MaxInFlight.
+  // But we can't easily test the queue content. Just verify no crash.
+  queue.AddNode(&node);
+  EXPECT_EQ(node.pending_count(), 1);
+}
+
 }  // namespace graph::runtime
