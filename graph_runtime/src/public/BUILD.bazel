@@ -12,10 +12,7 @@ cc_library(
     name = "log_interface",
     srcs = ["logger.cc"],
     hdrs = ["logger.h"],
-    copts = [
-        "-fvisibility=hidden",
-        "-fvisibility-inlines-hidden",
-    ],
+    alwayslink = 1,
     deps = [
         "@com_google_absl//absl/synchronization",
     ],

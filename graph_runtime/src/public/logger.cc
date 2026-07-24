@@ -7,16 +7,6 @@
 
 namespace graph::runtime {
 
-const char* LogLevelToString(LogLevel level) {
-  switch (level) {
-    case LogLevel::kFatal: return "FATAL";
-    case LogLevel::kError: return "ERROR";
-    case LogLevel::kWarn:  return "WARN";
-    case LogLevel::kInfo:  return "INFO";
-    case LogLevel::kDebug: return "DEBUG";
-    default:               return "UNKNOWN";
-  }
-}
 
 namespace {
 

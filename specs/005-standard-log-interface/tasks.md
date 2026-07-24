@@ -52,11 +52,11 @@
 
 **Independent Test**: Build and run any existing test that uses `std::cout` (e.g., scheduler_test.cc), then verify a new test that calls `Logger::Info(...)` produces expected output on stdout.
 
-- [ ] T013 [US1] Write a unit test at `graph_runtime/graph_runtime/src/tests/logger_test.cc` that calls `Logger::Info("graphrt::test", "hello")` and captures stdout to verify the formatted output matches `[graphrt::test] [INFO] ...`
-- [ ] T014 [US1] Write a unit test that calls `Logger::Error(...)` and verifies output goes to stderr
-- [ ] T015 [US1] Write a unit test that makes 10 concurrent `Logger::Info(...)` calls from 8 threads and verifies no interleaved/corrupted output lines
+- [x] T013 [US1] Write a unit test at `graph_runtime/graph_runtime/src/tests/logger_test.cc` that calls `Logger::Info("graphrt::test", "hello")` and captures stdout to verify the formatted output matches `[graphrt::test] [INFO] ...`
+- [x] T014 [US1] Write a unit test that calls `Logger::Error(...)` and verifies output goes to stderr
+- [x] T015 [US1] Write a unit test that makes 10 concurrent `Logger::Info(...)` calls from 8 threads and verifies no interleaved/corrupted output lines
 
-**Checkpoint**: New logger_test.cc compiles and passes, demonstrating working default console logging
+**Checkpoint**: `bazel test //src/tests:logger_test` passes ✅ — 6 tests covering LogLevelToString, all 5 levels, concurrent logging (8 threads × 50 iterations), and repeated calls (1000x)
 
 ---
 
