@@ -1,4 +1,4 @@
-#include "src/scheduler/scheduler.h"
+#include "src/framework/scheduler/scheduler.h"
 
 #include <algorithm>
 #include <set>
@@ -6,9 +6,9 @@
 #include <thread>
 
 #define GRAPHRT_LOG_TAG "graphrt::scheduler"
-#include "src/log/logger.h"
-#include "src/scheduler/input_stream_handler.h"
-#include "src/stream/output_stream_handler.h"
+#include "src/framework/log/logger.h"
+#include "src/framework/scheduler/input_stream_handler.h"
+#include "src/framework/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 

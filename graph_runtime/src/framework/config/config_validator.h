@@ -8,7 +8,7 @@
 #define GRAPH_RUNTIME_CONFIG_VALIDATOR_H_
 
 #include "absl/status/status.h"
-#include "src/config/graph_config.h"
+#include "src/framework/config/graph_config.h"
 
 namespace graph::runtime {
 

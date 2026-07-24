@@ -1,9 +1,9 @@
-#include "src/stream/output_stream_manager.h"
+#include "src/framework/stream/output_stream_manager.h"
 
 #include <algorithm>
 #include <utility>
 
-#include "src/scheduler/input_stream_handler.h"
+#include "src/framework/scheduler/input_stream_handler.h"
 
 namespace graph::runtime {
 

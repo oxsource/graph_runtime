@@ -1,4 +1,4 @@
-#include "src/stream/input_stream_manager.h"
+#include "src/framework/stream/input_stream_manager.h"
 
 #include <algorithm>
 

@@ -6,8 +6,8 @@
 #include <type_traits>
 
 #include "absl/status/status.h"
-#include "src/node/node_contract.h"
-#include "src/node/node_options.h"
+#include "src/framework/node/node_contract.h"
+#include "src/framework/node/node_options.h"
 
 namespace graph::runtime {
 

@@ -1,5 +1,5 @@
-#include "src/node/node_registry.h"
-#include "src/node/node.h"
+#include "src/framework/node/node_registry.h"
+#include "src/framework/node/node.h"
 
 #include <map>
 #include <mutex>

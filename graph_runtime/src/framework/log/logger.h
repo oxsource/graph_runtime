@@ -27,7 +27,7 @@ inline const char* LogLevelToString(LogLevel level) {
 // Modules define GRAPHRT_LOG_TAG before including this header to set
 // a default tag for no-tag overloads. Example:
 //   #define GRAPHRT_LOG_TAG "graphrt::scheduler"
-//   #include "src/log/logger.h"
+//   #include "src/framework/log/logger.h"
 
 class Logger {
  public:

@@ -1,10 +1,10 @@
-#include "src/public/graph_builder.h"
-#include "src/public/graph_runtime.h"
+#include "src/framework/public/graph_builder.h"
+#include "src/framework/public/graph_runtime.h"
 
-#include "src/config/config_validator.h"
-#include "src/scheduler/scheduler.h"
-#include "src/scheduler/thread_pool_executor.h"
-#include "src/node/node_registry.h"
+#include "src/framework/config/config_validator.h"
+#include "src/framework/scheduler/scheduler.h"
+#include "src/framework/scheduler/thread_pool_executor.h"
+#include "src/framework/node/node_registry.h"
 
 namespace graph::runtime {
 

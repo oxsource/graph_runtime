@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
-#include "src/stream/input_stream_manager.h"
-#include "src/stream/input_stream.h"
-#include "src/stream/packet.h"
+#include "src/framework/stream/input_stream_manager.h"
+#include "src/framework/stream/input_stream.h"
+#include "src/framework/stream/packet.h"
 
 namespace graph::runtime {
 

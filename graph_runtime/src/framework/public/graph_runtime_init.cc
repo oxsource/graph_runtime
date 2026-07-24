@@ -1,5 +1,5 @@
-#include "src/node/node_registry.h"
-#include "src/config/parser_registry.h"
+#include "src/framework/node/node_registry.h"
+#include "src/framework/config/parser_registry.h"
 
 namespace graph::runtime {
 

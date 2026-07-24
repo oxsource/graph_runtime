@@ -1,14 +1,14 @@
-#include "src/public/graph_runtime.h"
-#include "src/public/graph_builder.h"
+#include "src/framework/public/graph_runtime.h"
+#include "src/framework/public/graph_builder.h"
 
 #include <algorithm>
 
 #include "absl/strings/str_cat.h"
-#include "src/hook/factory.h"
-#include "src/scheduler/scheduler.h"
-#include "src/scheduler/input_stream_handler.h"
-#include "src/stream/input_stream_manager.h"
-#include "src/stream/output_stream_manager.h"
+#include "src/framework/hook/factory.h"
+#include "src/framework/scheduler/scheduler.h"
+#include "src/framework/scheduler/input_stream_handler.h"
+#include "src/framework/stream/input_stream_manager.h"
+#include "src/framework/stream/output_stream_manager.h"
 
 namespace graph::runtime {
 

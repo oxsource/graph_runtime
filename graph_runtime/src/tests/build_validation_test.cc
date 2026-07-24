@@ -1,10 +1,10 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/config/graph_config.h"
-#include "src/config/config_validator.h"
-#include "src/public/graph_runtime.h"
-#include "src/public/graph_builder.h"
+#include "src/framework/config/graph_config.h"
+#include "src/framework/config/config_validator.h"
+#include "src/framework/public/graph_runtime.h"
+#include "src/framework/public/graph_builder.h"
 
 namespace graph::runtime {
 

@@ -1,4 +1,4 @@
-#include "src/config/parser_registry.h"
+#include "src/framework/config/parser_registry.h"
 
 #include <map>
 #include <mutex>

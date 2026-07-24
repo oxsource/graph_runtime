@@ -8,7 +8,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "src/stream/packet.h"
+#include "src/framework/stream/packet.h"
 
 namespace graph::runtime {
 

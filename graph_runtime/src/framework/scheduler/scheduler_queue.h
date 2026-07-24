@@ -5,8 +5,8 @@
 #include <queue>
 #include <string>
 
-#include "src/scheduler/executor.h"
-#include "src/node/node.h"
+#include "src/framework/scheduler/executor.h"
+#include "src/framework/node/node.h"
 
 namespace graph::runtime {
 

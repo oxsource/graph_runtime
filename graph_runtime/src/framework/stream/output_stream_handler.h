@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "src/stream/output_stream_manager.h"
-#include "src/stream/output_stream_shard.h"
-#include "src/node/graph_context.h"
-#include "src/public/types.h"
+#include "src/framework/stream/output_stream_manager.h"
+#include "src/framework/stream/output_stream_shard.h"
+#include "src/framework/node/graph_context.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 

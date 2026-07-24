@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "src/node/node_options.h"
+#include "src/framework/node/node_options.h"
 
 namespace graph::runtime {
 

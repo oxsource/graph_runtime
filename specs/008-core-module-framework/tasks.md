@@ -31,15 +31,11 @@
 
 **Purpose**: Update all `#include "src/..."` to `#include "src/framework/..."` in moved files.
 
-- [ ] T008 Update includes in `src/framework/config/` — all `.h` and `.cc` files
-- [ ] T009 Update includes in `src/framework/hook/`
-- [ ] T010 [P] Update includes in `src/framework/log/`
-- [ ] T011 [P] Update includes in `src/framework/node/`
-- [ ] T012 Update includes in `src/framework/public/` (only non-`include/` files — public headers keep their paths)
-- [ ] T013 [P] Update includes in `src/framework/scheduler/`
-- [ ] T014 [P] Update includes in `src/framework/stream/`
+- [x] T008-T014 Bulk update all `#include "src/` → `#include "src/framework/` in `src/framework/` via sed
+- [x] Update `src/examples/` and `src/tests/` includes (referenced old `src/public/`, `src/stream/`, etc.)
+- [x] Update `examples/consumer_demo/main.cc` includes
 
-**Checkpoint**: `rg '#include "src/' src/framework/` returns zero matches ✅
+**Checkpoint**: `rg -c '#include "src/(public|log|hook|scheduler|stream|node|config)/'` returns zero ✅
 
 ---
 

@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "absl/status/statusor.h"
-#include "src/config/graph_config.h"
+#include "src/framework/config/graph_config.h"
 
 namespace graph::runtime {
 

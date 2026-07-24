@@ -8,7 +8,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "src/stream/timestamp.h"
+#include "src/framework/stream/timestamp.h"
 
 namespace graph::runtime {
 

@@ -1,6 +1,6 @@
-#include "src/scheduler/scheduler_queue.h"
-#include "src/node/graph_context.h"
-#include "src/stream/output_stream_handler.h"
+#include "src/framework/scheduler/scheduler_queue.h"
+#include "src/framework/node/graph_context.h"
+#include "src/framework/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 

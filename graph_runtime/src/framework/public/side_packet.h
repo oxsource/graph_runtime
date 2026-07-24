@@ -5,8 +5,8 @@
 #include <string>
 
 #include "absl/status/status.h"
-#include "src/stream/packet.h"
-#include "src/public/types.h"
+#include "src/framework/stream/packet.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 

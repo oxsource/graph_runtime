@@ -2,9 +2,9 @@
 #include <thread>
 
 #include "gtest/gtest.h"
-#include "src/scheduler/scheduler_queue.h"
-#include "src/scheduler/thread_pool_executor.h"
-#include "src/node/node.h"
+#include "src/framework/scheduler/scheduler_queue.h"
+#include "src/framework/scheduler/thread_pool_executor.h"
+#include "src/framework/node/node.h"
 
 namespace graph::runtime {
 

@@ -3,12 +3,12 @@
 #include <vector>
 
 #define GRAPHRT_LOG_TAG "graphrt::example"
-#include "src/log/logger.h"
-#include "src/stream/packet.h"
-#include "src/stream/timestamp.h"
-#include "src/node/node.h"
-#include "src/node/node_contract.h"
-#include "src/node/graph_context.h"
+#include "src/framework/log/logger.h"
+#include "src/framework/stream/packet.h"
+#include "src/framework/stream/timestamp.h"
+#include "src/framework/node/node.h"
+#include "src/framework/node/node_contract.h"
+#include "src/framework/node/graph_context.h"
 
 namespace graph::runtime {
 

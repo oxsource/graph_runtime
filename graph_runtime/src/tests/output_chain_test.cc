@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
-#include "src/stream/output_stream_manager.h"
-#include "src/stream/output_stream_shard.h"
-#include "src/stream/output_stream_handler.h"
-#include "src/stream/packet.h"
+#include "src/framework/stream/output_stream_manager.h"
+#include "src/framework/stream/output_stream_shard.h"
+#include "src/framework/stream/output_stream_handler.h"
+#include "src/framework/stream/packet.h"
 
 namespace graph::runtime {
 

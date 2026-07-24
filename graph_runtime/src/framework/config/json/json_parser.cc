@@ -1,4 +1,4 @@
-#include "src/config/json/json_parser.h"
+#include "src/framework/config/json/json_parser.h"
 
 #include <fstream>
 #include <sstream>
@@ -7,7 +7,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "nlohmann/json.hpp"
-#include "src/config/config_validator.h"
+#include "src/framework/config/config_validator.h"
 
 namespace graph::runtime {
 namespace {

@@ -7,11 +7,11 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "src/stream/packet.h"
-#include "src/stream/input_stream_manager.h"
-#include "src/node/node.h"
-#include "src/node/graph_context.h"
-#include "src/public/types.h"
+#include "src/framework/stream/packet.h"
+#include "src/framework/stream/input_stream_manager.h"
+#include "src/framework/node/node.h"
+#include "src/framework/node/graph_context.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 

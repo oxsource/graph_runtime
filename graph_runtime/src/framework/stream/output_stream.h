@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "src/stream/packet.h"
-#include "src/stream/timestamp.h"
+#include "src/framework/stream/packet.h"
+#include "src/framework/stream/timestamp.h"
 
 namespace graph::runtime {
 

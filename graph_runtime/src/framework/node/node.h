@@ -6,10 +6,10 @@
 #include <string>
 
 #include "absl/status/status.h"
-#include "src/stream/input_stream_manager.h"
-#include "src/stream/output_stream.h"
-#include "src/node/node_contract.h"
-#include "src/node/node_options.h"
+#include "src/framework/stream/input_stream_manager.h"
+#include "src/framework/stream/output_stream.h"
+#include "src/framework/node/node_contract.h"
+#include "src/framework/node/node_options.h"
 
 namespace graph::runtime {
 

@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "src/stream/packet.h"
+#include "src/framework/stream/packet.h"
 
 namespace graph::runtime {
 

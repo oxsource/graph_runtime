@@ -1,4 +1,4 @@
-#include "src/stream/output_stream_handler.h"
+#include "src/framework/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 

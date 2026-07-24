@@ -1,12 +1,12 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "src/node/node.h"
-#include "src/node/node_contract.h"
-#include "src/node/node_factory.h"
-#include "src/node/node_registry.h"
-#include "src/node/graph_context.h"
-#include "src/public/types.h"
+#include "src/framework/node/node.h"
+#include "src/framework/node/node_contract.h"
+#include "src/framework/node/node_factory.h"
+#include "src/framework/node/node_registry.h"
+#include "src/framework/node/graph_context.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 

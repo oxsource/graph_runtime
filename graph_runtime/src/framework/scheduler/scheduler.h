@@ -10,13 +10,13 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "src/scheduler/executor.h"
-#include "src/scheduler/scheduler_queue.h"
-#include "src/node/node.h"
-#include "src/node/graph_context.h"
-#include "src/stream/input_stream_manager.h"
-#include "src/stream/output_stream_handler.h"
-#include "src/public/types.h"
+#include "src/framework/scheduler/executor.h"
+#include "src/framework/scheduler/scheduler_queue.h"
+#include "src/framework/node/node.h"
+#include "src/framework/node/graph_context.h"
+#include "src/framework/stream/input_stream_manager.h"
+#include "src/framework/stream/output_stream_handler.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 

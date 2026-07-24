@@ -4,12 +4,12 @@
 // Build: bazel build //src/examples:add_packet_demo
 // Run:   bazel run //src/examples:add_packet_demo
 
-#include "src/log/logger.h"
-#include "src/public/graph_runtime.h"
-#include "src/node/node.h"
-#include "src/node/node_contract.h"
-#include "src/node/node_registry.h"
-#include "src/node/graph_context.h"
+#include "src/framework/log/logger.h"
+#include "src/framework/public/graph_runtime.h"
+#include "src/framework/node/node.h"
+#include "src/framework/node/node_contract.h"
+#include "src/framework/node/node_registry.h"
+#include "src/framework/node/graph_context.h"
 
 namespace graph::runtime {
 

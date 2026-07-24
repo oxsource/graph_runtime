@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 
-#include "src/scheduler/executor.h"
+#include "src/framework/scheduler/executor.h"
 
 namespace graph::runtime {
 

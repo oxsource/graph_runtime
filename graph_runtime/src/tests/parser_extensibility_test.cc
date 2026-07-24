@@ -2,9 +2,9 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/config/i_graph_config_parser.h"
-#include "src/config/parser_registry.h"
-#include "src/config/config_validator.h"
+#include "src/framework/config/i_graph_config_parser.h"
+#include "src/framework/config/parser_registry.h"
+#include "src/framework/config/config_validator.h"
 
 namespace graph::runtime {
 

@@ -1,4 +1,4 @@
-#include "src/node/options_registry.h"
+#include "src/framework/node/options_registry.h"
 
 namespace graph::runtime {
 

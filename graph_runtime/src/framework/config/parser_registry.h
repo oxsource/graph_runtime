@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include "src/config/i_graph_config_parser.h"
+#include "src/framework/config/i_graph_config_parser.h"
 
 namespace graph::runtime {
 

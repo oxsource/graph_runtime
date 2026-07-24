@@ -1,4 +1,4 @@
-#include "src/stream/output_stream_shard.h"
+#include "src/framework/stream/output_stream_shard.h"
 
 #include <utility>
 

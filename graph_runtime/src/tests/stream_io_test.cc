@@ -1,6 +1,6 @@
 #include <string>
 
-#include "src/public/graph_runtime.h"
+#include "src/framework/public/graph_runtime.h"
 #include "gtest/gtest.h"
 
 namespace graph::runtime {

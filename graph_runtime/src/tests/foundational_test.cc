@@ -1,8 +1,8 @@
-#include "src/stream/timestamp.h"
-#include "src/stream/packet.h"
-#include "src/node/node_options.h"
-#include "src/node/options_registry.h"
-#include "src/public/types.h"
+#include "src/framework/stream/timestamp.h"
+#include "src/framework/stream/packet.h"
+#include "src/framework/node/node_options.h"
+#include "src/framework/node/options_registry.h"
+#include "src/framework/public/types.h"
 
 #include "gtest/gtest.h"
 

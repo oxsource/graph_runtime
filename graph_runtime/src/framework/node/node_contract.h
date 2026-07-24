@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "src/stream/packet.h"
-#include "src/node/node_options.h"
-#include "src/public/types.h"
+#include "src/framework/stream/packet.h"
+#include "src/framework/node/node_options.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 

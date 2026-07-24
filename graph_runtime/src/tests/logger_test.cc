@@ -4,8 +4,8 @@
 #include <thread>
 #include <vector>
 
-#include "src/log/logger.h"
-#include "src/hook/factory.h"
+#include "src/framework/log/logger.h"
+#include "src/framework/hook/factory.h"
 #include "gtest/gtest.h"
 
 namespace graph::runtime {

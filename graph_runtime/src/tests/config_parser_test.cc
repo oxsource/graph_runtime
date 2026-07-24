@@ -1,8 +1,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/config/json/json_parser.h"
-#include "src/config/config_validator.h"
+#include "src/framework/config/json/json_parser.h"
+#include "src/framework/config/config_validator.h"
 
 namespace graph::runtime {
 
