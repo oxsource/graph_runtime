@@ -9,6 +9,19 @@ cc_library(
 )
 
 cc_library(
+    name = "hook_table",
+    hdrs = ["hook_table.h"],
+)
+
+cc_library(
+    name = "log_interface",
+    hdrs = ["logger.h"],
+    deps = [
+        ":hook_table",
+    ],
+)
+
+cc_library(
     name = "side_packet",
     hdrs = ["side_packet.h"],
     deps = [
@@ -38,11 +51,9 @@ cc_library(
         "types.h",
         "side_packet.h",
     ],
-    copts = [
-        "-fvisibility=hidden",
-        "-fvisibility-inlines-hidden",
-    ],
     deps = [
+        ":hook_table",
+        ":log_interface",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/scheduler:scheduler",
         "@graph_runtime//src/node:graph_context",
@@ -56,6 +67,7 @@ cc_library(
     srcs = [
         "graph_runtime.cc",
         "graph_runtime_init.cc",
+        "logger.cc",
     ],
     hdrs = [
         "include/graph_runtime/graph_runtime.h",
@@ -65,19 +77,19 @@ cc_library(
         "include/graph_runtime/packet.h",
         "include/graph_runtime/graph_config.h",
         "include/graph_runtime/side_packet.h",
+        "include/graph_runtime/logger.h",
     ],
     strip_include_prefix = "include",
-    copts = [
-        "-fvisibility=hidden",
-        "-fvisibility-inlines-hidden",
-    ],
     alwayslink = 1,
     deps = [
         ":graph_builder",
+        ":hook_table",
+        ":log_interface",
         ":runtime_internal",
         "@graph_runtime//src/scheduler:scheduler",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/public:types",
+        "@com_google_absl//absl/synchronization",
     ],
 )
 

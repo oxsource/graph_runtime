@@ -1,10 +1,12 @@
 #include "src/scheduler/scheduler.h"
 
 #include <algorithm>
-#include <iostream>
 #include <set>
+#include <string>
 #include <thread>
 
+#define GRAPHRT_LOG_TAG "graphrt::scheduler"
+#include "src/public/logger.h"
 #include "src/scheduler/input_stream_handler.h"
 #include "src/stream/output_stream_handler.h"
 
@@ -62,12 +64,12 @@ absl::Status Scheduler::Schedule() {
                      &input_shards, &output_shards, &opts);
     auto status = node->Open(ctx);
     if (!status.ok()) {
-      std::cerr << "  Open failed for " << node->name() << ": " << status << std::endl;
+      Logger::Error(std::string("Open failed for " + node->name() + ": " + std::string(status.ToString())).c_str());
       if (error_callback_) error_callback_(status);
       state_ = SchedulerState::kTerminated;
       return status;
     }
-    std::cout << "  Opened " << node->name() << std::endl;
+    Logger::Info(std::string("Opened " + node->name()).c_str());
     if (node->input_port_count() == 0) {
       active_sources_.insert(node);
     }
@@ -88,18 +90,18 @@ absl::Status Scheduler::Schedule() {
       GraphContext ctx(source->name(), reinterpret_cast<int64_t>(source),
                        "node", ts, &input_shards, &output_shards, &opts);
 
-      std::cout << "  Process " << source->name() << " at ts=" << ts.Value() << std::endl;
+      Logger::Info(std::string("Process " + source->name() + " at ts=" + std::to_string(ts.Value())).c_str());
       auto status = source->Process(ctx);
 
       if (!status.ok() && !IsStopStatus(status)) {
-        std::cerr << "  Error in " << source->name() << ": " << status << std::endl;
+        Logger::Error(std::string("Error in " + source->name() + ": " + std::string(status.ToString())).c_str());
         if (error_callback_) error_callback_(status);
         has_error_ = true;
         break;
       }
 
       if (IsStopStatus(status)) {
-        std::cout << "  " << source->name() << " stopped" << std::endl;
+        Logger::Info(std::string(source->name() + " stopped").c_str());
         active_sources_.erase(source);
         continue;
       }
@@ -119,10 +121,10 @@ absl::Status Scheduler::Schedule() {
         GraphContext dctx(downstream->name(), reinterpret_cast<int64_t>(downstream),
                           "node", ts, &ds_input, &ds_output, &opts);
 
-        std::cout << "  Process " << downstream->name() << " at ts=" << ts.Value() << std::endl;
+        Logger::Info(std::string("Process " + downstream->name() + " at ts=" + std::to_string(ts.Value())).c_str());
         auto ds = downstream->Process(dctx);
         if (!ds.ok() && !IsStopStatus(ds)) {
-          std::cerr << "  Error in " << downstream->name() << ": " << ds << std::endl;
+          Logger::Error(std::string("Error in " + downstream->name() + ": " + std::string(ds.ToString())).c_str());
           if (error_callback_) error_callback_(ds);
           has_error_ = true;
           break;
@@ -142,9 +144,9 @@ absl::Status Scheduler::Schedule() {
                      &input_shards, &output_shards, &opts);
     auto status = node->Close(ctx);
     if (!status.ok()) {
-      std::cerr << "  Close error for " << node->name() << ": " << status << std::endl;
+      Logger::Error(std::string("Close error for " + node->name() + ": " + std::string(status.ToString())).c_str());
     }
-    std::cout << "  Closed " << node->name() << std::endl;
+    Logger::Info(std::string("Closed " + node->name()).c_str());
   }
 
   state_ = SchedulerState::kTerminated;
@@ -152,16 +154,16 @@ absl::Status Scheduler::Schedule() {
   return absl::OkStatus();
 }
 
-absl::Status Scheduler::WaitUntilDone() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  cv_.wait(lock, [this] { return state_ == SchedulerState::kTerminated; });
-  return absl::OkStatus();
-}
-
 void Scheduler::Shutdown() {
   stopping_ = true;
   state_ = SchedulerState::kTerminated;
   cv_.notify_all();
+}
+
+absl::Status Scheduler::WaitUntilDone() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cv_.wait(lock, [this] { return state_ == SchedulerState::kTerminated; });
+  return absl::OkStatus();
 }
 
 absl::Status Scheduler::Pause() {
@@ -198,7 +200,6 @@ SchedulerQueue& Scheduler::GetQueue(const std::string& executor_name) {
 }
 
 void Scheduler::HandleIdle() {
-  // In sync mode, idle is handled by the main event loop.
 }
 
 absl::Status Scheduler::AddNode(Node* node) {

@@ -1,19 +1,17 @@
-#include <iostream>
-
 #include "graph_runtime/graph_runtime.h"
 
 int main() {
-  std::cout << "Graph Runtime consumer demo" << std::endl;
+  graph::runtime::Logger::Info("graphrt::demo", "Graph Runtime consumer demo");
 
   auto ts = graph::runtime::Timestamp(100);
-  std::cout << "Timestamp created: " << ts.DebugString() << std::endl;
+  graph::runtime::Logger::Info("graphrt::demo", ts.DebugString().c_str());
 
   auto pkt = graph::runtime::Packet::MakePacket<int>(42);
-  std::cout << "Packet created, empty=" << pkt.IsEmpty() << std::endl;
+  graph::runtime::Logger::Info("graphrt::demo", "Packet created");
 
   graph::runtime::GraphConfig config;
   config.nodes.push_back({"test", "Dummy", {}, {}, {}, {}, {}, "", "", 1, 0});
-  std::cout << "GraphConfig created with " << config.nodes.size() << " nodes" << std::endl;
+  graph::runtime::Logger::Info("graphrt::demo", "GraphConfig created");
 
   return 0;
 }
