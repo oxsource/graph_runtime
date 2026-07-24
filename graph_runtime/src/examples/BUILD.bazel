@@ -18,6 +18,14 @@ cc_binary(
 )
 
 cc_binary(
+    name = "log_intercept_demo",
+    srcs = ["log_intercept_demo.cc"],
+    deps = [
+        "@graph_runtime//src/public:runtime",
+    ],
+)
+
+cc_binary(
     name = "string_pipeline_json",
     srcs = ["string_pipeline_json.cc"],
     deps = [
