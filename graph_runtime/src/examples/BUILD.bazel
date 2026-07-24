@@ -32,3 +32,11 @@ cc_binary(
         "@graph_runtime//src/public:runtime",
     ],
 )
+
+cc_binary(
+    name = "add_packet_demo",
+    srcs = ["add_packet_demo.cc"],
+    deps = [
+        "@graph_runtime//src/public:runtime",
+    ],
+)
