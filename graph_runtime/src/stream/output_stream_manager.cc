@@ -68,18 +68,25 @@ void OutputStreamManager::PropagateUpdatesToMirrors(
 
   for (size_t idx = 0; idx < mirrors_.size(); ++idx) {
     auto& mirror = mirrors_[idx];
-    if (mirror.handler) {
-      if (!packets->empty()) {
-        if (idx == mirrors_.size() - 1) {
-          mirror.handler->SetNextTimestampBound(mirror.id, next_bound);
-        }
+    if (!mirror.handler) continue;
+
+    if (!packets->empty()) {
+      if (idx == mirrors_.size() - 1) {
+        // Last mirror: move packets (transfer ownership)
+        bool notify = false;
+        mirror.handler->MovePacketsToStream(mirror.id, packets, &notify);
+      } else {
+        // Other mirrors: copy packets
+        bool notify = false;
+        mirror.handler->AddPacketsToStream(mirror.id, *packets, &notify);
       }
-      if (set_bound) {
-        mirror.handler->SetNextTimestampBound(mirror.id, next_bound);
-      }
+    }
+    if (set_bound) {
+      mirror.handler->SetNextTimestampBound(mirror.id, next_bound);
     }
   }
 
+  // packets should be empty after MovePackets, clear just in case
   packets->clear();
 }
 

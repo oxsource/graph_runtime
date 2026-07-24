@@ -125,6 +125,22 @@ void DefaultInputStreamHandler::SetNextTimestampBound(
   }
 }
 
+absl::Status DefaultInputStreamHandler::AddPacketsToStream(
+    CollectionItemId id, const std::list<Packet>& packets, bool* notify) {
+  if (id < 0 || id >= static_cast<int>(managers_.size())) {
+    return absl::InvalidArgumentError("Invalid stream id");
+  }
+  return managers_[id]->AddPackets(packets, notify);
+}
+
+absl::Status DefaultInputStreamHandler::MovePacketsToStream(
+    CollectionItemId id, std::list<Packet>* packets, bool* notify) {
+  if (id < 0 || id >= static_cast<int>(managers_.size())) {
+    return absl::InvalidArgumentError("Invalid stream id");
+  }
+  return managers_[id]->MovePackets(packets, notify);
+}
+
 void DefaultInputStreamHandler::Close() {
   for (auto* mgr : managers_) {
     mgr->Close();

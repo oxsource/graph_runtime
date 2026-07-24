@@ -2,6 +2,7 @@
 #define GRAPH_RUNTIME_INPUT_STREAM_HANDLER_H_
 
 #include <functional>
+#include <list>
 #include <memory>
 #include <vector>
 
@@ -49,7 +50,15 @@ class InputStreamHandler {
 
   virtual void NotifyPacketArrival() = 0;
   virtual void SetNextTimestampBound(CollectionItemId id,
-                                     Timestamp bound) = 0;
+                                      Timestamp bound) = 0;
+
+  // Add/Move packets to the InputStreamManager identified by id.
+  virtual absl::Status AddPacketsToStream(CollectionItemId id,
+                                           const std::list<Packet>& packets,
+                                           bool* notify) = 0;
+  virtual absl::Status MovePacketsToStream(CollectionItemId id,
+                                            std::list<Packet>* packets,
+                                            bool* notify) = 0;
 
   virtual void Close() = 0;
 };
@@ -71,6 +80,13 @@ class DefaultInputStreamHandler : public InputStreamHandler {
 
   void NotifyPacketArrival() override;
   void SetNextTimestampBound(CollectionItemId id, Timestamp bound) override;
+
+  absl::Status AddPacketsToStream(CollectionItemId id,
+                                   const std::list<Packet>& packets,
+                                   bool* notify) override;
+  absl::Status MovePacketsToStream(CollectionItemId id,
+                                    std::list<Packet>* packets,
+                                    bool* notify) override;
 
   void Close() override;
 
