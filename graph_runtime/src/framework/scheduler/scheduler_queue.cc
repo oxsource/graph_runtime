@@ -89,10 +89,19 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   absl::Status status = node->Process(ctx);
 
   if (IsStopStatus(status)) {
+    // Propagate any output packets produced by this process cycle.
+    if (node->GetOutputStreamHandler()) {
+      node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
+    }
     // Non-source returning StatusStop triggers graceful shutdown.
     if (node->input_port_count() > 0) {
       if (idle_callback_) {
         idle_callback_(true);
+      }
+    } else {
+      // Source returning Stop — notify scheduler to remove from active_sources_.
+      if (source_stopped_callback_) {
+        source_stopped_callback_(node);
       }
     }
     return;

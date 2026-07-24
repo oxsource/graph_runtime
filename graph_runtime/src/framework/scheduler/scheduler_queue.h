@@ -13,6 +13,7 @@ namespace graph::runtime {
 class SchedulerQueue : public TaskQueue {
  public:
   using IdleCallback = std::function<void(bool idle)>;
+  using SourceStoppedCallback = std::function<void(Node*)>;
 
   struct Item {
     Node* node;
@@ -45,6 +46,7 @@ class SchedulerQueue : public TaskQueue {
 
   void SetExecutor(Executor* executor) { executor_ = executor; }
   void SetIdleCallback(IdleCallback cb) { idle_callback_ = std::move(cb); }
+  void SetSourceStoppedCallback(SourceStoppedCallback cb) { source_stopped_callback_ = std::move(cb); }
 
   void SetRunning(bool running);
   void Reset();
@@ -65,6 +67,7 @@ class SchedulerQueue : public TaskQueue {
   std::string name_;
   Executor* executor_ = nullptr;
   IdleCallback idle_callback_;
+  SourceStoppedCallback source_stopped_callback_;
   bool running_ = false;
   std::priority_queue<Item> queue_;
   int num_pending_tasks_ = 0;

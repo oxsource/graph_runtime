@@ -17,6 +17,7 @@
 #include "src/framework/stream/input_stream_manager.h"
 #include "src/framework/stream/output_stream_handler.h"
 #include "src/framework/public/types.h"
+#include "src/framework/public/side_packet.h"
 
 namespace graph::runtime {
 
@@ -72,6 +73,9 @@ class Scheduler {
   void SetTotalGraphInputStreams(int n) { total_graph_input_streams_ = n; }
   void IncClosedGraphInputStreams() { ++num_closed_graph_input_streams_; }
 
+  void SetInputSidePackets(const PacketSet& ps) { input_side_packets_ = ps; }
+  const PacketSet& GetInputSidePackets() const { return input_side_packets_; }
+
  protected:
   SchedulerQueue& GetQueue(const std::string& executor_name);
   void OnNodeOpened(Node* node);
@@ -101,6 +105,8 @@ class Scheduler {
 
   std::mutex mutex_;
   std::condition_variable cv_;
+
+  PacketSet input_side_packets_;
 };
 
 }  // namespace graph::runtime

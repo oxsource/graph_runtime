@@ -58,6 +58,31 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
 
   scheduler_->SetTotalGraphInputStreams(num_open_input_streams_);
 
+  // Create OutputStreamManagers for each declared output stream and register
+  // them on their owning node. This enables callback firing when PostProcess
+  // propagates output packets.
+  for (const auto& ndef : config_.nodes) {
+    if (ndef.output_streams.empty()) continue;
+
+    auto* node = FindNode(ndef.name);
+    if (!node) continue;
+
+    std::vector<OutputStreamManager*> managers;
+    for (const auto& output_stream : ndef.output_streams) {
+      auto mgr = std::make_unique<OutputStreamManager>(output_stream);
+      owned_output_stream_managers_.push_back(std::move(mgr));
+      managers.push_back(owned_output_stream_managers_.back().get());
+    }
+    auto handler = std::make_unique<OutputStreamHandler>(managers);
+    owned_output_stream_handlers_.push_back(std::move(handler));
+    node->SetOutputStreamHandler(owned_output_stream_handlers_.back().get());
+
+    // Register any previously set callbacks on this handler.
+    for (const auto& [stream_name, cb] : output_stream_callbacks_) {
+      owned_output_stream_handlers_.back()->SetOutputStreamCallback(stream_name, cb);
+    }
+  }
+
   // Wire backpressure callbacks on each input stream.
   for (const auto& ndef : config_.nodes) {
     for (const auto& input_stream : ndef.input_streams) {
@@ -78,7 +103,25 @@ absl::Status GraphRuntime::Start() {
   if (!scheduler_) {
     return absl::FailedPreconditionError("Graph not initialized");
   }
+  // Convert side_packet_map_ to PacketSet and pass to scheduler.
+  PacketSet side_packets;
+  for (auto& [tag, packet] : side_packet_map_) {
+    side_packets.Set(tag, packet);
+  }
+  scheduler_->SetInputSidePackets(side_packets);
   return scheduler_->Start();
+}
+
+absl::Status GraphRuntime::Schedule() {
+  if (!scheduler_) {
+    return absl::FailedPreconditionError("Graph not initialized");
+  }
+  PacketSet side_packets;
+  for (auto& [tag, packet] : side_packet_map_) {
+    side_packets.Set(tag, packet);
+  }
+  scheduler_->SetInputSidePackets(side_packets);
+  return scheduler_->Schedule();
 }
 
 absl::Status GraphRuntime::WaitUntilDone() {

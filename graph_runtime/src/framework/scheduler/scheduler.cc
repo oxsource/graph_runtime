@@ -129,6 +129,7 @@ absl::Status Scheduler::Schedule() {
     GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
                      "node", Timestamp::Unstarted(),
                      &input_shards, &output_shards, &opts);
+    ctx.SetInputSidePackets(input_side_packets_);
     auto status = node->Open(ctx);
     if (!status.ok()) {
       Logger::Error(std::string("Open failed for " + node->name() + ": " + std::string(status.ToString())).c_str());
@@ -147,7 +148,9 @@ absl::Status Scheduler::Schedule() {
   while (any_source_active && !stopping_ && !has_error_) {
     any_source_active = false;
 
-    for (auto* source : active_sources_) {
+    auto it = active_sources_.begin();
+    while (it != active_sources_.end()) {
+      Node* source = *it;
       if (stopping_ || has_error_) break;
 
       InputStreamShardSet input_shards;
@@ -168,8 +171,17 @@ absl::Status Scheduler::Schedule() {
       }
       if (IsStopStatus(status)) {
         Logger::Info(std::string(source->name() + " stopped").c_str());
-        active_sources_.erase(source);
+        // Propagate any output packets from this source before removing it.
+        if (source->GetOutputStreamHandler()) {
+          source->GetOutputStreamHandler()->PostProcess(ts, &output_shards);
+        }
+        it = active_sources_.erase(it);
         continue;
+      }
+
+      // Propagate source outputs via OutputStreamHandler.
+      if (source->GetOutputStreamHandler()) {
+        source->GetOutputStreamHandler()->PostProcess(ts, &output_shards);
       }
 
       // Propagate outputs downstream
@@ -192,6 +204,7 @@ absl::Status Scheduler::Schedule() {
         }
       }
       ++processed_count_;
+      ++it;
     }
   }
 
@@ -235,6 +248,7 @@ absl::Status Scheduler::Start() {
     GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
                      "node", Timestamp::Unstarted(),
                      &input_shards, &output_shards, &opts);
+    ctx.SetInputSidePackets(input_side_packets_);
     auto status = node->Open(ctx);
     if (!status.ok()) {
       Logger::Error(std::string("Open failed for " + node->name()).c_str());
@@ -251,6 +265,10 @@ absl::Status Scheduler::Start() {
   // Wire idle callbacks so queue idle → HandleIdle → termination detection.
   for (auto* q : all_queues_) {
     q->SetIdleCallback([this](bool) { HandleIdle(); });
+    q->SetSourceStoppedCallback([this](Node* node) {
+      active_sources_.erase(node);
+      HandleIdle();
+    });
     q->SetRunning(true);
   }
 

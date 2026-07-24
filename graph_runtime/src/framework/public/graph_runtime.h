@@ -2,6 +2,7 @@
 #define GRAPH_RUNTIME_GRAPH_RUNTIME_H_
 
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
@@ -17,6 +18,8 @@
 #include "src/framework/scheduler/scheduler.h"
 #include "src/framework/node/node.h"
 #include "src/framework/stream/input_stream_manager.h"
+#include "src/framework/stream/output_stream_manager.h"
+#include "src/framework/stream/output_stream_handler.h"
 
 namespace graph::runtime {
 
@@ -27,6 +30,7 @@ class GraphRuntime {
 
   absl::Status Initialize(const GraphConfig& config);
   absl::Status Start();
+  absl::Status Schedule();
   absl::Status WaitUntilDone();
   void Shutdown();
 
@@ -66,7 +70,7 @@ class GraphRuntime {
   GraphConfig config_;
   std::unique_ptr<Scheduler> scheduler_;
   std::vector<std::unique_ptr<Node>> all_nodes_;
-  std::vector<std::unique_ptr<InputStreamManager>> owned_stream_managers_;
+  std::list<std::unique_ptr<InputStreamManager>> owned_stream_managers_;
   std::map<std::string, InputStreamManager*> stream_managers_;
   std::set<std::string> graph_input_streams_set_;
   int num_open_input_streams_ = 0;
@@ -74,6 +78,10 @@ class GraphRuntime {
   // Throttle tracking: full input streams per node.
   std::map<Node*, std::set<InputStreamManager*>> full_input_streams_;
   std::set<std::string> closed_streams_;
+
+  // Owned output stream infrastructure (list for pointer stability).
+  std::list<std::unique_ptr<OutputStreamManager>> owned_output_stream_managers_;
+  std::list<std::unique_ptr<OutputStreamHandler>> owned_output_stream_handlers_;
 
   // Output stream callback storage.
   std::map<std::string, std::function<void(const Packet&)>> output_stream_callbacks_;
