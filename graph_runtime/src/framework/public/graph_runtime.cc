@@ -107,6 +107,30 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
     }
   }
 
+  // Create InputStreamHandler for each node based on config.
+  for (const auto& ndef : config_.nodes) {
+    if (ndef.input_streams.empty()) continue;
+
+    auto* node = FindNode(ndef.name);
+    if (!node) continue;
+
+    // Collect managers from the node's input ports.
+    std::vector<InputStreamManager*> mgrs;
+    for (const auto& is : ndef.input_streams) {
+      auto it = stream_managers_.find(is);
+      if (it != stream_managers_.end()) {
+        mgrs.push_back(it->second);
+      }
+    }
+    if (mgrs.empty()) continue;
+
+    auto handler = CreateInputStreamHandler(ndef.input_stream_handler,
+                                            ndef.max_in_flight);
+    handler->SetInputStreamManagers(mgrs);
+    owned_input_stream_handlers_.push_back(std::move(handler));
+    node->SetInputStreamHandler(owned_input_stream_handlers_.back().get());
+  }
+
   return absl::OkStatus();
 }
 

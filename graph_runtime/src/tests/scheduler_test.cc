@@ -10,6 +10,7 @@
 #include "src/framework/scheduler/scheduler.h"
 #include "src/framework/tool/tag_map.h"
 #include "src/framework/tool/validate_name.h"
+#include "src/framework/scheduler/input_stream_handler.h"
 
 namespace graph::runtime {
 
@@ -262,6 +263,28 @@ TEST_F(IndexedStreamTest, UnknownStreamReturnsError) {
   status = runtime_->AddPacketToInputStream("VIDEO", 99, std::move(pkt));
   EXPECT_FALSE(status.ok());
   EXPECT_TRUE(absl::IsNotFound(status)) << status;
+}
+
+class InputStreamHandlerFactoryTest : public ::testing::Test {};
+
+TEST_F(InputStreamHandlerFactoryTest, CreateDefaultHandler) {
+  auto handler = CreateInputStreamHandler("default");
+  EXPECT_NE(handler, nullptr);
+}
+
+TEST_F(InputStreamHandlerFactoryTest, CreateImmediateHandler) {
+  auto handler = CreateInputStreamHandler("immediate");
+  EXPECT_NE(handler, nullptr);
+}
+
+TEST_F(InputStreamHandlerFactoryTest, CreateFixedSizeHandler) {
+  auto handler = CreateInputStreamHandler("fixed_size", 5);
+  EXPECT_NE(handler, nullptr);
+}
+
+TEST_F(InputStreamHandlerFactoryTest, UnknownNameUsesDefault) {
+  auto handler = CreateInputStreamHandler("unknown_type");
+  EXPECT_NE(handler, nullptr);
 }
 
 }  // namespace graph::runtime

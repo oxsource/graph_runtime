@@ -150,6 +150,9 @@ class GraphRuntime {
   std::list<std::unique_ptr<OutputStreamManager>> owned_output_stream_managers_;
   std::list<std::unique_ptr<OutputStreamHandler>> owned_output_stream_handlers_;
 
+  // Owned input stream handlers.
+  std::list<std::unique_ptr<InputStreamHandler>> owned_input_stream_handlers_;
+
   // Output stream callback storage.
   std::map<std::string, std::function<void(const Packet&)>> output_stream_callbacks_;
 

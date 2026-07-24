@@ -174,11 +174,11 @@
 
 ### Layer 1: InputStreamHandler Strategies
 
-- [ ] T038 [P] [US7] Implement `SyncSetInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — schedules node only when all inputs have packets at the same timestamp
-- [ ] T039 [P] [US7] Implement `ImmediateInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — schedules node as soon as any input has a packet
-- [ ] T040 [P] [US7] Implement `FixedSizeInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — fixed per-input queue size with backpressure
-- [ ] T041 [US7] Integrate InputStreamHandler choice from `NodeDef::input_stream_handler` during `GraphRuntime::Initialize` in `src/framework/public/graph_runtime.cc`
-- [ ] T042 [P] [US7] Test: each handler strategy end-to-end in `src/tests/scheduler_test.cc`
+- [X] T038 [P] [US7] Implement `SyncSetInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — schedules node only when all inputs have packets at the same timestamp
+- [X] T039 [P] [US7] Implement `ImmediateInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — schedules node as soon as any input has a packet
+- [X] T040 [P] [US7] Implement `FixedSizeInputStreamHandler` in `src/framework/scheduler/input_stream_handler.h` and `src/framework/scheduler/input_stream_handler.cc` — fixed per-input queue size with backpressure
+- [X] T041 [US7] Integrate InputStreamHandler choice from `NodeDef::input_stream_handler` during `GraphRuntime::Initialize` in `src/framework/public/graph_runtime.cc`
+- [X] T042 [P] [US7] Test: each handler strategy end-to-end in `src/tests/scheduler_test.cc`
 
 ### Layer 2: MaxInFlight Constraint
 

@@ -97,6 +97,82 @@ class DefaultInputStreamHandler : public InputStreamHandler {
   bool notified_ = false;
 };
 
+// ImmediateInputStreamHandler schedules a node as soon as any input
+// stream has a packet, without waiting for other inputs.
+class ImmediateInputStreamHandler : public InputStreamHandler {
+ public:
+  ImmediateInputStreamHandler();
+
+  void SetInputStreamManagers(
+      const std::vector<InputStreamManager*>& managers) override;
+  void SetScheduleCallback(ScheduleCallback cb) override;
+
+  bool ScheduleInvocations(int max_allowance,
+                           Timestamp* input_bound,
+                           Node& node,
+                           GraphContext& context) override;
+  Readiness GetNodeReadiness(Timestamp* min_stream_timestamp) override;
+  void FillInputSet(Timestamp timestamp, GraphContext& context) override;
+
+  void NotifyPacketArrival() override;
+  void SetNextTimestampBound(CollectionItemId id, Timestamp bound) override;
+
+  absl::Status AddPacketsToStream(CollectionItemId id,
+                                   const std::list<Packet>& packets,
+                                   bool* notify) override;
+  absl::Status MovePacketsToStream(CollectionItemId id,
+                                    std::list<Packet>* packets,
+                                    bool* notify) override;
+
+  void Close() override;
+
+ private:
+  ScheduleCallback schedule_callback_;
+  std::vector<InputStreamManager*> managers_;
+  bool notified_ = false;
+};
+
+// FixedSizeInputStreamHandler limits the per-input queue size.
+// When a queue is full, backpressure prevents further scheduling.
+class FixedSizeInputStreamHandler : public InputStreamHandler {
+ public:
+  explicit FixedSizeInputStreamHandler(int max_queue_size);
+
+  void SetInputStreamManagers(
+      const std::vector<InputStreamManager*>& managers) override;
+  void SetScheduleCallback(ScheduleCallback cb) override;
+
+  bool ScheduleInvocations(int max_allowance,
+                           Timestamp* input_bound,
+                           Node& node,
+                           GraphContext& context) override;
+  Readiness GetNodeReadiness(Timestamp* min_stream_timestamp) override;
+  void FillInputSet(Timestamp timestamp, GraphContext& context) override;
+
+  void NotifyPacketArrival() override;
+  void SetNextTimestampBound(CollectionItemId id, Timestamp bound) override;
+
+  absl::Status AddPacketsToStream(CollectionItemId id,
+                                   const std::list<Packet>& packets,
+                                   bool* notify) override;
+  absl::Status MovePacketsToStream(CollectionItemId id,
+                                    std::list<Packet>* packets,
+                                    bool* notify) override;
+
+  void Close() override;
+
+ private:
+  int max_queue_size_;
+  ScheduleCallback schedule_callback_;
+  std::vector<InputStreamManager*> managers_;
+  bool notified_ = false;
+};
+
+// Factory: create the appropriate InputStreamHandler for a given name.
+// Supported names: "default", "sync_set", "immediate", "fixed_size".
+std::unique_ptr<InputStreamHandler> CreateInputStreamHandler(
+    const std::string& name, int max_queue_size = -1);
+
 }  // namespace graph::runtime
 
 #endif  // GRAPH_RUNTIME_INPUT_STREAM_HANDLER_H_

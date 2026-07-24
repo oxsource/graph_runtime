@@ -65,6 +65,7 @@ cc_test(
     deps = [
         "@graph_runtime//src/framework/public:runtime",
         "@graph_runtime//src/framework/scheduler:scheduler",
+        "@graph_runtime//src/framework/scheduler:input_stream_handler",
         "@graph_runtime//src/framework/tool:tag_map",
         "@graph_runtime//src/framework/tool:validate_name",
         "@com_google_googletest//:gtest_main",
