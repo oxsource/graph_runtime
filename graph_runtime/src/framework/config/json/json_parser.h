@@ -15,6 +15,10 @@ class JsonParser : public IGraphConfigParser {
 
   absl::StatusOr<GraphConfig> Parse(
       const std::string& file_path) override;
+
+  /// Parse a JSON string directly, without reading from a file.
+  absl::StatusOr<GraphConfig> ParseFromString(
+      const std::string& json_text);
 };
 
 }  // namespace graph::runtime

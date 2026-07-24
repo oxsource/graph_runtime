@@ -275,7 +275,7 @@ absl::Status Scheduler::Start() {
   return absl::OkStatus();
 }
 
-void Scheduler::AddedPacketToGraphInputStream() {
+void Scheduler::AddedPacketToInputStream() {
   for (auto* node : all_nodes_) {
     if (node->input_port_count() == 0) continue;
     bool has_data = false;

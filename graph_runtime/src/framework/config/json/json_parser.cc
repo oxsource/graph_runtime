@@ -36,25 +36,15 @@ constexpr int    kDefaultMaxInFlight    = 1;
 constexpr int    kDefaultSourceLayer    = 0;
 constexpr char   kDefaultExecutorType[] = "ThreadPoolExecutor";
 
-}  // namespace
-
-absl::StatusOr<GraphConfig> JsonParser::Parse(
-    const std::string& file_path) {
-  std::ifstream file(file_path);
-  if (!file.is_open()) {
-    return absl::NotFoundError(
-        absl::StrCat("config file not found: ", file_path));
-  }
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  std::string json_text = buffer.str();
-
+// Internal: parse a JSON string into a GraphConfig.
+absl::StatusOr<GraphConfig> ParseJsonText(const std::string& json_text,
+                                          const std::string& source_name) {
   nlohmann::json root;
   try {
     root = nlohmann::json::parse(json_text);
   } catch (const nlohmann::json::parse_error& e) {
     return absl::InvalidArgumentError(
-        absl::StrCat(file_path, ": JSON parse error: ", e.what()));
+        absl::StrCat(source_name, ": JSON parse error: ", e.what()));
   }
 
   GraphConfig config;
@@ -77,7 +67,7 @@ absl::StatusOr<GraphConfig> JsonParser::Parse(
     }
   }
 
-  // Parse nodes — connections are implicit via stream name matching.
+  // Parse nodes
   if (root.contains(kKeyNodes)) {
     for (const auto& nj : root[kKeyNodes]) {
       GraphConfig::NodeDef def;
@@ -106,8 +96,26 @@ absl::StatusOr<GraphConfig> JsonParser::Parse(
 
   auto status = ConfigValidator::Validate(config);
   if (!status.ok()) return status;
-
   return config;
+}
+
+}  // namespace
+
+absl::StatusOr<GraphConfig> JsonParser::Parse(
+    const std::string& file_path) {
+  std::ifstream file(file_path);
+  if (!file.is_open()) {
+    return absl::NotFoundError(
+        absl::StrCat("config file not found: ", file_path));
+  }
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  return ParseJsonText(buffer.str(), file_path);
+}
+
+absl::StatusOr<GraphConfig> JsonParser::ParseFromString(
+    const std::string& json_text) {
+  return ParseJsonText(json_text, "<json_string>");
 }
 
 }  // namespace graph::runtime

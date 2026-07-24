@@ -82,7 +82,6 @@ bool DefaultInputStreamHandler::ScheduleInvocations(
     Timestamp min_ts;
     Readiness r = GetNodeReadiness(&min_ts);
     if (r == kReadyForProcess) {
-      FillInputSet(min_ts, context);
       if (schedule_callback_) {
         schedule_callback_(node);
       }
@@ -168,7 +167,6 @@ bool ImmediateInputStreamHandler::ScheduleInvocations(
     Timestamp min_ts;
     Readiness r = GetNodeReadiness(&min_ts);
     if (r == kReadyForProcess) {
-      FillInputSet(min_ts, context);
       if (schedule_callback_) schedule_callback_(node);
       ++scheduled;
     } else if (r == kReadyForClose) {
@@ -262,7 +260,6 @@ bool FixedSizeInputStreamHandler::ScheduleInvocations(
     Timestamp min_ts;
     Readiness r = GetNodeReadiness(&min_ts);
     if (r == kReadyForProcess) {
-      FillInputSet(min_ts, context);
       if (schedule_callback_) schedule_callback_(node);
       ++scheduled;
     } else if (r == kReadyForClose) {

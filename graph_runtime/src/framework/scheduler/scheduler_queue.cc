@@ -30,9 +30,11 @@ void SchedulerQueue::CleanupAfterRun() {
 }
 
 void SchedulerQueue::AddNode(Node* node) {
-  // Check MaxInFlight constraint.
+  // Check MaxInFlight constraint. pending_count includes the current
+  // execution, so compare > not >= to allow scheduling the next
+  // invocation before the current one completes.
   int max_in_flight = node ? node->GetContract().MaxInFlight() : 1;
-  if (node && node->pending_count() >= max_in_flight) {
+  if (node && node->pending_count() > max_in_flight) {
     // Node has reached its concurrency limit; defer scheduling.
     return;
   }
@@ -67,10 +69,13 @@ void SchedulerQueue::RunNextTask() {
   }
   Item item = queue_.top();
   queue_.pop();
+  int before_pending = num_pending_tasks_;
   RunNode(item.node, item.is_open_node);
   --num_pending_tasks_;
   UpdateIdleState();
-  if (!queue_.empty() && running_) {
+  // Only submit a new task if RunNode didn't already schedule one
+  // (e.g., via callback → AddedPacketToInputStream).
+  if (!queue_.empty() && running_ && num_pending_tasks_ == 0) {
     SubmitToExecutor();
   }
 }
@@ -161,14 +166,6 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (perf_counters_) {
     perf_counters_->tasks_completed.Increment();
     perf_counters_->packets_processed.Increment();
-  }
-
-  // Batch scheduling: if the node has more data, schedule next invocations.
-  if (node->GetInputStreamHandler()) {
-    Timestamp input_bound;
-    int max_allowance = std::max(1, node->GetContract().MaxInFlight());
-    node->GetInputStreamHandler()->ScheduleInvocations(
-        max_allowance, &input_bound, *node, ctx);
   }
 }
 

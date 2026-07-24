@@ -76,15 +76,17 @@ void OutputStreamHandler::PropagateOutputPackets(
     auto& shard = shards->Index(static_cast<int>(i));
     Timestamp output_bound =
         mgr->ComputeOutputTimestampBound(shard, input_timestamp);
-    mgr->PropagateUpdatesToMirrors(output_bound, &shard);
 
-    // Fire registered callbacks for this output stream.
+    // Fire registered callbacks before PropagateUpdatesToMirrors clears
+    // the packet queue, so callbacks can access the output packets.
     auto cb_it = output_stream_callbacks_.find(mgr->Name());
     if (cb_it != output_stream_callbacks_.end()) {
       for (const auto& packet : shard.OutputQueue()) {
         cb_it->second(packet);
       }
     }
+
+    mgr->PropagateUpdatesToMirrors(output_bound, &shard);
 
     if (shard.IsClosed()) {
       mgr->Close();

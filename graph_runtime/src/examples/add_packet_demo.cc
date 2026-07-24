@@ -8,7 +8,7 @@
 //
 // In the async path, Source nodes are scheduled automatically. For
 // input-only graphs (no sources), the scheduler schedules nodes when
-// packets arrive via AddedPacketToGraphInputStream.
+// packets arrive via AddedPacketToInputStream.
 //
 // The synchronous path (Schedule) is used for batch/static graphs:
 //   - Runs entirely on the calling thread.

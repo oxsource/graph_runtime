@@ -43,7 +43,7 @@ Initial plan had 12 gaps vs MediaPipe reference. Corrected below:
 ### GraphRuntime API
 
 - **`GraphInputStream`**: Wraps `OutputStreamManager*` + reusable `OutputStreamShard`. Key: external packets are injected as if from an output stream.
-- **`AddPacketToInputStream`**: Must check throttling first (`ADD_IF_NOT_FULL` / `WAIT_TILL_NOT_FULL` mode), use virtual node ID for throttle tracking, error-check after add, then `PropagateUpdatesToMirrors`, then notify scheduler via `AddedPacketToGraphInputStream()`.
+- **`AddPacketToInputStream`**: Must check throttling first (`ADD_IF_NOT_FULL` / `WAIT_TILL_NOT_FULL` mode), use virtual node ID for throttle tracking, error-check after add, then `PropagateUpdatesToMirrors`, then notify scheduler via `AddedPacketToInputStream()`.
 - **`CloseInputStream`**: Increments counter; when all closed, calls `scheduler_.ClosedAllGraphInputStreams()`.
 - **Backpressure**: Full system: `full_input_streams_` vector, `UpdateThrottledNodes` callbacks, `GraphInputStreamAddMode`, `UnthrottleSources()` for deadlock recovery.
 
@@ -72,7 +72,7 @@ Current (Sync):
 
 New (Async):
   Start() → SetRunning → HandleIdle → return
-  AddedPacketToInputStream → wake scheduler via AddedPacketToGraphInputStream
+  AddedPacketToInputStream → wake scheduler via AddedPacketToInputStream
   HandleIdle() → CleanupActiveSources → schedule layers → unthrottle → yield
   WaitUntilIdle() → block until non_idle_queue_count_ == 0
   WaitUntilDone() → block until state == kTerminated

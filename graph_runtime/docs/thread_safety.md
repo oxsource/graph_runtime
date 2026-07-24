@@ -33,7 +33,7 @@ Start()
   │                                 
 AddPacketToInputStream("in", pkt)   
   ├─ AddPackets() [InputStreamManager]
-  └─ AddedPacketToGraphInputStream()
+  └─ AddedPacketToInputStream()
        ├─ q->AddNode(node) → SubmitToExecutor()
        └─ HandleIdle()
   │                                 │  ThreadPool worker wakes
@@ -42,7 +42,7 @@ AddPacketToInputStream("in", pkt)
 CloseInputStream("in")              
   ├─ Close() [InputStreamManager]    
   ├─ IncClosedGraphInputStreams()   
-  └─ AddedPacketToGraphInputStream()
+  └─ AddedPacketToInputStream()
        └─ HandleIdle() → Quit() → STATE_TERMINATED
   
 WaitUntilDone()                     
@@ -74,7 +74,7 @@ WaitUntilDone()
 ## HandleIdle Re-entrance
 
 `HandleIdle()` can be called from two threads concurrently (main thread via
-`AddedPacketToGraphInputStream`, executor thread via idle callback). It uses a
+`AddedPacketToInputStream`, executor thread via idle callback). It uses a
 `std::atomic<int> handling_idle_` guard to allow only the first caller to
 execute; concurrent callers return immediately. This is safe because the
 winning caller runs the full idle-detection loop.

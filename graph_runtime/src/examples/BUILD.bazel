@@ -48,3 +48,12 @@ cc_binary(
         "@graph_runtime//src/framework/public:runtime",
     ],
 )
+
+cc_binary(
+    name = "interactive_pipeline_demo",
+    srcs = ["interactive_pipeline_demo.cc"],
+    deps = [
+        "@graph_runtime//src/framework/public:runtime",
+        "@graph_runtime//src/framework/config/json:json_parser",
+    ],
+)

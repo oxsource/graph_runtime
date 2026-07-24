@@ -225,7 +225,7 @@ absl::Status GraphRuntime::AddPacketToInputStream(
 
   // Notify the scheduler that a packet arrived. The scheduler will schedule
   // the owning node.
-  scheduler_->AddedPacketToGraphInputStream();
+  scheduler_->AddedPacketToInputStream();
   return absl::OkStatus();
 }
 
@@ -251,7 +251,7 @@ absl::Status GraphRuntime::CloseInputStream(
   it->second->Close();
   closed_streams_.insert(stream_name);
   scheduler_->IncClosedGraphInputStreams();
-  scheduler_->AddedPacketToGraphInputStream();
+  scheduler_->AddedPacketToInputStream();
   return absl::OkStatus();
 }
 
