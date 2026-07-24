@@ -28,20 +28,71 @@ class GraphRuntime {
   GraphRuntime();
   ~GraphRuntime();
 
+  /// @defgroup ExecutionModes Execution Modes
+  ///
+  /// The runtime offers two mutually exclusive execution paths:
+  ///
+  /// **Async mode** (`Start` + `WaitUntilDone`):
+  ///   - Graph runs on a thread pool (non-blocking).
+  ///   - Supports `AddPacketToInputStream`, `CloseInputStream`,
+  ///     output callbacks, side packets.
+  ///   - Call `Start()` to begin execution, then interact with the
+  ///     running graph, then `WaitUntilDone()` to block until termination.
+  ///   - Use `Shutdown()` to force termination early.
+  ///   - MediaPipe-compatible pattern (see `StartRun` + `WaitUntilDone`).
+  ///
+  /// **Sync mode** (`Schedule`):
+  ///   - Graph runs entirely on the caller's thread (blocking).
+  ///   - Does NOT support `AddPacketToInputStream` or callbacks.
+  ///   - For batch/static graphs driven by source nodes only.
+  ///   - Returns only after all nodes finish.
+  ///   - No MediaPipe counterpart; convenience for simple batch use.
+  ///
+  /// @{
+
+  /// Initialize the graph from a config. Must be called before any
+  /// execution method.
   absl::Status Initialize(const GraphConfig& config);
+
+  /// @name Async execution path
+
+  /// Start asynchronous execution on a thread pool. Returns immediately.
+  /// After Start(), the graph runs on worker threads. Inject packets via
+  /// AddPacketToInputStream and signal completion via CloseInputStream.
+  /// WaitUntilDone() blocks until the graph reaches kTerminated.
   absl::Status Start();
-  absl::Status Schedule();
+
+  /// Block until the graph reaches kTerminated (async path only).
   absl::Status WaitUntilDone();
+
+  /// Block until all queues are idle (async path only).
   absl::Status WaitForIdle();
+
+  /// Returns true if the graph has terminated (async path).
   bool HasGraphFinished() const;
+
+  /// Returns the current scheduler state (async path).
   SchedulerState GetGraphState() const;
+
+  /// Force-terminate the graph (async path only).
   void Shutdown();
 
+  /// @name Sync execution path
+
+  /// Execute the graph synchronously on the calling thread.
+  /// Only source nodes are processed; AddPacketToInputStream is NOT
+  /// supported. Returns when all nodes finish.
+  /// For interactive/streaming use cases, use Start() instead.
+  absl::Status Schedule();
+
+  /// @}
+
+  /// Add a packet to the named input stream (async path only).
   absl::Status AddPacketToInputStream(const std::string& stream_name,
-                                       Packet packet);
+                                        Packet packet);
   absl::Status CloseInputStream(const std::string& stream_name);
   void SetOutputStreamCallback(const std::string& stream_name,
-                                std::function<void(const Packet&)> callback);
+                                 std::function<void(const Packet&)> callback);
   void ClearOutputStreamCallback(const std::string& stream_name);
   absl::Status SetInputSidePacket(const std::string& tag_name, Packet packet);
   void SetOutputSidePacketCallback(
