@@ -109,14 +109,14 @@ class GraphContext {
   GraphContext(
       const std::string& node_name,
       int node_id,
-      const std::string& calculator_type,
+      const std::string& node_type,
       Timestamp input_timestamp,
       InputStreamShardSet* inputs,
       OutputStreamShardSet* outputs,
       const NodeOptions* options)
       : node_name_(node_name),
         node_id_(node_id),
-        calculator_type_(calculator_type),
+        node_type_(node_type),
         input_timestamp_(input_timestamp),
         inputs_ptr_(inputs),
         outputs_ptr_(outputs),
@@ -126,14 +126,14 @@ class GraphContext {
   GraphContext(
       const std::string& node_name,
       int node_id,
-      const std::string& calculator_type,
+      const std::string& node_type,
       Timestamp input_timestamp,
       InputStreamShardSet&& inputs,
       OutputStreamShardSet&& outputs,
       const NodeOptions* options)
       : node_name_(node_name),
         node_id_(node_id),
-        calculator_type_(calculator_type),
+        node_type_(node_type),
         input_timestamp_(input_timestamp),
         owned_inputs_(std::move(inputs)),
         owned_outputs_(std::move(outputs)),
@@ -143,7 +143,7 @@ class GraphContext {
 
   const std::string& NodeName() const { return node_name_; }
   int NodeId() const { return node_id_; }
-  const std::string& CalculatorType() const { return calculator_type_; }
+  const std::string& NodeType() const { return node_type_; }
   Timestamp InputTimestamp() const { return input_timestamp_; }
   void SetInputTimestamp(Timestamp ts) { input_timestamp_ = ts; }
 
@@ -167,7 +167,7 @@ class GraphContext {
  private:
   std::string node_name_;
   int node_id_;
-  std::string calculator_type_;
+  std::string node_type_;
   Timestamp input_timestamp_;
   InputStreamShardSet owned_inputs_;
   OutputStreamShardSet owned_outputs_;
@@ -184,11 +184,11 @@ class GraphContextManager {
  public:
   void Initialize(
       const std::string& node_name, int node_id,
-      const std::string& calculator_type,
+      const std::string& node_type,
       InputStreamShardSet inputs, OutputStreamShardSet outputs,
       const NodeOptions* options) {
     default_context_ = std::make_unique<GraphContext>(
-        node_name, node_id, calculator_type,
+        node_name, node_id, node_type,
         Timestamp::Unstarted(), std::move(inputs), std::move(outputs),
         options);
   }
@@ -203,7 +203,7 @@ class GraphContextManager {
       auto ctx = std::make_unique<GraphContext>(
           default_context_->NodeName(),
           default_context_->NodeId(),
-          default_context_->CalculatorType(),
+          default_context_->NodeType(),
           input_timestamp,
           &default_context_->Inputs(),
           &default_context_->Outputs(),
