@@ -46,7 +46,7 @@ void Scheduler::HandleIdle() {
 
   while (IsIdle() && (state_ == SchedulerState::kRunning ||
                       state_ == SchedulerState::kCancelling)) {
-    // Clean up finished sources
+    // Clean up closed sources from active_sources_
     for (auto it = active_sources_.begin(); it != active_sources_.end();) {
       if (state_ == SchedulerState::kCancelling) {
         active_sources_.erase(it++);
@@ -55,12 +55,13 @@ void Scheduler::HandleIdle() {
       }
     }
 
-    bool should_quit = has_error_;
-    if (!should_quit && source_nodes_.empty() &&
-        total_graph_input_streams_ > 0 &&
-        num_closed_graph_input_streams_ >= total_graph_input_streams_) {
-      should_quit = true;
-    }
+    // Determine if we should quit
+    bool all_inputs_closed = (total_graph_input_streams_ > 0 &&
+                              num_closed_graph_input_streams_ >= total_graph_input_streams_);
+    bool no_more_sources = source_nodes_.empty() || active_sources_.empty();
+    bool should_quit = has_error_ ||
+                       (no_more_sources && all_inputs_closed) ||
+                       (no_more_sources && total_graph_input_streams_ == 0);
 
     if (should_quit) {
       if (error_callback_ && has_error_) {
@@ -72,26 +73,21 @@ void Scheduler::HandleIdle() {
       return;
     }
 
-    // Check if we need to schedule more work
-    bool all_queues_idle = true;
-    for (auto* q : all_queues_) {
-      if (!q->IsIdle()) { all_queues_idle = false; break; }
-    }
-    if (all_queues_idle) {
-      if (!active_sources_.empty()) {
-        for (auto* source : active_sources_) {
-          default_queue_.AddNode(source);
-        }
+    // If active sources exist and queues are idle, re-schedule them
+    if (!active_sources_.empty()) {
+      for (auto* source : active_sources_) {
+        default_queue_.AddNode(source);
       }
+      --handling_idle_;
+      return;
     }
 
-    // If no active sources and queues are idle, we're truly idle
-    bool has_pending_work = false;
+    // If no work is pending anywhere, terminate
+    bool any_pending = false;
     for (auto* q : all_queues_) {
-      if (!q->IsIdle()) { has_pending_work = true; break; }
+      if (!q->IsIdle()) { any_pending = true; break; }
     }
-    if (!has_pending_work && active_sources_.empty() &&
-        source_nodes_.empty() && total_graph_input_streams_ == 0) {
+    if (!any_pending) {
       state_ = SchedulerState::kTerminated;
       cv_.notify_all();
       --handling_idle_;

@@ -1,6 +1,8 @@
 #include "src/public/graph_runtime.h"
 #include "src/public/graph_builder.h"
 
+#include <algorithm>
+
 #include "absl/strings/str_cat.h"
 #include "src/hook/factory.h"
 #include "src/scheduler/scheduler.h"
@@ -94,10 +96,18 @@ absl::Status GraphRuntime::AddPacketToInputStream(
         absl::StrCat("Unknown input stream: ", stream_name));
   }
 
+  // Throttle check: if queue is full, reject
+  if (it->second->IsFull()) {
+    return absl::UnavailableError(
+        absl::StrCat("Input stream is full: ", stream_name));
+  }
+
   std::list<Packet> packets;
   packets.push_back(std::move(packet));
   bool notify = false;
-  it->second->AddPackets(packets, &notify);
+  absl::Status st = it->second->AddPackets(packets, &notify);
+  if (!st.ok()) return st;
+
   scheduler_->AddedPacketToGraphInputStream();
   return absl::OkStatus();
 }
@@ -110,7 +120,13 @@ absl::Status GraphRuntime::CloseInputStream(
         absl::StrCat("Unknown input stream: ", stream_name));
   }
 
+  // Idempotency: skip if already closed
+  if (closed_streams_.count(stream_name)) {
+    return absl::OkStatus();
+  }
+
   it->second->Close();
+  closed_streams_.insert(stream_name);
   scheduler_->IncClosedGraphInputStreams();
   scheduler_->AddedPacketToGraphInputStream();
   return absl::OkStatus();
@@ -165,13 +181,7 @@ void GraphRuntime::UnthrottleSources() {
   for (auto& [node, streams] : full_input_streams_) {
     for (auto* mgr : streams) {
       int current = mgr->MaxQueueSize();
-      if (current > 0) {
-        mgr->SetMaxQueueSize(current * 2);
-      } else if (current == -1) {
-        mgr->SetMaxQueueSize(64);
-      } else {
-        mgr->SetMaxQueueSize(128);
-      }
+      mgr->SetMaxQueueSize(std::max(1, current + 1));
     }
   }
   full_input_streams_.clear();

@@ -80,16 +80,31 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
                    "node", ts, &inputs, &outputs, &opts);
 
-  if (is_open || ts == Timestamp::Done()) {
-    if (is_open) {
-      node->Open(ctx);
-    } else {
-      node->Close(ctx);
+  if (is_open) {
+    node->Open(ctx);
+    return;
+  }
+
+  // Process the node
+  absl::Status status = node->Process(ctx);
+
+  if (IsStopStatus(status)) {
+    // Non-source returning StatusStop triggers graceful shutdown.
+    if (node->input_port_count() > 0) {
+      if (idle_callback_) {
+        idle_callback_(true);
+      }
     }
     return;
   }
 
-  node->Process(ctx);
+  if (!status.ok()) {
+    // Error during processing — propagate.
+    if (node->GetOutputStreamHandler()) {
+      node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
+    }
+    return;
+  }
 
   // Propagate outputs
   if (node->GetOutputStreamHandler()) {

@@ -72,6 +72,7 @@ class GraphRuntime {
 
   // Throttle tracking: full input streams per node.
   std::map<Node*, std::set<InputStreamManager*>> full_input_streams_;
+  std::set<std::string> closed_streams_;
 };
 
 }  // namespace graph::runtime

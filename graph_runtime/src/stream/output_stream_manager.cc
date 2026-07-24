@@ -62,9 +62,10 @@ void OutputStreamManager::PropagateUpdatesToMirrors(
     num_packets_added_ += packets->size();
   }
 
-  bool set_bound =
-      (next_bound != Timestamp::Unset()) &&
-      (packets->empty() || shard->LastAddedPacketTimestamp() != next_bound);
+  bool set_bound = (next_bound != Timestamp::Unset()) &&
+      (!packets->empty()
+           ? shard->LastAddedPacketTimestamp().NextAllowedInStream() != next_bound
+           : true);
 
   for (size_t idx = 0; idx < mirrors_.size(); ++idx) {
     auto& mirror = mirrors_[idx];
