@@ -57,16 +57,12 @@
 
 **Purpose**: Update `//src:__subpackages__` to `//src/framework:__subpackages__` in framework BUILD files.
 
-- [ ] T024 [US2] Update `src/framework/hook/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T025 [US2] Update `src/framework/log/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T026 [US2] Update `src/framework/scheduler/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T027 [US2] Update `src/framework/stream/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T028 [US2] Update `src/framework/node/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T029 [US2] Update `src/framework/config/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T030 [US2] Update `src/framework/config/json/BUILD.bazel` — `//src:__subpackages__` → `//src/framework:__subpackages__`
-- [ ] T031 [US2] Update `src/framework/public/BUILD.bazel` — per-target visibility stays (runtime_internal, graph_builder already `//src:__subpackages__` → `//src/framework:__subpackages__`)
+- [x] T024-T031 [US2] Update all `//src:__subpackages__` → `//src/framework:__subpackages__` + `//src/tests:__subpackages__` in framework BUILD files
+- [x] Fix sed-introduced syntax errors (quote placement in list)
+- [x] hook/BUILD and public/BUILD per-target visibility also updated
 
-**Checkpoint**: `rg '//src:' --glob '**/BUILD.bazel' src/framework/` returns zero matches ✅
+**Checkpoint**: `rg '//src:' --glob '**/BUILD.bazel' src/framework/` returns zero ✅
+`bazel test //src/tests/...` — 14/14 pass ✅
 
 ---
 
