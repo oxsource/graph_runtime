@@ -49,7 +49,12 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
   if (table) {
     for (const GraphHookEntity* e = table; e->type != kHookTypeSentinel; ++e) {
       if (e->type == kHookTypeLogIntercept && e->hook_fn) {
-        suppressed = e->hook_fn(formatted, 0) || suppressed;
+        try {
+          suppressed = e->hook_fn(formatted, 0) || suppressed;
+        } catch (...) {
+          // Hook threw — log a warning to stderr and fall back to default.
+          std::fprintf(stderr, "[graphrt] [WARN] Hook threw exception, falling back to default output\n");
+        }
       }
     }
   }

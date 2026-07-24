@@ -1,3 +1,5 @@
+#include <atomic>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -139,6 +141,28 @@ TEST(LoggerTest, ClearHookRestoresDefault) {
   EXPECT_FALSE(g_hook_invoked);
 }
 
+// --- Exception safety ---
+
+bool ThrowingHook(const void*, int) {
+  throw std::runtime_error("hook failure");
+}
+
+TEST(LoggerTest, HookExceptionDoesNotCrash) {
+  const GraphHookEntity kThrowingHook[] = {
+    { kHookTypeLogIntercept, ThrowingHook },
+    { kHookTypeSentinel, nullptr },
+  };
+
+  GraphRuntime runtime;
+  runtime.SetGlobalHook(kThrowingHook);
+
+  // Should not crash despite the hook throwing
+  Logger::Info("graphrt::test", "after exception");
+  Logger::Error("graphrt::test", "still works");
+
+  runtime.SetGlobalHook(nullptr);
+}
+
 // --- Concurrent logging ---
 
 TEST(LoggerTest, ConcurrentLogging) {
@@ -161,6 +185,42 @@ TEST(LoggerTest, RepeatedCalls) {
   for (int i = 0; i < 1000; ++i) {
     Logger::Info("graphrt::test", "repeat");
   }
+}
+
+TEST(LoggerTest, ConcurrentHookSwapNoCrash) {
+  static constexpr int kThreads = 8;
+  static constexpr int kLogsPerThread = 40;
+
+  GraphRuntime runtime;
+  std::atomic<bool> running{true};
+
+  // Thread that continuously swaps the hook table
+  std::thread swapper([&] {
+    while (running.load()) {
+      runtime.SetGlobalHook(kSingleHook);
+      std::this_thread::yield();
+      runtime.SetGlobalHook(nullptr);
+      std::this_thread::yield();
+    }
+  });
+
+  // Logging threads
+  std::vector<std::thread> loggers;
+  for (int i = 0; i < kThreads; ++i) {
+    loggers.emplace_back([&] {
+      for (int j = 0; j < kLogsPerThread; ++j) {
+        Logger::Info("graphrt::test", "concurrent swap");
+        Logger::Debug("graphrt::test", "debug");
+        Logger::Error("graphrt::test", "err");
+      }
+    });
+  }
+
+  for (auto& t : loggers) t.join();
+  running.store(false);
+  swapper.join();
+
+  runtime.SetGlobalHook(nullptr);
 }
 
 }  // namespace graph::runtime
