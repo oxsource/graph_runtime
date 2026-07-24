@@ -43,6 +43,7 @@ class Scheduler {
       const std::string& name, std::shared_ptr<Executor> executor);
 
   virtual absl::Status Schedule();
+  virtual absl::Status Start();
   virtual absl::Status WaitUntilDone();
   virtual void Shutdown();
   virtual absl::Status Pause();
@@ -52,6 +53,12 @@ class Scheduler {
   bool IsTerminated() const { return state_ == SchedulerState::kTerminated; }
   bool IsPaused() const { return state_ == SchedulerState::kPaused; }
   bool HasError() const { return has_error_; }
+  bool IsIdle() const {
+    for (auto* q : all_queues_) {
+      if (!q->IsIdle()) return false;
+    }
+    return true;
+  }
 
   void AssignNodeToQueue(Node* node);
 
@@ -61,6 +68,9 @@ class Scheduler {
   virtual absl::Status RemoveNode(Node* node);
 
   void HandleIdle();
+  void AddedPacketToGraphInputStream();
+  void SetTotalGraphInputStreams(int n) { total_graph_input_streams_ = n; }
+  void IncClosedGraphInputStreams() { ++num_closed_graph_input_streams_; }
 
  protected:
   SchedulerQueue& GetQueue(const std::string& executor_name);
@@ -83,6 +93,11 @@ class Scheduler {
   std::vector<Node*> all_nodes_;
   std::vector<Node*> source_nodes_;
   int processed_count_ = 0;
+
+  // Async source management
+  int num_closed_graph_input_streams_ = 0;
+  int total_graph_input_streams_ = 0;
+  int throttled_graph_input_stream_count_ = 0;
 
   std::mutex mutex_;
   std::condition_variable cv_;

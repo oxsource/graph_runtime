@@ -2,7 +2,9 @@
 #define GRAPH_RUNTIME_GRAPH_RUNTIME_H_
 
 #include <functional>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -13,6 +15,7 @@
 #include "src/public/side_packet.h"
 #include "src/scheduler/scheduler.h"
 #include "src/node/node.h"
+#include "src/stream/input_stream_manager.h"
 
 namespace graph::runtime {
 
@@ -42,10 +45,15 @@ class GraphRuntime {
   void SetHook(int type, hook::HookFn fn);
 
  private:
+  Node* FindNode(const std::string& name);
+
   friend class GraphBuilder;
   GraphConfig config_;
   std::unique_ptr<Scheduler> scheduler_;
   std::vector<std::unique_ptr<Node>> all_nodes_;
+  std::map<std::string, InputStreamManager*> stream_managers_;
+  std::set<std::string> graph_input_streams_set_;
+  int num_open_input_streams_ = 0;
 };
 
 }  // namespace graph::runtime
