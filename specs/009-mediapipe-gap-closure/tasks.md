@@ -201,9 +201,9 @@
 
 ### Layer 5: Performance Counters
 
-- [ ] T053 [P] [US7] Instantiate `PerfCounters` in `Scheduler` and pass to `SchedulerQueue` in `src/framework/scheduler/scheduler.cc`
-- [ ] T054 [US7] Wire `tasks_submitted` / `tasks_completed` / `packets_processed` counters in `SchedulerQueue` in `src/framework/scheduler/scheduler_queue.cc`
-- [ ] T055 [P] [US7] Test: counters increment in `src/tests/scheduler_test.cc`
+- [X] T053 [P] [US7] Instantiate `PerfCounters` in `Scheduler` and pass to `SchedulerQueue` in `src/framework/scheduler/scheduler.cc`
+- [X] T054 [US7] Wire `tasks_submitted` / `tasks_completed` / `packets_processed` counters in `SchedulerQueue` in `src/framework/scheduler/scheduler_queue.cc`
+- [X] T055 [P] [US7] Test: counters increment in `src/tests/scheduler_test.cc`
 
 ### Layer 6: Cancel()
 

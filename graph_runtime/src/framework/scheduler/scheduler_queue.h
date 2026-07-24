@@ -10,6 +10,9 @@
 
 namespace graph::runtime {
 
+class PerfCounters;
+
+
 class SchedulerQueue : public TaskQueue {
  public:
   using IdleCallback = std::function<void(bool idle)>;
@@ -58,6 +61,8 @@ class SchedulerQueue : public TaskQueue {
   void AddNodeForOpen(Node* node);
   void RunNextTask() override;
 
+  void SetPerfCounters(PerfCounters* counters) { perf_counters_ = counters; }
+
   bool IsIdle() const { return queue_.empty() && num_pending_tasks_ == 0; }
   int NumPendingTasks() const { return num_pending_tasks_; }
 
@@ -70,6 +75,7 @@ class SchedulerQueue : public TaskQueue {
   Executor* executor_ = nullptr;
   IdleCallback idle_callback_;
   SourceStoppedCallback source_stopped_callback_;
+  PerfCounters* perf_counters_ = nullptr;
   bool running_ = false;
   std::priority_queue<Item> queue_;
   int num_pending_tasks_ = 0;

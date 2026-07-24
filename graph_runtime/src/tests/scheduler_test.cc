@@ -404,4 +404,27 @@ TEST_F(BatchSchedulingTest, ScheduleInvocationsOnDefaultHandler) {
   EXPECT_GT(callback_count, 0);
 }
 
+class PerfCountersTest : public ::testing::Test {};
+
+TEST_F(PerfCountersTest, CountersStartAtZero) {
+  PerfCounters counters;
+  EXPECT_EQ(counters.tasks_submitted.Value(), 0);
+  EXPECT_EQ(counters.tasks_completed.Value(), 0);
+  EXPECT_EQ(counters.packets_processed.Value(), 0);
+  EXPECT_EQ(counters.nodes_opened.Value(), 0);
+  EXPECT_EQ(counters.nodes_closed.Value(), 0);
+}
+
+TEST_F(PerfCountersTest, IncrementAndRead) {
+  PerfCounters counters;
+  counters.tasks_submitted.Increment();
+  EXPECT_EQ(counters.tasks_submitted.Value(), 1);
+  counters.tasks_submitted.Increment(3);
+  EXPECT_EQ(counters.tasks_submitted.Value(), 4);
+  counters.tasks_completed.Increment();
+  counters.packets_processed.Increment();
+  EXPECT_EQ(counters.tasks_completed.Value(), 1);
+  EXPECT_EQ(counters.packets_processed.Value(), 1);
+}
+
 }  // namespace graph::runtime

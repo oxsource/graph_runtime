@@ -2,6 +2,7 @@
 #include "src/framework/node/graph_context.h"
 #include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/output_stream_handler.h"
+#include "src/framework/scheduler/counters.h"
 
 #define GRAPHRT_LOG_TAG "graphrt::scheduler_queue"
 #include "src/framework/utils/logger.h"
@@ -77,6 +78,7 @@ void SchedulerQueue::RunNextTask() {
 void SchedulerQueue::SubmitToExecutor() {
   if (!executor_) return;
   ++num_pending_tasks_;
+  if (perf_counters_) perf_counters_->tasks_submitted.Increment();
   executor_->AddTask(this);
 }
 
@@ -115,6 +117,7 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
 
   if (is_open) {
     (void)node->Open(ctx);
+    if (perf_counters_) perf_counters_->nodes_opened.Increment();
     return;
   }
 
@@ -155,6 +158,10 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
   }
   node->DecrementPending();
+  if (perf_counters_) {
+    perf_counters_->tasks_completed.Increment();
+    perf_counters_->packets_processed.Increment();
+  }
 
   // Batch scheduling: if the node has more data, schedule next invocations.
   if (node->GetInputStreamHandler()) {

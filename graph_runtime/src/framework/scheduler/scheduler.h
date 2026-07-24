@@ -20,6 +20,7 @@
 #include "src/framework/stream/output_stream_handler.h"
 #include "src/framework/public/types.h"
 #include "src/framework/public/side_packet.h"
+#include "src/framework/scheduler/counters.h"
 
 namespace graph::runtime {
 
@@ -115,6 +116,8 @@ class Scheduler {
   std::condition_variable cv_;
 
   PacketSet input_side_packets_;
+
+  PerfCounters perf_counters_;
 };
 
 }  // namespace graph::runtime

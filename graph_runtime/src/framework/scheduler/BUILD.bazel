@@ -31,6 +31,11 @@ cc_library(
 )
 
 cc_library(
+    name = "counters",
+    hdrs = ["counters.h"],
+)
+
+cc_library(
     name = "scheduler_queue",
     srcs = ["scheduler_queue.cc"],
     hdrs = ["scheduler_queue.h"],
@@ -40,6 +45,7 @@ cc_library(
         "@graph_runtime//src/framework/node:node_base",
         "@graph_runtime//src/framework/stream:output_stream_handler",
         "@graph_runtime//src/framework/utils:logger",
+        ":counters",
     ],
 )
 
@@ -52,6 +58,7 @@ cc_library(
         ":scheduler_queue",
         ":thread_pool_executor",
         ":input_stream_handler",
+        ":counters",
         "@graph_runtime//src/framework/utils:logger",
         "@graph_runtime//src/framework/stream:input_stream_manager",
         "@graph_runtime//src/framework/stream:input_stream",

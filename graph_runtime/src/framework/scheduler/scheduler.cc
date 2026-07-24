@@ -214,6 +214,7 @@ absl::Status Scheduler::Schedule() {
       Logger::Error(std::string("Close error for " + node->name() + ": " + std::string(status.ToString())).c_str());
     }
     Logger::Info(std::string("Closed " + node->name()).c_str());
+    perf_counters_.nodes_closed.Increment();
   }
 
   state_ = SchedulerState::kTerminated;
@@ -266,6 +267,7 @@ absl::Status Scheduler::Start() {
       cv_.notify_all();
       HandleIdle();
     });
+    q->SetPerfCounters(&perf_counters_);
     q->SetRunning(true);
   }
 
