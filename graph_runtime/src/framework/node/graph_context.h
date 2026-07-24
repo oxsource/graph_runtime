@@ -145,6 +145,7 @@ class GraphContext {
   int NodeId() const { return node_id_; }
   const std::string& CalculatorType() const { return calculator_type_; }
   Timestamp InputTimestamp() const { return input_timestamp_; }
+  void SetInputTimestamp(Timestamp ts) { input_timestamp_ = ts; }
 
   InputStreamShardSet& Inputs() { return *inputs_ptr_; }
   const InputStreamShardSet& Inputs() const { return *inputs_ptr_; }
@@ -196,15 +197,48 @@ class GraphContextManager {
     return default_context_.get();
   }
 
-  // Phase 2 stubs
+  // Returns a prepared context from the pool or creates a new one.
   GraphContext* PrepareCalculatorContext(Timestamp input_timestamp) {
-    return default_context_.get();
+    if (pool_.empty()) {
+      auto ctx = std::make_unique<GraphContext>(
+          default_context_->NodeName(),
+          default_context_->NodeId(),
+          default_context_->CalculatorType(),
+          input_timestamp,
+          &default_context_->Inputs(),
+          &default_context_->Outputs(),
+          &default_context_->Options());
+      owned_.push_back(std::move(ctx));
+      return owned_.back().get();
+    }
+    auto ctx = std::move(pool_.back());
+    pool_.pop_back();
+    ctx->SetInputTimestamp(input_timestamp);
+    owned_.push_back(std::move(ctx));
+    return owned_.back().get();
   }
-  void RecycleCalculatorContext() {}
-  void CleanupAfterRun() { default_context_.reset(); }
+
+  // Returns a context to the pool for reuse.
+  void RecycleCalculatorContext(GraphContext* ctx) {
+    for (auto it = owned_.begin(); it != owned_.end(); ++it) {
+      if (it->get() == ctx) {
+        pool_.push_back(std::move(*it));
+        owned_.erase(it);
+        break;
+      }
+    }
+  }
+
+  void CleanupAfterRun() {
+    default_context_.reset();
+    pool_.clear();
+    owned_.clear();
+  }
 
  private:
   std::unique_ptr<GraphContext> default_context_;
+  std::vector<std::unique_ptr<GraphContext>> pool_;
+  std::vector<std::unique_ptr<GraphContext>> owned_;
 };
 
 }  // namespace graph::runtime

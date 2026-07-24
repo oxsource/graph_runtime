@@ -342,4 +342,25 @@ TEST_F(MaxInFlightTest, AddNodeRespectsMaxInFlight) {
   EXPECT_EQ(node.pending_count(), 1);
 }
 
+class GraphContextPoolingTest : public ::testing::Test {};
+
+TEST_F(GraphContextPoolingTest, PrepareAndRecycle) {
+  GraphContextManager mgr;
+  InputStreamShardSet empty_inputs;
+  OutputStreamShardSet empty_outputs;
+  NodeOptions opts;
+  mgr.Initialize("test", 1, "TestNode", std::move(empty_inputs),
+                 std::move(empty_outputs), &opts);
+
+  GraphContext* ctx = mgr.PrepareCalculatorContext(Timestamp(1));
+  EXPECT_NE(ctx, nullptr);
+  EXPECT_EQ(ctx->InputTimestamp().Value(), 1);
+
+  // Recycle and re-prepare should reuse the context.
+  mgr.RecycleCalculatorContext(ctx);
+  GraphContext* ctx2 = mgr.PrepareCalculatorContext(Timestamp(2));
+  EXPECT_NE(ctx2, nullptr);
+  EXPECT_EQ(ctx2->InputTimestamp().Value(), 2);
+}
+
 }  // namespace graph::runtime

@@ -188,10 +188,10 @@
 
 ### Layer 3: GraphContext Pooling
 
-- [ ] T046 [US7] Implement `PrepareCalculatorContext()` in `src/framework/node/graph_context.cc` — create or reuse from pool
-- [ ] T047 [US7] Implement `RecycleCalculatorContext()` in `src/framework/node/graph_context.cc` — return context to pool
-- [ ] T048 [P] [US7] Wire context lifecycle in `SchedulerQueue::RunNode()` — call Recycle after Process
-- [ ] T049 [P] [US7] Test: context pooling reuse in `src/tests/scheduler_test.cc`
+- [X] T046 [US7] Implement `PrepareCalculatorContext()` in `src/framework/node/graph_context.cc` — create or reuse from pool
+- [X] T047 [US7] Implement `RecycleCalculatorContext()` in `src/framework/node/graph_context.cc` — return context to pool
+- [X] T048 [P] [US7] Wire context lifecycle in `SchedulerQueue::RunNode()` — call Recycle after Process
+- [X] T049 [P] [US7] Test: context pooling reuse in `src/tests/scheduler_test.cc`
 
 ### Layer 4: Batch Scheduling — ScheduleInvocations
 
