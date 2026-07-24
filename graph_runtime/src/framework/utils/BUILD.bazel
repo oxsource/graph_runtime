@@ -1,6 +1,13 @@
 package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__subpackages__"])
 
 cc_library(
+    name = "hook",
+    srcs = ["factory.cc"],
+    hdrs = ["factory.h"],
+    deps = ["@graph_runtime//src/framework/public:hook_header"],
+)
+
+cc_library(
     name = "log_core",
     srcs = ["logger.cc"],
     hdrs = ["logger.h"],
@@ -9,7 +16,7 @@ cc_library(
         "-fvisibility-inlines-hidden",
     ],
     deps = [
-        "@graph_runtime//src/framework/hook:hook",
+        "@graph_runtime//src/framework/utils:hook",
         "@com_google_absl//absl/synchronization",
     ],
 )

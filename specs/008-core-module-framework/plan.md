@@ -53,8 +53,8 @@ src/                               src/
 ### Phase 1 — File Migration
 
 1. `git mv src/config/ src/framework/config/`
-2. `git mv src/hook/ src/framework/hook/`
-3. `git mv src/log/ src/framework/log/`
+2. `git mv src/hook/ src/framework/utils/`
+3. `git mv src/log/ src/framework/utils/`
 4. `git mv src/node/ src/framework/node/`
 5. `git mv src/public/ src/framework/public/`
 6. `git mv src/scheduler/ src/framework/scheduler/`
@@ -88,13 +88,13 @@ Also update visibility rules: `//src:__subpackages__` → `//src/framework:__sub
 
 ### Phase 4 — Visibility Rule Fixes
 
-In `src/framework/hook/BUILD.bazel`:
+In `src/framework/utils/BUILD.bazel`:
 ```
 //src:__subpackages__  →  //src/framework:__subpackages__
 //src/tests:__subpackages__  stays the same
 ```
 
-In `src/framework/log/BUILD.bazel` and other internal frameworks:
+In `src/framework/utils/BUILD.bazel` and other internal frameworks:
 ```
 //src:__subpackages__  →  //src/framework:__subpackages__
 ```
@@ -102,7 +102,7 @@ In `src/framework/log/BUILD.bazel` and other internal frameworks:
 ### Phase 5 — Documentation & Config
 
 1. Update `AGENTS.md` — point plan reference to `008-core-module-framework/plan.md`; update any path references
-2. Update `docs/build-conventions.md` — `src/public/` → `src/framework/public/`, `src/log/` → `src/framework/log/`, etc.
+2. Update `docs/build-conventions.md` — `src/public/` → `src/framework/public/`, `src/log/` → `src/framework/utils/`, etc.
 3. Update `.specify/feature.json` if needed
 
 ### Phase 6 — Validation

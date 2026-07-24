@@ -6,7 +6,7 @@
 #include <thread>
 
 #define GRAPHRT_LOG_TAG "graphrt::scheduler"
-#include "src/framework/log/logger.h"
+#include "src/framework/utils/logger.h"
 #include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/output_stream_handler.h"
 

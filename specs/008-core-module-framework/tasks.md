@@ -16,8 +16,8 @@
 **Purpose**: Move 7 internal modules to `src/framework/` via `git mv`.
 
 - [x] T001 `git mv src/config/ src/framework/config/`
-- [x] T002 `git mv src/hook/ src/framework/hook/`
-- [x] T003 `git mv src/log/ src/framework/log/`
+- [x] T002 `git mv src/hook/ src/framework/utils/`
+- [x] T003 `git mv src/log/ src/framework/utils/`
 - [x] T004 `git mv src/node/ src/framework/node/`
 - [x] T005 `git mv src/public/ src/framework/public/`
 - [x] T006 `git mv src/scheduler/ src/framework/scheduler/`

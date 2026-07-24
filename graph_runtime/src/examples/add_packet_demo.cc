@@ -4,7 +4,7 @@
 // Build: bazel build //src/examples:add_packet_demo
 // Run:   bazel run //src/examples:add_packet_demo
 
-#include "src/framework/log/logger.h"
+#include "src/framework/utils/logger.h"
 #include "src/framework/public/graph_runtime.h"
 #include "src/framework/node/node.h"
 #include "src/framework/node/node_contract.h"

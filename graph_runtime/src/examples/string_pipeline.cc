@@ -3,7 +3,7 @@
 #include <vector>
 
 #define GRAPHRT_LOG_TAG "graphrt::example"
-#include "src/framework/log/logger.h"
+#include "src/framework/utils/logger.h"
 #include "src/framework/stream/packet.h"
 #include "src/framework/stream/timestamp.h"
 #include "src/framework/node/node.h"

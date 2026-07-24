@@ -24,7 +24,7 @@
 
 - **Decision**: Update to `//src/framework:__subpackages__` for all internal packages.
 - **Rationale**: The Bazel package group `//src:__subpackages__` covered everything under `src/`. After the move, framework modules should only be visible to other framework modules + tests.
-- **Note**: `//src/framework/hook/BUILD.bazel` has special visibility `["//src/framework:__subpackages__", "//src/tests:__subpackages__"]`.
+- **Note**: `//src/framework/utils/BUILD.bazel` has special visibility `["//src/framework:__subpackages__", "//src/tests:__subpackages__"]`.
 
 ## Scope Summary
 

@@ -51,7 +51,7 @@ cc_library(
         ":scheduler_queue",
         ":thread_pool_executor",
         ":input_stream_handler",
-        "@graph_runtime//src/framework/log:log_core",
+        "@graph_runtime//src/framework/utils:log_core",
         "@graph_runtime//src/framework/stream:input_stream_manager",
         "@graph_runtime//src/framework/stream:input_stream",
         "@graph_runtime//src/framework/stream:output_stream_handler",

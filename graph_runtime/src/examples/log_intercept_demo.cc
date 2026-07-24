@@ -7,7 +7,7 @@
 #include <cstdio>
 
 #define GRAPHRT_LOG_TAG "graphrt::demo"
-#include "src/framework/log/logger.h"
+#include "src/framework/utils/logger.h"
 #include "src/framework/public/graph_runtime.h"
 
 namespace {

@@ -21,8 +21,8 @@ All internal packages under `src/framework/` use `//src/framework:__subpackages_
 
 | Package | Visibility |
 |---------|-----------|
-| `src/framework/log/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
-| `src/framework/hook/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
+| `src/framework/utils/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
+| `src/framework/utils/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
 | `src/framework/scheduler/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
 | `src/framework/stream/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |
 | `src/framework/node/` | `//src/framework:__subpackages__`, `//src/tests:__subpackages__` |

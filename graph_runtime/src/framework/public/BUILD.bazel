@@ -81,7 +81,7 @@ cc_library(
     deps = [
         ":graph_builder",
         ":runtime_internal",
-        "@graph_runtime//src/framework/log:log_core",
+        "@graph_runtime//src/framework/utils:log_core",
         "@graph_runtime//src/framework/scheduler:scheduler",
         "@graph_runtime//src/framework/config:graph_config",
         "@graph_runtime//src/framework/public:types",
