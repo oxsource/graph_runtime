@@ -4,5 +4,5 @@ cc_library(
     name = "hook",
     srcs = ["factory.cc"],
     hdrs = ["factory.h"],
-    deps = ["//src/public:hook_header"],
+    deps = ["@graph_runtime//src/public:hook_header"],
 )

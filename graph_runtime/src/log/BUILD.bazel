@@ -1,4 +1,4 @@
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//src:__subpackages__"])
 
 cc_library(
     name = "log_core",
@@ -9,7 +9,7 @@ cc_library(
         "-fvisibility-inlines-hidden",
     ],
     deps = [
-        "//src/hook:hook",
+        "@graph_runtime//src/hook:hook",
         "@com_google_absl//absl/synchronization",
     ],
 )

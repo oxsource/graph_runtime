@@ -1,4 +1,4 @@
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//src:__subpackages__"])
 
 # @nlohmann_json dependency is intentionally restricted to this package.
 # No module outside //src/config/json may depend on nlohmann/json.

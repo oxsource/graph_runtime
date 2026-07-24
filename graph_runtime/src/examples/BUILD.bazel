@@ -29,12 +29,6 @@ cc_binary(
     name = "string_pipeline_json",
     srcs = ["string_pipeline_json.cc"],
     deps = [
-        "@graph_runtime//src/config/json:json_parser",
-        "@graph_runtime//src/config:config",
-        "@graph_runtime//src/node:node_base",
-        "@graph_runtime//src/node:graph_context",
         "@graph_runtime//src/public:runtime",
-        "@graph_runtime//src/stream:packet",
-        "@graph_runtime//src/stream:timestamp",
     ],
 )

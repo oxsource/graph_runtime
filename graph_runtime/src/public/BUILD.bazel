@@ -30,6 +30,7 @@ cc_library(
     name = "graph_builder",
     srcs = ["graph_builder.cc"],
     hdrs = ["graph_builder.h"],
+    visibility = ["//src:__subpackages__"],
     deps = [
         ":runtime_internal",
         "@graph_runtime//src/config:config",
@@ -47,6 +48,7 @@ cc_library(
         "types.h",
         "side_packet.h",
     ],
+    visibility = ["//src:__subpackages__"],
     deps = [
         ":hook_header",
         "@graph_runtime//src/config:graph_config",
@@ -79,7 +81,7 @@ cc_library(
     deps = [
         ":graph_builder",
         ":runtime_internal",
-        "//src/log:log_core",
+        "@graph_runtime//src/log:log_core",
         "@graph_runtime//src/scheduler:scheduler",
         "@graph_runtime//src/config:graph_config",
         "@graph_runtime//src/public:types",

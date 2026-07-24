@@ -58,16 +58,15 @@ As a CI system, I want example binaries to compile using only `//src/public:runt
 
 A dedicated `sh_test` target verifies visibility constraints via `bazel query`:
 
-```python
-sh_test(
-    name = "visibility_test",
-    srcs = ["visibility_test.sh"],
-    data = ["//src/public:runtime", "//src/scheduler:scheduler"],
-)
+A standalone script `src/tests/visibility_test.sh` is provided. It runs outside Bazel sandbox to avoid server lock conflicts:
+
+```bash
+# Run from workspace root:
+src/tests/visibility_test.sh
 ```
 
-The script queries visibility relationships:
-- `bazel query 'visible(//external:target, //src/scheduler:scheduler)'` → empty (not visible)
+The script uses `bazel query` to verify:
+- `bazel query 'visible(//external:target, //src/scheduler:scheduler)'` → empty (NOT visible)
 - `bazel query 'visible(//external:target, //src/public:runtime)'` → returns runtime (visible)
 
 ## Requirements
