@@ -8,7 +8,6 @@ namespace graph::runtime {
 absl::StatusOr<TagMap> TagMap::Create(
     const std::vector<std::string>& tag_index_names) {
   TagMap tag_map;
-  int id = 0;
   // Build a map from tag to list of (index, name) pairs, preserving order.
   // Use a vector for order tracking and a map for fast lookup.
   struct EntryGroup {

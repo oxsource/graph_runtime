@@ -390,7 +390,7 @@ TEST_F(BatchSchedulingTest, ScheduleInvocationsOnDefaultHandler) {
   std::list<Packet> packets;
   packets.push_back(Packet::MakePacket<std::string>("hello"));
   bool notify = false;
-  mgr->AddPackets(packets, &notify);
+  (void)mgr->AddPackets(packets, &notify);
   node.SetInputPort("in", mgr.get());
   handler.SetInputStreamManagers({mgr.get()});
 
@@ -444,7 +444,8 @@ TEST_F(CancelTest, CancelThenWaitUntilDone) {
   GraphConfig config;
   auto status = runtime_->Initialize(config);
   ASSERT_TRUE(status.ok()) << status;
-  runtime_->Start();
+  status = runtime_->Start();
+  ASSERT_TRUE(status.ok()) << status;
   runtime_->Cancel();
   status = runtime_->WaitUntilDone();
   EXPECT_TRUE(status.ok()) << status;
@@ -453,14 +454,13 @@ TEST_F(CancelTest, CancelThenWaitUntilDone) {
 TEST_F(CancelTest, StateIsCancellingAfterCancel) {
   GraphConfig config;
   ASSERT_TRUE(runtime_->Initialize(config).ok());
-  runtime_->Start();
-  // After Start, the graph may already be terminated (empty config).
-  // Cancel() sets kCancelling if running, else no-op.
+  auto status = runtime_->Start();
+  ASSERT_TRUE(status.ok()) << status;
   runtime_->Cancel();
   auto state = runtime_->GetGraphState();
   EXPECT_TRUE(state == SchedulerState::kCancelling ||
               state == SchedulerState::kTerminated);
-  runtime_->WaitUntilDone();
+  (void)runtime_->WaitUntilDone();
 }
 
 }  // namespace graph::runtime
