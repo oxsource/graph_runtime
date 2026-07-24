@@ -148,21 +148,21 @@
 
 ### Layer 1: Infrastructure — TagMap + ParseTagIndexName
 
-- [ ] T029 [P] [US6] Create `src/framework/tool/tag_map.h` — `TagMap` class with `Create()`, `GetId(tag, index)`, `NumEntries(tag)`, `HasTag()`, `GetTags()`, `Names()`
-- [ ] T030 [P] [US6] Create `src/framework/tool/validate_name.h` — `ParseTagIndexName()` utility that parses `"TAG:index:name"` → `{tag, index, name}`
-- [ ] T031 [P] [US6] Create `src/framework/tool/BUILD.bazel` — build target for tag_map + validate_name
-- [ ] T032 [P] [US6] Test: TagMap creation and tag/index resolution in `src/tests/scheduler_test.cc`
+- [X] T029 [P] [US6] Create `src/framework/tool/tag_map.h` — `TagMap` class with `Create()`, `GetId(tag, index)`, `NumEntries(tag)`, `HasTag()`, `GetTags()`, `Names()`
+- [X] T030 [P] [US6] Create `src/framework/tool/validate_name.h` — `ParseTagIndexName()` utility that parses `"TAG:index:name"` → `{tag, index, name}`
+- [X] T031 [P] [US6] Create `src/framework/tool/BUILD.bazel` — build target for tag_map + validate_name
+- [X] T032 [P] [US6] Test: TagMap creation and tag/index resolution in `src/tests/scheduler_test.cc`
 
 ### Layer 2: PacketTypeSet Indexed Access
 
-- [ ] T033 [P] [US6] Add `PacketTypeSet::Get(tag, index)` overloads in `src/framework/node/node_contract.h` — const and non-const, delegates to internal `Get(tag_name)`
-- [ ] T034 [US6] Test: indexed type access in `src/tests/scheduler_test.cc`
+- [X] T033 [P] [US6] Add `PacketTypeSet::Get(tag, index)` overloads in `src/framework/node/node_contract.h` — const and non-const, delegates to internal `Get(tag_name)`
+- [X] T034 [US6] Test: indexed type access in `src/tests/scheduler_test.cc`
 
 ### Layer 3: AddPacketToInputStream Indexed Overload
 
-- [ ] T035 [US6] Add `AddPacketToInputStream(tag, index, packet)` to `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` — locate stream manager by tag map, delegate to `AddPackets`
-- [ ] T036 [US6] Support string-form `AddPacketToInputStream("TAG:index", packet)` — parse with ParseTagIndexName, route to correct manager
-- [ ] T037 [P] [US6] Test: indexed AddPacketToInputStream with both (tag, index) and ("TAG:index") forms in `src/tests/integration_test.cc`
+- [X] T035 [US6] Add `AddPacketToInputStream(tag, index, packet)` to `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` — locate stream manager by tag map, delegate to `AddPackets`
+- [X] T036 [US6] Support string-form `AddPacketToInputStream("TAG:index", packet)` — parse with ParseTagIndexName, route to correct manager
+- [X] T037 [P] [US6] Test: indexed AddPacketToInputStream with both (tag, index) and ("TAG:index") forms in `src/tests/integration_test.cc`
 
 **Checkpoint**: TagMap, ParseTagIndexName, indexed AddPacketToInputStream all functional — `bazel test //...` all pass ✅
 

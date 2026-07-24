@@ -48,6 +48,16 @@ class PacketTypeSet {
   PacketType& Get(CollectionItemId id) {
     return ports_[std::to_string(id)];
   }
+  // Indexed access: Get("VIDEO", 0) constructs "VIDEO:0" internally.
+  PacketType& Get(const std::string& tag, int index) {
+    return ports_[tag + ":" + std::to_string(index)];
+  }
+  const PacketType& Get(const std::string& tag, int index) const {
+    auto it = ports_.find(tag + ":" + std::to_string(index));
+    if (it != ports_.end()) return it->second;
+    static const PacketType kEmpty;
+    return kEmpty;
+  }
   int NumEntries() const {
     return static_cast<int>(ports_.size());
   }

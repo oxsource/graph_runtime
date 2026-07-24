@@ -98,6 +98,11 @@ class GraphRuntime {
   /// Add a packet to the named input stream (async path only).
   absl::Status AddPacketToInputStream(const std::string& stream_name,
                                         Packet packet);
+
+  /// Add a packet to an indexed input stream (e.g., tag="VIDEO", index=0
+  /// maps to stream name "VIDEO:0").
+  absl::Status AddPacketToInputStream(const std::string& tag, int index,
+                                        Packet packet);
   absl::Status CloseInputStream(const std::string& stream_name);
   void SetOutputStreamCallback(const std::string& stream_name,
                                  std::function<void(const Packet&)> callback);

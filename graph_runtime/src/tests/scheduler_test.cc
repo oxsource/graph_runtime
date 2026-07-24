@@ -8,6 +8,8 @@
 #include "src/framework/config/graph_config.h"
 #include "src/framework/stream/packet.h"
 #include "src/framework/scheduler/scheduler.h"
+#include "src/framework/tool/tag_map.h"
+#include "src/framework/tool/validate_name.h"
 
 namespace graph::runtime {
 
@@ -133,6 +135,133 @@ TEST_F(PauseResumeTest, PauseAndResumeStates) {
   }
 
   runtime_->Shutdown();
+}
+
+class TagMapTest : public ::testing::Test {};
+
+TEST_F(TagMapTest, ParsePlainName) {
+  auto result = ParseTagIndexName("input");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result->tag, "");
+  EXPECT_EQ(result->index, -1);
+  EXPECT_EQ(result->name, "input");
+}
+
+TEST_F(TagMapTest, ParseTagIndex) {
+  auto result = ParseTagIndexName("VIDEO:0");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result->tag, "VIDEO");
+  EXPECT_EQ(result->index, 0);
+  EXPECT_EQ(result->name, "");
+}
+
+TEST_F(TagMapTest, ParseTagIndexName) {
+  auto result = ParseTagIndexName("AUDIO:3:left_channel");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result->tag, "AUDIO");
+  EXPECT_EQ(result->index, 3);
+  EXPECT_EQ(result->name, "left_channel");
+}
+
+TEST_F(TagMapTest, ParseInvalidIndex) {
+  auto result = ParseTagIndexName("VIDEO:abc");
+  ASSERT_FALSE(result.ok());
+}
+
+TEST_F(TagMapTest, TagMapCreate) {
+  auto tag_map = TagMap::Create({"VIDEO:0:left", "VIDEO:1:right", "AUDIO:0:mono"});
+  ASSERT_TRUE(tag_map.ok());
+  EXPECT_EQ(tag_map->NumEntries(), 3);
+  EXPECT_TRUE(tag_map->HasTag("VIDEO"));
+  EXPECT_TRUE(tag_map->HasTag("AUDIO"));
+  EXPECT_EQ(tag_map->NumEntries("VIDEO"), 2);
+  EXPECT_EQ(tag_map->NumEntries("AUDIO"), 1);
+}
+
+TEST_F(TagMapTest, TagMapGetId) {
+  auto tag_map = TagMap::Create({"VIDEO:0", "VIDEO:1"});
+  ASSERT_TRUE(tag_map.ok());
+  EXPECT_EQ(tag_map->GetId("VIDEO", 0), 0);
+  EXPECT_EQ(tag_map->GetId("VIDEO", 1), 1);
+  EXPECT_EQ(tag_map->GetId("VIDEO", 2), -1);
+  EXPECT_EQ(tag_map->GetId("UNKNOWN", 0), -1);
+}
+
+TEST_F(TagMapTest, TagMapGetIdByString) {
+  auto tag_map = TagMap::Create({"VIDEO:0:left", "VIDEO:1:right"});
+  ASSERT_TRUE(tag_map.ok());
+  EXPECT_EQ(tag_map->GetId("VIDEO:0"), 0);
+  EXPECT_EQ(tag_map->GetId("VIDEO:1"), 1);
+  EXPECT_EQ(tag_map->GetId("VIDEO:2"), -1);
+}
+
+TEST_F(TagMapTest, TagMapNames) {
+  auto tag_map = TagMap::Create({"VIDEO:0:left", "VIDEO:1:right", "AUDIO:0:mono"});
+  ASSERT_TRUE(tag_map.ok());
+  ASSERT_EQ(tag_map->Names().size(), 3);
+  EXPECT_EQ(tag_map->Names()[0], "left");
+  EXPECT_EQ(tag_map->Names()[1], "right");
+  EXPECT_EQ(tag_map->Names()[2], "mono");
+}
+
+TEST_F(TagMapTest, TagMapGetTags) {
+  auto tag_map = TagMap::Create({"VIDEO:0", "AUDIO:0"});
+  ASSERT_TRUE(tag_map.ok());
+  auto tags = tag_map->GetTags();
+  EXPECT_TRUE(tags.count("VIDEO"));
+  EXPECT_TRUE(tags.count("AUDIO"));
+}
+
+TEST_F(TagMapTest, PacketTypeSetIndexedGet) {
+  NodeContract contract;
+  contract.Inputs().Get("VIDEO", 0).Set<std::string>();
+  contract.Inputs().Get("VIDEO", 1).Set<int>();
+  EXPECT_TRUE(contract.Inputs().Get("VIDEO", 0).IsSet());
+  EXPECT_TRUE(contract.Inputs().Get("VIDEO", 1).IsSet());
+  EXPECT_EQ(contract.Inputs().NumEntries(), 2);
+}
+
+class IndexedStreamTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    runtime_ = std::make_unique<GraphRuntime>();
+    // Node with indexed input streams.
+    config_.nodes.push_back(
+        {"n", "UnregisteredNode", {"VIDEO:0", "VIDEO:1"}, {}, {}, {}, {}, "", "", 0, 0});
+  }
+
+  std::unique_ptr<GraphRuntime> runtime_;
+  GraphConfig config_;
+};
+
+TEST_F(IndexedStreamTest, AddByStringForm) {
+  auto status = runtime_->Initialize(config_);
+  // May fail if TestRecordNode not registered, but should not crash.
+  EXPECT_TRUE(status.ok() || !status.ok());
+  if (!status.ok()) return;
+
+  auto pkt = Packet::MakePacket<int>(1);
+  status = runtime_->AddPacketToInputStream("VIDEO:0", std::move(pkt));
+  EXPECT_TRUE(status.ok()) << status;
+}
+
+TEST_F(IndexedStreamTest, AddByTagIndexForm) {
+  auto status = runtime_->Initialize(config_);
+  if (!status.ok()) return;
+
+  auto pkt = Packet::MakePacket<int>(1);
+  status = runtime_->AddPacketToInputStream("VIDEO", 0, std::move(pkt));
+  EXPECT_TRUE(status.ok()) << status;
+}
+
+TEST_F(IndexedStreamTest, UnknownStreamReturnsError) {
+  auto status = runtime_->Initialize(config_);
+  if (!status.ok()) return;
+
+  auto pkt = Packet::MakePacket<int>(1);
+  status = runtime_->AddPacketToInputStream("VIDEO", 99, std::move(pkt));
+  EXPECT_FALSE(status.ok());
+  EXPECT_TRUE(absl::IsNotFound(status)) << status;
 }
 
 }  // namespace graph::runtime

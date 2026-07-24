@@ -199,6 +199,12 @@ absl::Status GraphRuntime::AddPacketToInputStream(
   return absl::OkStatus();
 }
 
+absl::Status GraphRuntime::AddPacketToInputStream(
+    const std::string& tag, int index, Packet packet) {
+  return AddPacketToInputStream(
+      tag + ":" + std::to_string(index), std::move(packet));
+}
+
 absl::Status GraphRuntime::CloseInputStream(
     const std::string& stream_name) {
   auto it = stream_managers_.find(stream_name);

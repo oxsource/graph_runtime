@@ -1,0 +1,24 @@
+package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__subpackages__"])
+
+cc_library(
+    name = "tag_map",
+    srcs = ["tag_map.cc"],
+    hdrs = ["tag_map.h"],
+    deps = [
+        ":validate_name",
+        "@graph_runtime//src/framework/public:types",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_library(
+    name = "validate_name",
+    srcs = ["validate_name.cc"],
+    hdrs = ["validate_name.h"],
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)
