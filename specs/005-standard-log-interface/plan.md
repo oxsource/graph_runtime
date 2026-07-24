@@ -6,7 +6,7 @@
 
 ## Summary
 
-Replace raw `std::cout`/`std::cerr` in the graph_runtime library with a standard logging interface. The logger defaults to stdout/stderr output with structured format `[TAG] [LEVEL] timestamp content`. A hook table (`GraphHook[]`, NULL-terminated sentinel array) is configured on the `GraphRuntime` instance via `SetGlobalHook`/`GetGlobalHook(int type)`. The Logger reads the table internally, dispatching to entries of type `kHookTypeLogIntercept`; each hook's boolean return controls whether default stdout is suppressed (`true`) or proceeds (`false`). Future modules can add new hook types (e.g., metrics, tracing) without API changes. Design follows syslog ordering (kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4) with module-based TAG (`graphrt::` prefix) and ISO 8601 millisecond timestamps.
+Replace raw `std::cout`/`std::cerr` in the graph_runtime library with a standard logging interface. The logger defaults to stdout/stderr output with structured format `[TAG] [LEVEL] timestamp content`. A hook table (`GraphHookEntity[]`, NULL-terminated sentinel array) is configured on the `GraphRuntime` instance via `SetGlobalHook`/`GetGlobalHook(int type)`. The Logger reads the table internally, dispatching to entries of type `kHookTypeLogIntercept`; each hook's boolean return controls whether default stdout is suppressed (`true`) or proceeds (`false`). Future modules can add new hook types (e.g., metrics, tracing) without API changes. Design follows syslog ordering (kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4) with module-based TAG (`graphrt::` prefix) and ISO 8601 millisecond timestamps.
 
 ## Technical Context
 
@@ -61,7 +61,7 @@ specs/005-standard-log-interface/
 ├── data-model.md        # Phase 1 output
 ├── quickstart.md        # Phase 1 output
 ├── contracts/           # Phase 1 output
-│   ├── graph_runtime_hook_api.h  # HookType + GraphHook + SetGlobalHook/GetGlobalHook
+│   ├── graph_runtime_hook_api.h  # HookType + GraphHookEntity + SetGlobalHook/GetGlobalHook
 │   └── logger.h         # Public Logger API contract
 └── checklists/
     └── requirements.md
@@ -74,7 +74,7 @@ src/
 ├── public/
 │   ├── include/graph_runtime/
 │   │   ├── graph_runtime.h          # Umbrella header (existing, add logger.h)
-│   │   ├── graph_runtime.h          # GraphRuntime class (existing, add HookType, GraphHook, SetGlobalHook/GetGlobalHook)
+│   │   ├── graph_runtime.h          # GraphRuntime class (existing, add HookType, GraphHookEntity, SetGlobalHook/GetGlobalHook)
 │   │   ├── logger.h                 # Public Logger API (convenience methods only)
 │   │   └── graph_runtime_export.h   # (existing) GRAPH_RUNTIME_API macro
 │   ├── logger.h                     # Internal: Logger class + LogLevel enum + LogMessage struct

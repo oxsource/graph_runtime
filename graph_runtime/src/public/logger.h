@@ -1,9 +1,8 @@
 #ifndef GRAPH_RUNTIME_INTERNAL_LOGGER_H_
 #define GRAPH_RUNTIME_INTERNAL_LOGGER_H_
 
-#include <cstdint>
-
 #include "absl/synchronization/mutex.h"
+#include "include/graph_runtime/graph_runtime_export.h"
 
 namespace graph::runtime {
 
@@ -26,14 +25,7 @@ inline const char* LogLevelToString(LogLevel level) {
   }
 }
 
-struct LogMessage {
-  LogLevel level;
-  const char* tag;
-  const char* message;
-  int64_t timestamp_ms;
-};
-
-class Logger {
+class GRAPH_RUNTIME_API Logger {
  public:
   static void Debug(const char* tag, const char* content);
   static void Info(const char* tag, const char* content);

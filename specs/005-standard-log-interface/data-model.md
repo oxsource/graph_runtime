@@ -30,7 +30,7 @@ The structured log entry used internally by Logger to assemble the formatted str
 - Example: `[graphrt::scheduler] [INFO] 2026-07-24 14:30:00.123 Pipeline started\n`
 - Error/Fatal level routes to stderr instead of stdout.
 
-## GraphHook
+## GraphHookEntity
 
 A single entry in the NULL-terminated sentinel hook table.
 
@@ -61,7 +61,7 @@ The hook table is owned and configured on the `GraphRuntime` instance. The table
 
 | State | Type | Description |
 |-------|------|-------------|
-| `hook_table_` | `std::atomic<const GraphHook*>` | Active hook table pointer. Set via `GraphRuntime::SetGlobalHook()`, read via `GraphRuntime::GetGlobalHook(int type)`. |
+| `hook_table_` | `std::atomic<const GraphHookEntity*>` | Active hook table pointer. Set via `GraphRuntime::SetGlobalHook()`, read via `GraphRuntime::GetGlobalHook(int type)`. |
 
 **Lifecycle**:
 - Initialized to `nullptr` (no hooks, pure default behavior).

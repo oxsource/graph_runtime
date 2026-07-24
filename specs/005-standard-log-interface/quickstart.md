@@ -40,7 +40,7 @@ bool SilentHook(const void* data, int flag) {
 }
 
 // Register hooks via sentinel-terminated array on the runtime instance
-static const graph::runtime::GraphHook kMyHooks[] = {
+static const graph::runtime::GraphHookEntity kMyHooks[] = {
   { graph::runtime::kHookTypeLogIntercept, MyLogHook },
   { graph::runtime::kHookTypeLogIntercept, SilentHook },
   { graph::runtime::kHookTypeSentinel, nullptr },
@@ -53,7 +53,7 @@ runtime.SetGlobalHook(kMyHooks);
 runtime.SetGlobalHook(nullptr);
 
 // Query a hook by type (returns first match or nullptr):
-const graph::runtime::GraphHook* hook = runtime.GetGlobalHook(
+const graph::runtime::GraphHookEntity* hook = runtime.GetGlobalHook(
     graph::runtime::kHookTypeLogIntercept);
 ```
 

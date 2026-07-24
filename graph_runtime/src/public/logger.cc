@@ -1,4 +1,5 @@
 #include "src/public/logger.h"
+#include "src/public/hook_table.h"
 
 #include <chrono>
 #include <cstdio>
@@ -6,7 +7,6 @@
 #include <cstring>
 
 namespace graph::runtime {
-
 
 namespace {
 
@@ -40,6 +40,20 @@ void Logger::Log(LogLevel level, const char* tag, const char* content) {
                         "[%s] [%s] %s.%03d %s",
                         tag, LogLevelToString(level),
                         timestamp, msec, content);
+
+  // Dispatch to registered hooks before acquiring the output mutex.
+  // Iterate ALL kHookTypeLogIntercept entries. If any returns true,
+  // skip the default write.
+  bool suppressed = false;
+  const GraphHookEntity* table = GetGlobalHookTable();
+  if (table) {
+    for (const GraphHookEntity* e = table; e->type != kHookTypeSentinel; ++e) {
+      if (e->type == kHookTypeLogIntercept && e->hook_fn) {
+        suppressed = e->hook_fn(formatted, 0) || suppressed;
+      }
+    }
+  }
+  if (suppressed) return;
 
   FILE* out = (level <= LogLevel::kError) ? stderr : stdout;
   absl::MutexLock lock(&output_mutex_);

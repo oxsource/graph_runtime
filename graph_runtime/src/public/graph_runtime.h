@@ -8,22 +8,13 @@
 
 #include "absl/status/status.h"
 #include "src/config/graph_config.h"
+#include "src/public/hook_table.h"
 #include "src/public/types.h"
 #include "src/public/side_packet.h"
 #include "src/scheduler/scheduler.h"
 #include "src/node/node.h"
 
 namespace graph::runtime {
-
-enum HookType : int {
-  kHookTypeSentinel = 0,
-  kHookTypeLogIntercept = 1,
-};
-
-struct GraphHook {
-  int type;
-  bool (*hook_fn)(const void* data, int flag);
-};
 
 class GraphRuntime {
  public:
@@ -46,8 +37,8 @@ class GraphRuntime {
       const std::string& name,
       std::function<void(const Packet&)> callback);
 
-  void SetGlobalHook(const GraphHook* table);
-  const GraphHook* GetGlobalHook(int type) const;
+  void SetGlobalHook(const GraphHookEntity* table);
+  const GraphHookEntity* GetGlobalHook(int type) const;
 
  private:
   friend class GraphBuilder;

@@ -77,7 +77,7 @@ As a library consumer, I want my hook to control whether the default stdout outp
 ### Functional Requirements
 
 - **FR-001**: The system MUST provide a standard logging interface with default behavior that outputs log messages to stdout and error messages to stderr
-- **FR-002**: The system MUST provide a hook table on the `GraphRuntime` instance (`SetGlobalHook`/`GetGlobalHook(int type)`) via a struct pointer table (NULL-terminated sentinel array of `GraphHook` entries), externally injectable at runtime
+- **FR-002**: The system MUST provide a hook table on the `GraphRuntime` instance (`SetGlobalHook`/`GetGlobalHook(int type)`) via a struct pointer table (NULL-terminated sentinel array of `GraphHookEntity` entries), externally injectable at runtime
 - **FR-003**: The hook function signature MUST be `bool hook_fn(const void* data, int flag)`, where `flag` is an extensibility parameter (default 0, reserved for future use). `data` is cast based on the hook's registered `type`. For `kHookTypeLogIntercept`, `data` points to a null-terminated `const char*` containing the fully formatted log line. The function returns `true` to suppress default stdout output or `false` to allow it.
 - **FR-004**: The system MUST respect the hook's return value: `true` suppresses default stdout output for that message, `false` allows default stdout output to proceed
 - **FR-005**: The system MUST support five log levels (internally `kFatal`..`kDebug` in syslog order: 0=most severe, 4=most verbose) with appropriate default routing (Error/Fatal to stderr, others to stdout). External consumers select level via named convenience methods (Debug, Info, Warn, Error, Fatal) without exposing the enum directly
@@ -93,7 +93,7 @@ As a library consumer, I want my hook to control whether the default stdout outp
 
 - **LogLevel** (internal): Enumeration of log levels (kFatal=0, kError=1, kWarn=2, kInfo=3, kDebug=4) following syslog convention where lower = more severe. Used internally; external consumers use convenience methods (Debug, Info, Warn, Error, Fatal)
 - **LogMessage** (internal): A structured log entry containing TAG, timestamp (ISO 8601 ms), log level, and content text. Used internally by the Logger to assemble the formatted string delivered to hooks. Not exposed in the public hook API — hooks receive the pre-formatted `const char*` line.
-- **GraphHook**: A struct with `type` and `hook_fn` fields, forming a NULL-terminated sentinel array (`GraphHook[]`). Configured on the `GraphRuntime` instance via `SetGlobalHook`/`GetGlobalHook(int type)`. The initial table contains one log interception hook (type `kHookTypeLogIntercept`); future hook types can be appended before the sentinel without ABI changes
+- **GraphHookEntity**: A struct with `type` and `hook_fn` fields, forming a NULL-terminated sentinel array (`GraphHookEntity[]`). Configured on the `GraphRuntime` instance via `SetGlobalHook`/`GetGlobalHook(int type)`. The initial table contains one log interception hook (type `kHookTypeLogIntercept`); future hook types can be appended before the sentinel without ABI changes
 - **Logger**: The central logging interface that reads hook entries of type `kHookTypeLogIntercept` from the global hook table registry, dispatches log messages to them, and handles default stdout/stderr output based on each hook's return value
 
 ## Success Criteria

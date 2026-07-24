@@ -32,7 +32,7 @@
 
 ### Decision 5: Log Module Under `//src/public` with Bazel Visibility
 
-- **Decision**: `HookType`, `GraphHook`, `SetGlobalHook`, and `GetGlobalHook` live directly on `GraphRuntime` in `src/public/graph_runtime.h` (no separate hook_table header). Logger public header is under `src/public/include/graph_runtime/logger.h`. Implementation in `src/public/logger.cc`. New Bazel target `//src/public:log_interface` with `visibility = ["//visibility:public"]`. Aggregated into `//src/public:runtime`.
+- **Decision**: `HookType`, `GraphHookEntity`, `SetGlobalHook`, and `GetGlobalHook` live directly on `GraphRuntime` in `src/public/graph_runtime.h` (no separate hook_table header). Logger public header is under `src/public/include/graph_runtime/logger.h`. Implementation in `src/public/logger.cc`. New Bazel target `//src/public:log_interface` with `visibility = ["//visibility:public"]`. Aggregated into `//src/public:runtime`.
 - **Rationale**: Follows established project pattern. Internal modules (scheduler, stream, etc.) depend on `@graph_runtime//src/public:log_interface`. External consumers get it via the umbrella `graph_runtime.h`.
 - **Alternatives considered**: Separate `//src/log` module (adds unnecessary module boundary), header-only logger (cannot hide implementation details).
 - **Source**: Existing `//src/public/BUILD.bazel` patterns, project_bootstrap.md conventions.
@@ -46,4 +46,4 @@
 | Timestamp format | ISO 8601 with milliseconds | Human-readable, millisecond precision sufficient for debugging |
 | Thread safety | `absl::Mutex` + `std::atomic` | Project already depends on absl; no new dependency needed |
 | Log message struct (internal) | `struct LogMessage { LogLevel level; const char* tag; const char* content; int64_t timestamp_ms; }` | Internal struct for format assembly; hooks receive pre-formatted `const char*` string |
-| Hook table entry | `struct GraphHook { int type; bool (*hook_fn)(const void* data, int flag); }` | `type` discriminates at lookup time; `flag` reserved (pass 0); `data` cast by hook based on registered type |
+| Hook table entry | `struct GraphHookEntity { int type; bool (*hook_fn)(const void* data, int flag); }` | `type` discriminates at lookup time; `flag` reserved (pass 0); `data` cast by hook based on registered type |

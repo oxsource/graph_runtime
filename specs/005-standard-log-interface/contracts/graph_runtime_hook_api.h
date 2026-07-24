@@ -9,7 +9,7 @@ enum HookType : int {
   kHookTypeLogIntercept = 1, // Log interception hook
 };
 
-struct GRAPH_RUNTIME_API GraphHook {
+struct GRAPH_RUNTIME_API GraphHookEntity {
   int type;                                    // HookType value
   bool (*hook_fn)(const void* data, int flag); // Hook function, NULL for placeholder.
                                                // flag is an extensibility parameter,
@@ -27,19 +27,19 @@ struct GRAPH_RUNTIME_API GraphHook {
 
 // Contract for the types and methods added to class GraphRuntime:
 //
-//   // Set the global hook table (sentinel-terminated GraphHook array).
+//   // Set the global hook table (sentinel-terminated GraphHookEntity array).
 //   // The caller must ensure the table outlives all concurrent access.
 //   // Pass nullptr to clear hooks and restore default behavior.
-//   void SetGlobalHook(const GraphHook* table);
+//   void SetGlobalHook(const GraphHookEntity* table);
 //
-//   // Return the first GraphHook entry matching `type`, or nullptr.
+//   // Return the first GraphHookEntity entry matching `type`, or nullptr.
 //   // Example: GetGlobalHook(kHookTypeLogIntercept) returns the first
 //   // log interception hook registered, or nullptr if none.
-//   const GraphHook* GetGlobalHook(int type) const;
+//   const GraphHookEntity* GetGlobalHook(int type) const;
 //
 // Example usage:
 //   GraphRuntime runtime;
-//   static const GraphHook kHooks[] = {
+//   static const GraphHookEntity kHooks[] = {
 //     { kHookTypeLogIntercept, MyLogHook },
 //     { kHookTypeSentinel, nullptr },
 //   };

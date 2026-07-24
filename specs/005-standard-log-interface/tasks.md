@@ -20,7 +20,7 @@
 
 **Purpose**: Create logger module structure, Bazel targets, and internal headers
 
-- [x] T001 Add `HookType` enum and `GraphHook` struct to `graph_runtime/graph_runtime/src/public/graph_runtime.h`
+- [x] T001 Add `HookType` enum and `GraphHookEntity` struct to `graph_runtime/graph_runtime/src/public/graph_runtime.h`
 - [x] T002 Create internal logger header at `graph_runtime/graph_runtime/src/public/logger.h` with `LogLevel` enum, `LogMessage` struct, and `Logger` class (singleton + `Log(LogLevel, tag, content)` + convenience methods)
 - [x] T003 Create public logger header at `graph_runtime/graph_runtime/src/public/include/graph_runtime/logger.h` with `Logger` class exposing only 5 convenience methods (Debug, Info, Warn, Error, Fatal)
 - [x] T004 [P] Update umbrella header `graph_runtime/graph_runtime/src/public/include/graph_runtime/graph_runtime.h` to include `graph_runtime/logger.h`
@@ -62,18 +62,18 @@
 
 ## Phase 4: User Story 2 - Custom Hook Table (Priority: P1)
 
-**Goal**: External consumers can inject a `GraphHook[]` table via `GraphRuntime::SetGlobalHook()`. Logger dispatches to all `kHookTypeLogIntercept` hooks.
+**Goal**: External consumers can inject a `GraphHookEntity[]` table via `GraphRuntime::SetGlobalHook()`. Logger dispatches to all `kHookTypeLogIntercept` hooks.
 
 **Independent Test**: Register a hook table with two log intercept hooks, verify both receive the formatted string, and output falls back to stdout when hooks are cleared.
 
-- [ ] T016 [P] [US2] Implement `GraphRuntime::SetGlobalHook(const GraphHook*)` — store pointer in a module-level `std::atomic<const GraphHook*>` with release ordering in `graph_runtime/graph_runtime/src/public/graph_runtime.cc`
-- [ ] T017 [P] [US2] Implement `GraphRuntime::GetGlobalHook(int type) const` — scan atomically loaded table for first entry matching type, return pointer or nullptr in `graph_runtime/graph_runtime/src/public/graph_runtime.cc`
-- [ ] T018 [US2] Integrate hook dispatch into `Logger::Log()` — before writing to stdout/stderr, load the global hook table, iterate entries matching `kHookTypeLogIntercept`, call each `hook_fn(formatted_line, 0)`. If any returns `true`, skip default output in `graph_runtime/graph_runtime/src/public/logger.cc`
-- [ ] T019 [US2] Write a unit test that registers a hook table with one log intercept hook, logs a message, and verifies the hook receives the formatted string
-- [ ] T020 [US2] Write a unit test that clears the hook table (pass nullptr) after registration and verifies output falls back to stdout
-- [ ] T021 [US2] Write a unit test that registers a hook table with two log intercept hooks and verifies both are called in table order
+- [x] T016 [P] [US2] Implement `GraphRuntime::SetGlobalHook(const GraphHookEntity*)` — store pointer in a module-level `std::atomic<const GraphHookEntity*>` with release ordering in `graph_runtime/graph_runtime/src/public/graph_runtime.cc`
+- [x] T017 [P] [US2] Implement `GraphRuntime::GetGlobalHook(int type) const` — scan atomically loaded table for first entry matching type, return pointer or nullptr in `graph_runtime/graph_runtime/src/public/graph_runtime.cc`
+- [x] T018 [US2] Integrate hook dispatch into `Logger::Log()` — before writing to stdout/stderr, load the global hook table, iterate entries matching `kHookTypeLogIntercept`, call each `hook_fn(formatted_line, 0)`. If any returns `true`, skip default output in `graph_runtime/graph_runtime/src/public/logger.cc`
+- [x] T019 [US2] Write a unit test that registers a hook table with one log intercept hook, logs a message, and verifies the hook receives the formatted string
+- [x] T020 [US2] Write a unit test that clears the hook table (pass nullptr) after registration and verifies output falls back to stdout
+- [x] T021 [US2] Write a unit test that registers a hook table with two log intercept hooks and verifies both are called in table order
 
-**Checkpoint**: Hook table registration, dispatch, and cleanup all work. Logger_test passes all US2 scenarios.
+**Checkpoint**: `bazel test //src/tests/...` passes ✅ — 13/13 tests. Hook table registration, dispatch, suppression, and cleanup all verified.
 
 ---
 
