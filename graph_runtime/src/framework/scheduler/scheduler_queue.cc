@@ -69,13 +69,10 @@ void SchedulerQueue::RunNextTask() {
   }
   Item item = queue_.top();
   queue_.pop();
-  int before_pending = num_pending_tasks_;
   RunNode(item.node, item.is_open_node);
   --num_pending_tasks_;
   UpdateIdleState();
-  // Only submit a new task if RunNode didn't already schedule one
-  // (e.g., via callback → AddedPacketToInputStream).
-  if (!queue_.empty() && running_ && num_pending_tasks_ == 0) {
+  if (!queue_.empty() && running_) {
     SubmitToExecutor();
   }
 }

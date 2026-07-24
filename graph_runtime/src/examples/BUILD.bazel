@@ -50,8 +50,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "interactive_pipeline_demo",
-    srcs = ["interactive_pipeline_demo.cc"],
+    name = "interactive_pipeline",
+    srcs = ["interactive_pipeline.cc"],
     deps = [
         "@graph_runtime//src/framework/public:runtime",
         "@graph_runtime//src/framework/config/json:json_parser",

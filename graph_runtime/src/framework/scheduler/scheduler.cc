@@ -44,6 +44,17 @@ absl::Status Scheduler::SetNonDefaultExecutor(
 void Scheduler::HandleIdle() {
   if (++handling_idle_ > 1) { --handling_idle_; return; }
 
+  // When cancelled, force-terminate regardless of idle state.
+  if (state_ == SchedulerState::kCancelling && has_error_) {
+    for (auto* q : all_queues_) {
+      q->CleanupAfterRun();
+    }
+    state_ = SchedulerState::kTerminated;
+    cv_.notify_all();
+    --handling_idle_;
+    return;
+  }
+
   bool inputs_remaining = total_graph_input_streams_ > 0 &&
                           num_closed_graph_input_streams_ < total_graph_input_streams_;
 
