@@ -397,5 +397,123 @@ TEST(ProfilerTest, ReporterClear) {
   std::remove(path.c_str());
 }
 
+// ── Build Switch / Stub Tests ──
+
+#ifndef GRAPH_RUNTIME_PROFILER_ENABLED
+TEST(ProfilerTest, ProfilerBuildStubIsNoOp) {
+  // Verifies that the default build (stub) produces empty profiles
+  ProfilingContext profiler;
+  ProfilerConfig config;
+  config.enable_profiler = true;
+  profiler.Initialize(config, {"test_node"});
+  profiler.Start();
+  {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::PROCESS, "test_node", &profiler);
+  }
+  profiler.Stop();
+  auto profiles = profiler.GetNodeProfiles();
+  // In stub mode, GetNodeProfiles always returns empty
+  EXPECT_TRUE(profiles.empty());
+}
+#endif
+
+#ifdef GRAPH_RUNTIME_PROFILER_ENABLED
+
+TEST(ProfilerTest, ProfilerScopeRecordsCorrectly) {
+  ProfilingContext profiler;
+  auto mock_clock = std::make_shared<MockClock>(
+      std::vector<int64_t>{100, 200, 200, 300});
+  profiler.SetClock(mock_clock);
+  ProfilerConfig config;
+  config.enable_profiler = true;
+  profiler.Initialize(config, {"test_node"});
+  profiler.Start();
+
+  {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::PROCESS, "test_node", &profiler);
+  }
+  {
+    ProfilingContext::Scope open_scope(
+        ProfilingContext::EventType::OPEN, "test_node", &profiler);
+  }
+
+  profiler.Stop();
+  auto profiles = profiler.GetNodeProfiles();
+  ASSERT_EQ(profiles.size(), 1);
+  EXPECT_EQ(profiles[0].process_runtime.count(), 1);
+  EXPECT_EQ(profiles[0].process_runtime.total(), 100);
+  EXPECT_EQ(profiles[0].open_runtime_usec, 100);
+}
+
+#endif  // GRAPH_RUNTIME_PROFILER_ENABLED
+
+// ── Integration: Write + Read (works in both modes) ──
+
+TEST(ProfilerTest, WriteProfileReadableByReporter) {
+  ProfilerConfig config;
+  config.enable_profiler = true;
+  config.histogram_interval_size_usec = 1000;
+  config.num_histogram_intervals = 3;
+
+  ProfileWriterNodeData node;
+  node.node_name = "test_node";
+  node.open_runtime_usec = 100;
+  node.close_runtime_usec = 50;
+  node.process_count = 10;
+  node.process_time_total_usec = 5000;
+  node.process_time_mean_usec = 500.0;
+  node.histogram_interval_size_usec = 1000;
+  node.histogram_num_intervals = 3;
+  node.histogram_buckets = {8, 2, 0};
+
+  std::vector<ProfileWriterNodeData> nodes = {node};
+  std::string path = std::tmpnam(nullptr);
+  auto write_status = WriteProfile(path, config, nodes);
+  ASSERT_TRUE(write_status.ok()) << write_status.ToString();
+
+  Reporter reporter;
+  auto read_status = reporter.Accumulate(path);
+  ASSERT_TRUE(read_status.ok()) << read_status.ToString();
+
+  auto report = reporter.Report();
+  ASSERT_EQ(report.nodes.size(), 1);
+  EXPECT_EQ(report.nodes[0].node_name, "test_node");
+  EXPECT_EQ(report.nodes[0].open_runtime_usec, 100);
+  EXPECT_EQ(report.nodes[0].close_runtime_usec, 50);
+  EXPECT_EQ(report.nodes[0].process_count, 10);
+  EXPECT_EQ(report.nodes[0].process_time_total_usec, 5000);
+
+  std::remove(path.c_str());
+}
+
+#ifdef GRAPH_RUNTIME_PROFILER_ENABLED
+
+TEST(ProfilerTest, ProfilerEnabledRecordsRuntimes) {
+  ProfilingContext profiler;
+  auto mock_clock = std::make_shared<MockClock>(
+      std::vector<int64_t>{0, 10000, 0, 10000, 0, 10000});
+  profiler.SetClock(mock_clock);
+  ProfilerConfig config;
+  config.enable_profiler = true;
+  profiler.Initialize(config, {"sleepy_node"});
+  profiler.Start();
+
+  for (int i = 0; i < 3; ++i) {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::PROCESS, "sleepy_node", &profiler);
+  }
+
+  profiler.Stop();
+  auto profiles = profiler.GetNodeProfiles();
+  ASSERT_EQ(profiles.size(), 1);
+  EXPECT_EQ(profiles[0].process_runtime.count(), 3);
+  EXPECT_EQ(profiles[0].process_runtime.total(), 30000);
+  EXPECT_DOUBLE_EQ(profiles[0].process_runtime.mean(), 10000.0);
+}
+
+#endif  // GRAPH_RUNTIME_PROFILER_ENABLED
+
 }  // namespace
 }  // namespace graph::runtime

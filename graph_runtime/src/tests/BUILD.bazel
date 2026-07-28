@@ -178,3 +178,13 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+sh_test(
+    size = "small",
+    name = "print_profile_cli_test",
+    srcs = ["print_profile_cli_test.sh"],
+    data = [
+        "@graph_runtime//src/framework/profiler/reporter/tools:print_profile",
+    ],
+    args = ["$(location @graph_runtime//src/framework/profiler/reporter/tools:print_profile)"],
+)

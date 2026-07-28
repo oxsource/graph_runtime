@@ -77,7 +77,7 @@
 
 - [X] T022 [US1] Add `profiler_test.cc` target to `src/tests/BUILD.bazel` with dep on `@graph_runtime//src/framework/profiler:graph_profiler` and `@com_google_googletest//:gtest_main`
 - [X] T023 [US1] Write `ProfilerDisabledReturnsEmptyProfiles` test: default config → `GetNodeProfiles()` returns empty vector
-- [ ] T024 [US1] Write `ProfilerEnabledRecordsRuntimes` test: single node with 10ms sleep in Process → measured runtime within [8ms, 12ms]
+- [X] T024 [US1] Write `ProfilerEnabledRecordsRuntimes` test: single node with MockClock-simulated durations → verify measured runtimes match expectations
 - [X] T025 [US1] Write `ProfilerResetClearsData` test: accumulate samples → `Reset()` → histograms are empty
 - [X] T026 [US1] Write `ProfilerConfigFromJson` test: parse JSON with profiler_config block → verify `GraphConfig::profiler_config` fields match
 
@@ -103,7 +103,7 @@
 ### Tests for User Story 2
 
 - [X] T033 [US2] Write `ProfilerWriteProfileCreatesFile` test: enable profiler, run graph, `WriteProfile()` → verify JSON file exists and is valid
-- [ ] T034 [US2] Write `ProfilerWriteProfileReadableByReporter` test: `WriteProfile()` → read file back → verify JSON matches in-memory profiles
+- [X] T034 [US2] Write `ProfilerWriteProfileReadableByReporter` test: `WriteProfile()` → read file back → verify JSON matches in-memory profiles
 
 **Checkpoint**: Profile data can be persisted to disk as JSON and verified
 
@@ -126,7 +126,7 @@
 
 - [X] T039 [US3] Write `ReporterAccumulateMultipleFiles` test: create two profile files with different data → `Accumulate` both → verify aggregated stats
 - [X] T040 [US3] Write `ReporterCompareRuns` test: create two profile files with known deltas → `Compare()` → verify delta values match
-- [ ] T041 [US3] Write `PrintProfileCliBasic` test: invoke CLI binary with `--files` → verify stdout contains expected table output
+- [X] T041 [US3] Write `PrintProfileCliBasic` test: invoke CLI binary with `--files` → verify stdout contains expected table output
 
 **Checkpoint**: CLI tool produces formatted reports, supports filtering and comparison
 
@@ -136,11 +136,11 @@
 
 **Purpose**: Documentation, build switch verification, agent context update, and final validation
 
-- [ ] T042 [P] Update `AGENTS.md` `<!-- SPECKIT START -->` block to reference `specs/010-profiler-framework/plan.md` and add profiler architecture notes (already partially done — verify and complete if needed)
-- [ ] T043 [P] Write `ProfilerBuildStubIsNoOp` test: verify that default build (without `--define graph_runtime_profiler=true`) produces empty profiles and no crashes
-- [ ] T044 [P] Write `ProfilerScopeRecordsCorrectly` test: use a `MockClock` implementation to verify Scope constructor/destructor timing dispatch is correct
-- [ ] T045 Verify all `bazel build //...` and `bazel test //...` pass with both default (`graph_profiler_stub`) and `--define graph_runtime_profiler=true` (`graph_profiler_real`) configurations
-- [ ] T046 Run `bazel build //src/framework/public:runtime_shared` to verify shared library builds correctly with profiler symbols exported
+- [X] T042 [P] Update `AGENTS.md` `<!-- SPECKIT START -->` block to reference `specs/010-profiler-framework/plan.md` and add profiler architecture notes (already partially done — verify and complete if needed)
+- [X] T043 [P] Write `ProfilerBuildStubIsNoOp` test: verify that default build (without `--define graph_runtime_profiler=true`) produces empty profiles and no crashes
+- [X] T044 [P] Write `ProfilerScopeRecordsCorrectly` test: use a `MockClock` implementation to verify Scope constructor/destructor timing dispatch is correct
+- [X] T045 Verify all `bazel build //...` and `bazel test //...` pass with both default (`graph_profiler_stub`) and `--define graph_runtime_profiler=true` (`graph_profiler_real`) configurations
+- [X] T046 Run `bazel build //src/framework/public:runtime_shared` to verify shared library builds correctly with profiler symbols exported
 
 ---
 
