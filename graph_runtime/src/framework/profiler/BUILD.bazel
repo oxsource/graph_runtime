@@ -1,0 +1,45 @@
+package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__subpackages__"])
+
+config_setting(
+    name = "profiler_enabled",
+    define_values = {"graph_runtime_profiler": "true"},
+)
+
+cc_library(
+    name = "graph_profiler_stub",
+    hdrs = [
+        "profiler_config.h",
+    ],
+    deps = [
+        "@graph_runtime//src/framework/public:hook_header",
+    ],
+)
+
+cc_library(
+    name = "graph_profiler_real",
+    srcs = [
+        "clock.cc",
+        "graph_profiler.cc",
+        "time_histogram.cc",
+    ],
+    hdrs = [
+        "clock.h",
+        "graph_profiler.h",
+        "profiler_config.h",
+        "time_histogram.h",
+    ],
+    defines = ["GRAPH_RUNTIME_PROFILER_ENABLED"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/time",
+        "@graph_runtime//src/framework/public:hook_header",
+    ],
+)
+
+alias(
+    name = "graph_profiler",
+    actual = select({
+        ":profiler_enabled": ":graph_profiler_real",
+        "//conditions:default": ":graph_profiler_stub",
+    }),
+)

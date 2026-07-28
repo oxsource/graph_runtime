@@ -5,6 +5,7 @@ cc_library(
     hdrs = ["graph_config.h"],
     deps = [
         "@graph_runtime//src/framework/node:node_options",
+        "@graph_runtime//src/framework/profiler:graph_profiler",
     ],
 )
 

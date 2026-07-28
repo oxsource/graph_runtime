@@ -28,6 +28,11 @@ constexpr char kKeyExecutor[]           = "executor";
 constexpr char kKeyInputStreamHandler[] = "input_stream_handler";
 constexpr char kKeyMaxInFlight[]        = "max_in_flight";
 constexpr char kKeySourceLayer[]        = "source_layer";
+constexpr char kKeyProfilerConfig[]     = "profiler_config";
+constexpr char kKeyEnableProfiler[]     = "enable_profiler";
+constexpr char kKeyHistogramInterval[]  = "histogram_interval_size_usec";
+constexpr char kKeyNumIntervals[]       = "num_histogram_intervals";
+constexpr char kKeyTraceLogPath[]       = "trace_log_path";
 
 // Default values
 constexpr int    kDefaultMaxQueueSize   = 100;
@@ -50,6 +55,18 @@ absl::StatusOr<GraphConfig> ParseJsonText(const std::string& json_text,
   GraphConfig config;
   config.max_queue_size = root.value(kKeyMaxQueueSize, kDefaultMaxQueueSize);
   config.report_deadlock = root.value(kKeyReportDeadlock, false);
+
+  if (root.contains(kKeyProfilerConfig)) {
+    const auto& pc = root[kKeyProfilerConfig];
+    config.profiler_config.enable_profiler =
+        pc.value(kKeyEnableProfiler, false);
+    config.profiler_config.histogram_interval_size_usec =
+        pc.value(kKeyHistogramInterval, 1000000LL);
+    config.profiler_config.num_histogram_intervals =
+        pc.value(kKeyNumIntervals, 5);
+    config.profiler_config.trace_log_path =
+        pc.value(kKeyTraceLogPath, std::string());
+  }
 
   for (auto& s : root.value(kKeyInputStreams, std::vector<std::string>{}))
     config.input_streams.push_back(std::move(s));

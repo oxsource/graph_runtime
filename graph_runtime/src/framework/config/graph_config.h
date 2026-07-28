@@ -5,12 +5,14 @@
 #include <vector>
 
 #include "src/framework/node/node_options.h"
+#include "src/framework/profiler/profiler_config.h"
 
 namespace graph::runtime {
 
 struct GraphConfig {
   int max_queue_size = 100;
   bool report_deadlock = false;
+  ProfilerConfig profiler_config;
 
   struct NodeDef {
     std::string name;

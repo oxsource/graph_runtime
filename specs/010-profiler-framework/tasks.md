@@ -27,8 +27,8 @@
 
 **Purpose**: Create module directories and initial build files
 
-- [ ] T001 Create profiler module directory structure at `src/framework/profiler/` and `src/framework/profiler/reporter/tools/`
-- [ ] T002 [P] Create initial `src/framework/profiler/BUILD.bazel` with `config_setting(name = "profiler_enabled")`, `graph_profiler_stub` and `graph_profiler_real` targets, and `graph_runtime_select()` alias (stub only initially, real will add srcs as they are implemented)
+- [X] T001 Create profiler module directory structure at `src/framework/profiler/` and `src/framework/profiler/reporter/tools/`
+- [X] T002 [P] Create initial `src/framework/profiler/BUILD.bazel` with `config_setting(name = "profiler_enabled")`, `graph_profiler_stub` and `graph_profiler_real` targets, and `graph_runtime_select()` alias (stub only initially, real will add srcs as they are implemented)
 
 **Checkpoint**: Module skeleton ready — no logic yet, but build files compile
 
@@ -40,16 +40,16 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 [P] Implement `Clock` abstract interface in `src/framework/profiler/clock.h` with `virtual int64_t TimeNowUsec() = 0`
-- [ ] T004 [P] Implement `RealClock` in `src/framework/profiler/clock.cc` wrapping `std::chrono::steady_clock`
-- [ ] T005 [P] Implement `ProfilerConfig` struct in `src/framework/profiler/profiler_config.h` with `enable_profiler`, `histogram_interval_size_usec`, `num_histogram_intervals`, `trace_log_path`
-- [ ] T006 [P] Implement `TimeHistogram` in `src/framework/profiler/time_histogram.h` and `src/framework/profiler/time_histogram.cc` — `Initialize()`, `AddSample()`, `Reset()`, read-only queries, `std::mutex` protection
-- [ ] T007 [P] Create public API header `src/framework/public/include/graph_runtime/profiler.h` with `ProfilingContext` forward declaration, `ProfilerConfig` struct, and `NodeProfile` struct (all decorated with `GRAPH_RUNTIME_API`)
-- [ ] T008 [P] Add `ProfilerConfig profiler_config` field to `GraphConfig` in `src/framework/config/graph_config.h`
-- [ ] T009 [P] Update umbrella header `src/framework/public/include/graph_runtime/graph_runtime.h` to include `"graph_runtime/profiler.h"`
-- [ ] T010 [P] Add `#include` for `profiler_config.h` and the `profiler` dep to `src/framework/config/BUILD.bazel` (for `graph_config` target)
-- [ ] T011 [P] Add `profiler_header` target to `src/framework/public/BUILD.bazel` that wraps the new public header, and add it as a dep to the `runtime` target
-- [ ] T012 Parse `profiler_config` block in `src/framework/config/json/json_parser.cc` to populate `GraphConfig::profiler_config`
+- [X] T003 [P] Implement `Clock` abstract interface in `src/framework/profiler/clock.h` with `virtual int64_t TimeNowUsec() = 0`
+- [X] T004 [P] Implement `RealClock` in `src/framework/profiler/clock.cc` wrapping `std::chrono::steady_clock`
+- [X] T005 [P] Implement `ProfilerConfig` struct in `src/framework/profiler/profiler_config.h` with `enable_profiler`, `histogram_interval_size_usec`, `num_histogram_intervals`, `trace_log_path`
+- [X] T006 [P] Implement `TimeHistogram` in `src/framework/profiler/time_histogram.h` and `src/framework/profiler/time_histogram.cc` — `Initialize()`, `AddSample()`, `Reset()`, read-only queries, `std::mutex` protection
+- [X] T007 [P] Create public API header `src/framework/public/include/graph_runtime/profiler.h` with `ProfilingContext` forward declaration, `ProfilerConfig` struct, and `NodeProfile` struct (all decorated with `GRAPH_RUNTIME_API`)
+- [X] T008 [P] Add `ProfilerConfig profiler_config` field to `GraphConfig` in `src/framework/config/graph_config.h`
+- [X] T009 [P] Update umbrella header `src/framework/public/include/graph_runtime/graph_runtime.h` to include `"graph_runtime/profiler.h"`
+- [X] T010 [P] Add `#include` for `profiler_config.h` and the `profiler` dep to `src/framework/config/BUILD.bazel` (for `graph_config` target)
+- [X] T011 [P] Add `profiler_header` target to `src/framework/public/BUILD.bazel` that wraps the new public header, and add it as a dep to the `runtime` target
+- [X] T012 Parse `profiler_config` block in `src/framework/config/json/json_parser.cc` to populate `GraphConfig::profiler_config`
 
 **Checkpoint**: Foundation ready — Clock, ProfilerConfig, TimeHistogram, public header, and config parsing all functional
 

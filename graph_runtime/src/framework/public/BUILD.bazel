@@ -10,6 +10,15 @@ cc_library(
 )
 
 cc_library(
+    name = "profiler_header",
+    hdrs = ["include/graph_runtime/profiler.h"],
+    strip_include_prefix = "include",
+    deps = [
+        ":hook_header",
+    ],
+)
+
+cc_library(
     name = "types",
     hdrs = ["types.h"],
     deps = [
@@ -75,12 +84,14 @@ cc_library(
         "include/graph_runtime/side_packet.h",
         "include/graph_runtime/logger.h",
         "include/graph_runtime/hook.h",
+        "include/graph_runtime/profiler.h",
     ],
     strip_include_prefix = "include",
     alwayslink = 1,
     deps = [
         ":graph_builder",
         ":runtime_internal",
+        ":profiler_header",
         "@graph_runtime//src/framework/utils:logger",
         "@graph_runtime//src/framework/scheduler:scheduler",
         "@graph_runtime//src/framework/config:graph_config",
