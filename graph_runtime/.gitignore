@@ -2,6 +2,10 @@
 bazel-*
 *.bazel.lst
 
+# Auto-generated platform setup (machine-local, DO NOT commit)
+.user.bazelrc
+.configure.bazelrc
+
 # Python
 __pycache__/
 *.pyc
