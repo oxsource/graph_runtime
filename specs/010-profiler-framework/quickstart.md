@@ -101,3 +101,67 @@ bazel build //... --define graph_runtime_profiler=true
 ```bash
 bazel build //...
 ```
+
+## Full Demo Example
+
+A complete, runnable example is at `src/examples/profiler_demo.cc`. It demonstrates the full profiler workflow with a node that simulates ~5ms of compute work per Process call.
+
+### Build & Run
+
+```bash
+# Build with real profiler enabled
+bazel build //src/examples:profiler_demo --define graph_runtime_profiler=true
+
+# Run
+bazel run //src/examples:profiler_demo --define graph_runtime_profiler=true
+```
+
+### Expected Output
+
+```
+=== Profiler Demo ===
+
+Config: 1 node(s), profiler enabled=true
+Running graph (sync mode)...
+Graph completed.
+
+=== Profile Results ===
+Node: work
+  Process calls: 1
+  Process total: 5038 us
+  Process mean:  5038.00 us
+  Open:          683 us
+  Close:         10 us
+
+Profile saved to: /tmp/profiler_demo_profile.json
+
+=== CLI Analysis ===
+Table output:
+  print_profile --files=/tmp/profiler_demo_profile.json
+```
+
+### Analyze with CLI
+
+```bash
+bazel build //src/framework/profiler/reporter/tools:print_profile
+
+# Table output
+./bazel-bin/src/framework/profiler/reporter/tools/print_profile \
+  --files=/tmp/profiler_demo_profile.json
+
+# CSV output
+./bazel-bin/src/framework/profiler/reporter/tools/print_profile \
+  --files=/tmp/profiler_demo_profile.json --format=csv
+```
+
+### Stub Mode (Default Build)
+
+Without `--define graph_runtime_profiler=true`, the profiler compiles as a no-op stub.
+`GetNodeProfiles()` returns an empty vector and `WriteProfile()` returns `OkStatus`
+without performing any I/O. This ensures zero overhead in production builds.
+The demo binary still runs and shows `(No profile data ...)` — useful for
+verifying the API compiles and doesn't crash in either mode.
+
+```bash
+bazel run //src/examples:profiler_demo
+```

@@ -79,6 +79,7 @@ void Scheduler::HandleIdle() {
       if (error_callback_ && has_error_) {
         error_callback_(absl::InternalError("Graph execution error"));
       }
+      if (profiler_) profiler_->Stop();
       state_ = SchedulerState::kTerminated;
       cv_.notify_all();
       --handling_idle_;
@@ -115,6 +116,7 @@ void Scheduler::HandleIdle() {
 
 absl::Status Scheduler::Schedule() {
   state_ = SchedulerState::kRunning;
+  if (profiler_) profiler_->Start();
 
   for (auto* node : all_nodes_) {
     if (node->input_port_count() == 0) {
@@ -167,6 +169,8 @@ absl::Status Scheduler::Schedule() {
                        "node", ts, &input_shards, &output_shards, &opts);
 
       Logger::Info(std::string("Process " + source->name() + " at ts=" + std::to_string(ts.Value())).c_str());
+      ProfilingContext::Scope src_scope(
+          ProfilingContext::EventType::PROCESS, source->name(), profiler_);
       auto status = source->Process(ctx);
 
       if (!status.ok() && !IsStopStatus(status)) {
@@ -201,6 +205,8 @@ absl::Status Scheduler::Schedule() {
                           "node", ts, &ds_input, &ds_output, &opts);
 
         Logger::Info(std::string("Process " + downstream->name() + " at ts=" + std::to_string(ts.Value())).c_str());
+        ProfilingContext::Scope ds_scope(
+            ProfilingContext::EventType::PROCESS, downstream->name(), profiler_);
         auto ds = downstream->Process(dctx);
         if (!ds.ok() && !IsStopStatus(ds)) {
           Logger::Error(std::string("Error in " + downstream->name() + ": " + std::string(ds.ToString())).c_str());
@@ -232,12 +238,14 @@ absl::Status Scheduler::Schedule() {
     perf_counters_.nodes_closed.Increment();
   }
 
+  if (profiler_) profiler_->Stop();
   state_ = SchedulerState::kTerminated;
   cv_.notify_all();
   return absl::OkStatus();
 }
 
 absl::Status Scheduler::Start() {
+  if (profiler_) profiler_->Start();
   state_ = SchedulerState::kRunning;
 
   for (auto* node : all_nodes_) {
