@@ -9,16 +9,19 @@ cc_library(
     name = "graph_profiler_stub",
     srcs = [
         "clock.cc",
+        "profile_writer.cc",
         "time_histogram.cc",
     ],
     hdrs = [
         "clock.h",
         "graph_profiler.h",
         "profiler_config.h",
+        "profile_writer.h",
         "time_histogram.h",
     ],
     deps = [
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/time",
         "@graph_runtime//src/framework/public:hook_header",
     ],
 )
@@ -28,12 +31,14 @@ cc_library(
     srcs = [
         "clock.cc",
         "graph_profiler.cc",
+        "profile_writer.cc",
         "time_histogram.cc",
     ],
     hdrs = [
         "clock.h",
         "graph_profiler.h",
         "profiler_config.h",
+        "profile_writer.h",
         "time_histogram.h",
     ],
     defines = ["GRAPH_RUNTIME_PROFILER_ENABLED"],

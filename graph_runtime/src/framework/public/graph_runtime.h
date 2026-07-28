@@ -124,6 +124,7 @@ class GraphRuntime {
   ProfilingContext* profiler();
   const ProfilingContext* profiler() const;
   std::vector<NodeProfile> GetNodeProfiles() const;
+  absl::Status WriteProfile(const std::string& path) const;
 
   // Register a hook by type. Replaces any previous hook of the same type.
   // Example: SetHook(hook::kTypeLog, myFn);

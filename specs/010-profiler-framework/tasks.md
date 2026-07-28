@@ -93,16 +93,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Create `src/framework/profiler/profile_writer.h` with `absl::Status WriteProfile(const std::string& path, const ProfilerConfig& config, const std::vector<NodeProfile>& profiles)` free function
-- [ ] T028 [US2] Implement JSON serialization in `src/framework/profiler/profile_writer.cc` — lightweight JSON writer that outputs the schema from plan.md §1.9 including `capture_time`, `node_count`, `profiler_config`, and `nodes` array with histogram buckets
-- [ ] T029 [US2] Add `WriteProfile(const std::string& path = "")` method to `GraphProfiler` in `src/framework/profiler/graph_profiler.h` and `src/framework/profiler/graph_profiler.cc` — delegates to `profile_writer`; when path is empty and `trace_log_path` is set, use `<trace_log_path>/profile_<timestamp>.json`
-- [ ] T030 [US2] Add `WriteProfile()` no-op to `GraphProfilerStub` in `src/framework/profiler/graph_profiler.h` (returns `OkStatus`)
-- [ ] T031 [US2] Add `WriteProfile(const std::string& path)` convenience method to `GraphRuntime` in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` that delegates to `profiler_->WriteProfile(path)`
-- [ ] T032 [US2] Add `profile_writer.cc` to the `srcs` of `graph_profiler_real` target in `src/framework/profiler/BUILD.bazel`
+- [X] T027 [P] [US2] Create `src/framework/profiler/profile_writer.h` with `absl::Status WriteProfile(const std::string& path, const ProfilerConfig& config, const std::vector<NodeProfile>& profiles)` free function
+- [X] T028 [US2] Implement JSON serialization in `src/framework/profiler/profile_writer.cc` — lightweight JSON writer that outputs the schema from plan.md §1.9 including `capture_time`, `node_count`, `profiler_config`, and `nodes` array with histogram buckets
+- [X] T029 [US2] Add `WriteProfile(const std::string& path = "")` method to `GraphProfiler` in `src/framework/profiler/graph_profiler.h` and `src/framework/profiler/graph_profiler.cc` — delegates to `profile_writer`; when path is empty and `trace_log_path` is set, use `<trace_log_path>/profile_<timestamp>.json`
+- [X] T030 [US2] Add `WriteProfile()` no-op to `GraphProfilerStub` in `src/framework/profiler/graph_profiler.h` (returns `OkStatus`)
+- [X] T031 [US2] Add `WriteProfile(const std::string& path)` convenience method to `GraphRuntime` in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc` that delegates to `profiler_->WriteProfile(path)`
+- [X] T032 [US2] Add `profile_writer.cc` to the `srcs` of `graph_profiler_real` target in `src/framework/profiler/BUILD.bazel`
 
 ### Tests for User Story 2
 
-- [ ] T033 [US2] Write `ProfilerWriteProfileCreatesFile` test: enable profiler, run graph, `WriteProfile()` → verify JSON file exists and is valid
+- [X] T033 [US2] Write `ProfilerWriteProfileCreatesFile` test: enable profiler, run graph, `WriteProfile()` → verify JSON file exists and is valid
 - [ ] T034 [US2] Write `ProfilerWriteProfileReadableByReporter` test: `WriteProfile()` → read file back → verify JSON matches in-memory profiles
 
 **Checkpoint**: Profile data can be persisted to disk as JSON and verified

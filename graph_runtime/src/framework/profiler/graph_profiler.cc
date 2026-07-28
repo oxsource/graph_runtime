@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "src/framework/profiler/profile_writer.h"
+
 namespace graph::runtime {
 
 #ifdef GRAPH_RUNTIME_PROFILER_ENABLED
@@ -96,8 +98,35 @@ void GraphProfiler::Reset() {
 }
 
 absl::Status GraphProfiler::WriteProfile(const std::string& path) {
-  // Phase 4: implement JSON serialization
-  return absl::OkStatus();
+  std::string output_path = path;
+  if (output_path.empty() && !config_.trace_log_path.empty()) {
+    absl::Time now = absl::Now();
+    std::string ts = absl::FormatTime(
+        absl::UnixEpoch() + absl::Seconds(
+            absl::ToUnixSeconds(now)), absl::UTCTimeZone());
+    output_path = config_.trace_log_path + "/profile_" + ts + ".json";
+  }
+  if (output_path.empty()) {
+    return absl::InvalidArgumentError(
+        "WriteProfile requires an explicit path or trace_log_path");
+  }
+  auto internal_profiles = GetNodeProfiles();
+  std::vector<ProfileWriterNodeData> nodes;
+  nodes.reserve(internal_profiles.size());
+  for (const auto& ip : internal_profiles) {
+    ProfileWriterNodeData node;
+    node.node_name = ip.node_name;
+    node.open_runtime_usec = ip.open_runtime_usec;
+    node.close_runtime_usec = ip.close_runtime_usec;
+    node.process_count = ip.process_runtime.count();
+    node.process_time_total_usec = ip.process_runtime.total();
+    node.process_time_mean_usec = ip.process_runtime.mean();
+    node.histogram_interval_size_usec = ip.process_runtime.interval_size_usec();
+    node.histogram_num_intervals = ip.process_runtime.num_intervals();
+    node.histogram_buckets = ip.process_runtime.buckets();
+    nodes.push_back(std::move(node));
+  }
+  return ::graph::runtime::WriteProfile(output_path, config_, nodes);
 }
 
 std::vector<GraphProfiler::NodeProfile> GraphProfiler::GetNodeProfiles() const {

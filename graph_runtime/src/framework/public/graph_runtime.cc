@@ -338,6 +338,13 @@ std::vector<NodeProfile> GraphRuntime::GetNodeProfiles() const {
   return result;
 }
 
+absl::Status GraphRuntime::WriteProfile(const std::string& path) const {
+  if (!profiler_) {
+    return absl::FailedPreconditionError("Profiler not initialized");
+  }
+  return profiler_->WriteProfile(path);
+}
+
 Node* GraphRuntime::FindNode(const std::string& name) {
   for (auto& node : all_nodes_) {
     if (node->name() == name) return node.get();
