@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <fstream>
+#include <unistd.h>
 
 #include "src/framework/config/graph_config.h"
 #include "src/framework/config/json/json_parser.h"
@@ -19,6 +20,13 @@
 
 namespace graph::runtime {
 namespace {
+
+std::string CreateTempPath() {
+  char path[] = "/tmp/graph_runtime_test_XXXXXX";
+  int fd = mkstemp(path);
+  close(fd);
+  return path;
+}
 
 // ── Clock Tests ──
 
@@ -183,7 +191,7 @@ TEST(ProfilerTest, WriteProfileCreatesFile) {
 
   std::vector<ProfileWriterNodeData> nodes = {node};
 
-  std::string path = std::tmpnam(nullptr);
+  std::string path = CreateTempPath();
   auto status = WriteProfile(path, config, nodes);
   ASSERT_TRUE(status.ok()) << status.ToString();
 
@@ -208,7 +216,7 @@ TEST(ProfilerTest, WriteProfileEmptyProfiles) {
   ProfilerConfig config;
   std::vector<ProfileWriterNodeData> nodes;
 
-  std::string path = std::tmpnam(nullptr);
+  std::string path = CreateTempPath();
   auto status = WriteProfile(path, config, nodes);
   ASSERT_TRUE(status.ok()) << status.ToString();
 
@@ -255,7 +263,7 @@ TEST(ProfilerTest, WriteProfileRealEnabled) {
   }
   profiler.Stop();
 
-  std::string path = std::tmpnam(nullptr);
+  std::string path = CreateTempPath();
   auto status = profiler.WriteProfile(path);
   EXPECT_TRUE(status.ok() || !status.ok());
   std::remove(path.c_str());
@@ -264,7 +272,7 @@ TEST(ProfilerTest, WriteProfileRealEnabled) {
 // ── Reporter Tests ──
 
 TEST(ProfilerTest, ReporterAccumulateSingleFile) {
-  std::string path = std::tmpnam(nullptr);
+  std::string path = CreateTempPath();
   {
     std::ofstream f(path);
     f << R"({
@@ -296,8 +304,8 @@ TEST(ProfilerTest, ReporterAccumulateSingleFile) {
 }
 
 TEST(ProfilerTest, ReporterAccumulateMultipleFiles) {
-  std::string path1 = std::tmpnam(nullptr);
-  std::string path2 = std::tmpnam(nullptr);
+  std::string path1 = CreateTempPath();
+  std::string path2 = CreateTempPath();
 
   auto write_profile = [](const std::string& p, const std::string& name,
                           int64_t count, int64_t total) {
@@ -335,8 +343,8 @@ TEST(ProfilerTest, ReporterAccumulateFileNotFound) {
 }
 
 TEST(ProfilerTest, ReporterCompareRuns) {
-  std::string baseline_path = std::tmpnam(nullptr);
-  std::string experiment_path = std::tmpnam(nullptr);
+  std::string baseline_path = CreateTempPath();
+  std::string experiment_path = CreateTempPath();
 
   auto write_profile = [](const std::string& p, const std::string& name,
                           double mean) {
@@ -372,7 +380,7 @@ TEST(ProfilerTest, ReporterCompareRuns) {
 }
 
 TEST(ProfilerTest, ReporterClear) {
-  std::string path = std::tmpnam(nullptr);
+  std::string path = CreateTempPath();
   {
     std::ofstream f(path);
     f << R"({"capture_time": "", "node_count": 1, "nodes": [{
@@ -442,7 +450,7 @@ TEST(ProfilerTest, WriteProfileReadableByReporter) {
   node.histogram_buckets = {8, 2, 0};
 
   std::vector<ProfileWriterNodeData> nodes = {node};
-  std::string path = std::tmpnam(nullptr);
+  std::string path = CreateTempPath();
   auto write_status = WriteProfile(path, config, nodes);
   ASSERT_TRUE(write_status.ok()) << write_status.ToString();
 
