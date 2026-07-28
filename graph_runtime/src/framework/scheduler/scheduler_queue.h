@@ -8,6 +8,8 @@
 #include "src/framework/scheduler/executor.h"
 #include "src/framework/node/node.h"
 
+#include "src/framework/profiler/graph_profiler.h"
+
 namespace graph::runtime {
 
 class PerfCounters;
@@ -62,6 +64,7 @@ class SchedulerQueue : public TaskQueue {
   void RunNextTask() override;
 
   void SetPerfCounters(PerfCounters* counters) { perf_counters_ = counters; }
+  void SetProfiler(ProfilingContext* profiler) { profiler_ = profiler; }
 
   bool IsIdle() const { return queue_.empty() && num_pending_tasks_ == 0; }
   int NumPendingTasks() const { return num_pending_tasks_; }
@@ -76,6 +79,7 @@ class SchedulerQueue : public TaskQueue {
   IdleCallback idle_callback_;
   SourceStoppedCallback source_stopped_callback_;
   PerfCounters* perf_counters_ = nullptr;
+  ProfilingContext* profiler_ = nullptr;
   bool running_ = false;
   std::priority_queue<Item> queue_;
   int num_pending_tasks_ = 0;

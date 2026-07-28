@@ -127,6 +127,8 @@ absl::Status Scheduler::Schedule() {
 
   // Open all nodes
   for (auto* node : all_nodes_) {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::OPEN, node->name(), profiler_);
     InputStreamShardSet input_shards;
     OutputStreamShardSet output_shards;
     NodeOptions opts;
@@ -214,6 +216,8 @@ absl::Status Scheduler::Schedule() {
 
   // Close all nodes
   for (auto* node : all_nodes_) {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::CLOSE, node->name(), profiler_);
     InputStreamShardSet input_shards;
     OutputStreamShardSet output_shards;
     NodeOptions opts;
@@ -247,6 +251,8 @@ absl::Status Scheduler::Start() {
 
   // Open all nodes
   for (auto* node : all_nodes_) {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::OPEN, node->name(), profiler_);
     InputStreamShardSet input_shards;
     OutputStreamShardSet output_shards;
     NodeOptions opts;
@@ -279,6 +285,7 @@ absl::Status Scheduler::Start() {
       HandleIdle();
     });
     q->SetPerfCounters(&perf_counters_);
+    q->SetProfiler(profiler_);
     q->SetRunning(true);
   }
 

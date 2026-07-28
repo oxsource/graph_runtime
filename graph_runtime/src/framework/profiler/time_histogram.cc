@@ -5,6 +5,27 @@
 
 namespace graph::runtime {
 
+TimeHistogram::TimeHistogram(const TimeHistogram& other) {
+  std::lock_guard<std::mutex> lock(other.mutex_);
+  interval_size_usec_ = other.interval_size_usec_;
+  num_intervals_ = other.num_intervals_;
+  count_ = other.count_;
+  total_ = other.total_;
+  buckets_ = other.buckets_;
+}
+
+TimeHistogram& TimeHistogram::operator=(const TimeHistogram& other) {
+  if (this == &other) return *this;
+  std::lock_guard<std::mutex> lhs_lock(mutex_);
+  std::lock_guard<std::mutex> rhs_lock(other.mutex_);
+  interval_size_usec_ = other.interval_size_usec_;
+  num_intervals_ = other.num_intervals_;
+  count_ = other.count_;
+  total_ = other.total_;
+  buckets_ = other.buckets_;
+  return *this;
+}
+
 void TimeHistogram::Initialize(int64_t interval_size_usec, int num_intervals) {
   std::lock_guard<std::mutex> lock(mutex_);
   interval_size_usec_ = interval_size_usec;

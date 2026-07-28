@@ -9,6 +9,10 @@ namespace graph::runtime {
 
 class TimeHistogram {
  public:
+  TimeHistogram() = default;
+  TimeHistogram(const TimeHistogram& other);
+  TimeHistogram& operator=(const TimeHistogram& other);
+
   void Initialize(int64_t interval_size_usec, int num_intervals);
   void AddSample(int64_t start_time_usec, int64_t end_time_usec);
   void Reset();

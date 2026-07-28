@@ -118,6 +118,8 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
                    "node", ts, &inputs, &outputs, &opts);
 
   if (is_open) {
+    ProfilingContext::Scope scope(
+        ProfilingContext::EventType::OPEN, node->name(), profiler_);
     (void)node->Open(ctx);
     if (perf_counters_) perf_counters_->nodes_opened.Increment();
     return;
@@ -125,6 +127,9 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
 
   // Mark node as in-flight (MaxInFlight tracking).
   node->IncrementPending();
+
+  ProfilingContext::Scope scope(
+      ProfilingContext::EventType::PROCESS, node->name(), profiler_);
 
   // Process the node
   absl::Status status = node->Process(ctx);

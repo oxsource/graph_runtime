@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "absl/strings/str_cat.h"
+#include "graph_runtime/profiler.h"
 #include "src/framework/utils/hook.h"
 #include "src/framework/scheduler/scheduler.h"
 #include "src/framework/scheduler/input_stream_handler.h"
@@ -27,10 +28,19 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
   all_nodes_ = std::move(built->all_nodes_);
 
   std::vector<Node*> node_ptrs;
+  std::vector<std::string> node_names;
   for (auto& node : all_nodes_) {
     node_ptrs.push_back(node.get());
+    node_names.push_back(node->name());
   }
   scheduler_->SetNodes(node_ptrs);
+
+  // Initialize profiler
+  const ProfilerConfig& pcfg = config_.profiler_config;
+  profiler_ = std::make_unique<ProfilingContext>();
+  profiler_->SetClock(std::make_shared<RealClock>());
+  profiler_->Initialize(pcfg, node_names);
+  scheduler_->SetProfiler(profiler_.get());
 
   // Create InputStreamManagers for each declared input stream and register
   // them on their owning node. This enables AddPacketToInputStream to find
@@ -296,6 +306,36 @@ void GraphRuntime::SetOutputSidePacketCallback(
 
 void GraphRuntime::SetHook(int type, hook::HookFn fn) {
   hook::HookFactory::Register(type, fn);
+}
+
+void GraphRuntime::SetProfilerConfig(const ProfilerConfig& config) {
+  profiler_config_override_ = config;
+}
+
+ProfilingContext* GraphRuntime::profiler() {
+  return profiler_.get();
+}
+
+const ProfilingContext* GraphRuntime::profiler() const {
+  return profiler_.get();
+}
+
+std::vector<NodeProfile> GraphRuntime::GetNodeProfiles() const {
+  if (!profiler_) return {};
+  auto internal_profiles = profiler_->GetNodeProfiles();
+  std::vector<NodeProfile> result;
+  result.reserve(internal_profiles.size());
+  for (const auto& ip : internal_profiles) {
+    NodeProfile np;
+    np.node_name = ip.node_name;
+    np.open_runtime_usec = ip.open_runtime_usec;
+    np.close_runtime_usec = ip.close_runtime_usec;
+    np.process_count = ip.process_runtime.count();
+    np.process_time_total_usec = ip.process_runtime.total();
+    np.process_time_mean_usec = ip.process_runtime.mean();
+    result.push_back(std::move(np));
+  }
+  return result;
 }
 
 Node* GraphRuntime::FindNode(const std::string& name) {

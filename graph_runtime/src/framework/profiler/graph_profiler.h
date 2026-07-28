@@ -1,9 +1,11 @@
 #ifndef GRAPH_RUNTIME_GRAPH_PROFILER_H_
 #define GRAPH_RUNTIME_GRAPH_PROFILER_H_
 
+#include <atomic>
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -61,8 +63,18 @@ class GraphProfiler {
   void SetCloseRuntime(const std::string& name,
                        int64_t start_usec, int64_t end_usec);
 
+  struct PerNodeData {
+    std::atomic<int64_t> open_runtime_usec{0};
+    std::atomic<int64_t> close_runtime_usec{0};
+    TimeHistogram process_runtime;
+  };
+
   ProfilerConfig config_;
-  // Will be implemented in Phase 3
+  std::atomic<bool> is_profiling_{false};
+  std::atomic<bool> is_initialized_{false};
+  std::shared_ptr<Clock> clock_;
+  mutable std::mutex mutex_;
+  std::map<std::string, std::unique_ptr<PerNodeData>> node_data_;
 };
 
 class ProfilingContext : public GraphProfiler {
@@ -93,6 +105,7 @@ class GraphProfilerStub {
     std::string node_name;
     int64_t open_runtime_usec = 0;
     int64_t close_runtime_usec = 0;
+    TimeHistogram process_runtime;
   };
   std::vector<NodeProfile> GetNodeProfiles() const { return {}; }
   const ProfilerConfig& profiler_config() const { return config_; }

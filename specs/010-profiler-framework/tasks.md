@@ -63,23 +63,23 @@
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Implement `GraphProfiler` class (real) in `src/framework/profiler/graph_profiler.h` and `src/framework/profiler/graph_profiler.cc` — `Initialize()`, `Start()`, `Stop()`, `Pause()`, `Resume()`, `Reset()`, `SetClock()`, `GetNodeProfiles()`, `SetOpenRuntime()`, `AddProcessSample()`, `SetCloseRuntime()`, plus the `Scope` nested class with `EventType` enum
-- [ ] T014 [P] [US1] Implement `GraphProfilerStub` class (no-op) in the same `src/framework/profiler/graph_profiler.h` — all methods are empty bodies with the same API shape
-- [ ] T015 [P] [US1] Implement `ProfilingContext` as a class inheriting from either `GraphProfiler` or `GraphProfilerStub` depending on `GRAPH_RUNTIME_PROFILER_ENABLED` in `src/framework/profiler/graph_profiler.h`
-- [ ] T016 [US1] Add `ProfilingContext* profiler_` member, `SetProfiler()`, and `GetProfiler()` to `src/framework/scheduler/scheduler.h` and `src/framework/scheduler/scheduler.cc`
-- [ ] T017 [US1] Add `ProfilingContext* profiler_` member and `SetProfiler()` to `src/framework/scheduler/scheduler_queue.h` and `src/framework/scheduler/scheduler_queue.cc`
-- [ ] T018 [US1] Instrument `Node::Open` and `Node::Close` in `Scheduler::Schedule()` (sync path) and `Scheduler::Start()` (async path) with `ProfilingContext::Scope` wrappers in `src/framework/scheduler/scheduler.cc`
-- [ ] T019 [US1] Instrument `Node::Open` and `Node::Process` in `SchedulerQueue::RunNode()` with `ProfilingContext::Scope` wrappers in `src/framework/scheduler/scheduler_queue.cc`
-- [ ] T020 [US1] Add `std::unique_ptr<ProfilingContext> profiler_` member, `profiler()` accessor, `SetProfilerConfig()`, and `GetNodeProfiles()` to `GraphRuntime` in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc`; wire profiler initialization and pass to scheduler during `Initialize()`
-- [ ] T021 [US1] Update `src/framework/scheduler/BUILD.bazel` to add `@graph_runtime//src/framework/profiler:graph_profiler` dep on `scheduler_queue` and `scheduler` targets
+- [X] T013 [P] [US1] Implement `GraphProfiler` class (real) in `src/framework/profiler/graph_profiler.h` and `src/framework/profiler/graph_profiler.cc` — `Initialize()`, `Start()`, `Stop()`, `Pause()`, `Resume()`, `Reset()`, `SetClock()`, `GetNodeProfiles()`, `SetOpenRuntime()`, `AddProcessSample()`, `SetCloseRuntime()`, plus the `Scope` nested class with `EventType` enum
+- [X] T014 [P] [US1] Implement `GraphProfilerStub` class (no-op) in the same `src/framework/profiler/graph_profiler.h` — all methods are empty bodies with the same API shape
+- [X] T015 [P] [US1] Implement `ProfilingContext` as a class inheriting from either `GraphProfiler` or `GraphProfilerStub` depending on `GRAPH_RUNTIME_PROFILER_ENABLED` in `src/framework/profiler/graph_profiler.h`
+- [X] T016 [US1] Add `ProfilingContext* profiler_` member, `SetProfiler()`, and `GetProfiler()` to `src/framework/scheduler/scheduler.h` and `src/framework/scheduler/scheduler.cc`
+- [X] T017 [US1] Add `ProfilingContext* profiler_` member and `SetProfiler()` to `src/framework/scheduler/scheduler_queue.h` and `src/framework/scheduler/scheduler_queue.cc`
+- [X] T018 [US1] Instrument `Node::Open` and `Node::Close` in `Scheduler::Schedule()` (sync path) and `Scheduler::Start()` (async path) with `ProfilingContext::Scope` wrappers in `src/framework/scheduler/scheduler.cc`
+- [X] T019 [US1] Instrument `Node::Open` and `Node::Process` in `SchedulerQueue::RunNode()` with `ProfilingContext::Scope` wrappers in `src/framework/scheduler/scheduler_queue.cc`
+- [X] T020 [US1] Add `std::unique_ptr<ProfilingContext> profiler_` member, `profiler()` accessor, `SetProfilerConfig()`, and `GetNodeProfiles()` to `GraphRuntime` in `src/framework/public/graph_runtime.h` and `src/framework/public/graph_runtime.cc`; wire profiler initialization and pass to scheduler during `Initialize()`
+- [X] T021 [US1] Update `src/framework/scheduler/BUILD.bazel` to add `@graph_runtime//src/framework/profiler:graph_profiler` dep on `scheduler_queue` and `scheduler` targets
 
 ### Tests for User Story 1
 
-- [ ] T022 [US1] Add `profiler_test.cc` target to `src/tests/BUILD.bazel` with dep on `@graph_runtime//src/framework/profiler:graph_profiler` and `@com_google_googletest//:gtest_main`
-- [ ] T023 [US1] Write `ProfilerDisabledReturnsEmptyProfiles` test: default config → `GetNodeProfiles()` returns empty vector
+- [X] T022 [US1] Add `profiler_test.cc` target to `src/tests/BUILD.bazel` with dep on `@graph_runtime//src/framework/profiler:graph_profiler` and `@com_google_googletest//:gtest_main`
+- [X] T023 [US1] Write `ProfilerDisabledReturnsEmptyProfiles` test: default config → `GetNodeProfiles()` returns empty vector
 - [ ] T024 [US1] Write `ProfilerEnabledRecordsRuntimes` test: single node with 10ms sleep in Process → measured runtime within [8ms, 12ms]
-- [ ] T025 [US1] Write `ProfilerResetClearsData` test: accumulate samples → `Reset()` → histograms are empty
-- [ ] T026 [US1] Write `ProfilerConfigFromJson` test: parse JSON with profiler_config block → verify `GraphConfig::profiler_config` fields match
+- [X] T025 [US1] Write `ProfilerResetClearsData` test: accumulate samples → `Reset()` → histograms are empty
+- [X] T026 [US1] Write `ProfilerConfigFromJson` test: parse JSON with profiler_config block → verify `GraphConfig::profiler_config` fields match
 
 **Checkpoint**: At this point, User Story 1 should be fully functional — profiling can be configured, data collected, and profiles retrieved in memory
 

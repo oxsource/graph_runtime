@@ -22,6 +22,8 @@
 #include "src/framework/public/side_packet.h"
 #include "src/framework/scheduler/counters.h"
 
+#include "src/framework/profiler/graph_profiler.h"
+
 namespace graph::runtime {
 
 class InputStreamHandler;
@@ -41,6 +43,8 @@ class Scheduler {
 
   void SetInputStreamHandler(std::unique_ptr<InputStreamHandler> handler);
   void SetErrorCallback(ErrorCallback cb);
+  void SetProfiler(ProfilingContext* profiler) { profiler_ = profiler; }
+  ProfilingContext* profiler() const { return profiler_; }
 
   virtual absl::Status SetDefaultExecutor(std::shared_ptr<Executor> executor);
   virtual absl::Status SetNonDefaultExecutor(
@@ -120,6 +124,7 @@ class Scheduler {
   PacketSet input_side_packets_;
 
   PerfCounters perf_counters_;
+  ProfilingContext* profiler_ = nullptr;
 };
 
 }  // namespace graph::runtime

@@ -17,6 +17,8 @@
 #include "src/framework/public/side_packet.h"
 #include "src/framework/scheduler/scheduler.h"
 #include "src/framework/node/node.h"
+#include "src/framework/profiler/graph_profiler.h"
+#include "graph_runtime/profiler.h"
 #include "src/framework/stream/input_stream_manager.h"
 #include "src/framework/stream/output_stream_manager.h"
 #include "src/framework/stream/output_stream_handler.h"
@@ -116,6 +118,13 @@ class GraphRuntime {
       const std::string& name,
       std::function<void(const Packet&)> callback);
 
+  // ── Profiler ──
+
+  void SetProfilerConfig(const ProfilerConfig& config);
+  ProfilingContext* profiler();
+  const ProfilingContext* profiler() const;
+  std::vector<NodeProfile> GetNodeProfiles() const;
+
   // Register a hook by type. Replaces any previous hook of the same type.
   // Example: SetHook(hook::kTypeLog, myFn);
   void SetHook(int type, hook::HookFn fn);
@@ -165,6 +174,9 @@ class GraphRuntime {
 
   // Output side packet callback storage (name → callback).
   std::map<std::string, std::function<void(const Packet&)>> output_side_packet_callbacks_;
+
+  ProfilerConfig profiler_config_override_;
+  std::unique_ptr<ProfilingContext> profiler_;
 };
 
 }  // namespace graph::runtime

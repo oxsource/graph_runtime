@@ -7,10 +7,18 @@ config_setting(
 
 cc_library(
     name = "graph_profiler_stub",
+    srcs = [
+        "clock.cc",
+        "time_histogram.cc",
+    ],
     hdrs = [
+        "clock.h",
+        "graph_profiler.h",
         "profiler_config.h",
+        "time_histogram.h",
     ],
     deps = [
+        "@com_google_absl//absl/status",
         "@graph_runtime//src/framework/public:hook_header",
     ],
 )
