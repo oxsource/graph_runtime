@@ -123,10 +123,10 @@ int main() {
     for (const auto& p : profiles) {
       printf("Node: %s\n", p.node_name.c_str());
       printf("  Process calls: %lld\n", static_cast<long long>(p.process_count));
-      printf("  Process total: %lld us\n", static_cast<long long>(p.process_time_total_usec));
-      printf("  Process mean:  %.2f us\n", p.process_time_mean_usec);
-      printf("  Open:          %lld us\n", static_cast<long long>(p.open_runtime_usec));
-      printf("  Close:         %lld us\n", static_cast<long long>(p.close_runtime_usec));
+      printf("  Process total: %.3f ms\n", p.process_time_total_usec / 1000.0);
+      printf("  Process mean:  %.3f ms\n", p.process_time_mean_usec / 1000.0);
+      printf("  Open:          %.3f ms\n", p.open_runtime_usec / 1000.0);
+      printf("  Close:         %.3f ms\n", p.close_runtime_usec / 1000.0);
     }
   }
 

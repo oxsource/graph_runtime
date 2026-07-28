@@ -73,10 +73,10 @@ void PrintTable(const ProfileReport& report,
 
   os.width(22); os << "Node";
   os << "  " << "Count";
-  os << "  " << "Mean(us)";
-  os << "  " << "Total(us)";
-  os << "  " << "Open(us)";
-  os << "  " << "Close(us)";
+  os << "  " << "Mean(ms)";
+  os << "  " << "Total(ms)";
+  os << "  " << "Open(ms)";
+  os << "  " << "Close(ms)";
   os << "\n";
   print_separator();
 
@@ -87,14 +87,21 @@ void PrintTable(const ProfileReport& report,
     os << "  ";
     os.width(5); os << node.process_count;
     os << "  ";
-    std::snprintf(buf, sizeof(buf), "%.2f", node.process_time_mean_usec);
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  node.process_time_mean_usec / 1000.0);
     os.width(8); os << buf;
     os << "  ";
-    os.width(9); os << node.process_time_total_usec;
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  static_cast<double>(node.process_time_total_usec) / 1000.0);
+    os.width(8); os << buf;
     os << "  ";
-    os.width(8); os << node.open_runtime_usec;
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  static_cast<double>(node.open_runtime_usec) / 1000.0);
+    os.width(8); os << buf;
     os << "  ";
-    os.width(8); os << node.close_runtime_usec;
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  static_cast<double>(node.close_runtime_usec) / 1000.0);
+    os.width(8); os << buf;
     os << "\n";
   }
   print_separator();
@@ -103,14 +110,16 @@ void PrintTable(const ProfileReport& report,
   os.width(5); os << report.total_process_count;
   os << "  ";
   char buf[64];
-  std::snprintf(buf, sizeof(buf), "%.2f",
+  std::snprintf(buf, sizeof(buf), "%.3f",
       report.total_process_time_usec > 0
           ? static_cast<double>(report.total_process_time_usec) /
-                report.total_process_count
+                report.total_process_count / 1000.0
           : 0.0);
   os.width(8); os << buf;
   os << "  ";
-  os.width(9); os << report.total_process_time_usec;
+  std::snprintf(buf, sizeof(buf), "%.3f",
+                static_cast<double>(report.total_process_time_usec) / 1000.0);
+  os.width(8); os << buf;
   os << "  ";
   os << "  " << "—";
   os << "       " << "—";
@@ -120,15 +129,24 @@ void PrintTable(const ProfileReport& report,
 void PrintCsv(const ProfileReport& report,
               const std::string& node_filter,
               std::ostream& os) {
-  os << "Node,Count,Mean(us),Total(us),Open(us),Close(us)\n";
+  os << "Node,Count,Mean(ms),Total(ms),Open(ms),Close(ms)\n";
   for (const auto& node : report.nodes) {
     if (!MatchesFilter(node.node_name, node_filter)) continue;
+    char buf[64];
     os << node.node_name << ","
-       << node.process_count << ","
-       << node.process_time_mean_usec << ","
-       << node.process_time_total_usec << ","
-       << node.open_runtime_usec << ","
-       << node.close_runtime_usec << "\n";
+       << node.process_count << ",";
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  node.process_time_mean_usec / 1000.0);
+    os << buf << ",";
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  static_cast<double>(node.process_time_total_usec) / 1000.0);
+    os << buf << ",";
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  static_cast<double>(node.open_runtime_usec) / 1000.0);
+    os << buf << ",";
+    std::snprintf(buf, sizeof(buf), "%.3f",
+                  static_cast<double>(node.close_runtime_usec) / 1000.0);
+    os << buf << "\n";
   }
 }
 
@@ -139,8 +157,8 @@ void PrintDeltaTable(const std::vector<Reporter::Delta>& deltas,
   };
 
   os.width(22); os << "Node";
-  os << "  " << "Mean(us)";
-  os << "  " << "Delta(us)";
+  os << "  " << "Mean(ms)";
+  os << "  " << "Delta(ms)";
   os << "  " << "Delta(%)";
   os << "\n";
   print_sep();
@@ -150,11 +168,11 @@ void PrintDeltaTable(const std::vector<Reporter::Delta>& deltas,
     os.width(22); os << d.node_name;
     os << "  ";
     os.width(8);
-    std::snprintf(buf, sizeof(buf), "%.2f", d.process_mean_delta_usec);
+    std::snprintf(buf, sizeof(buf), "%.3f", d.process_mean_delta_usec / 1000.0);
     os << buf;
     os << "  ";
     os.width(9);
-    std::snprintf(buf, sizeof(buf), "%+.2f", d.process_mean_delta_usec);
+    std::snprintf(buf, sizeof(buf), "%+.3f", d.process_mean_delta_usec / 1000.0);
     os << buf;
     os << "  ";
     os.width(9);
@@ -225,12 +243,17 @@ int Run(const Args& args) {
 
     auto deltas = experiment_reporter.Compare(baseline);
     if (args.format == "csv") {
-      *os << "Node,Mean(us),Delta(us),Delta(%)\n";
+      *os << "Node,Mean(ms),Delta(ms),Delta(%)\n";
       for (const auto& d : deltas) {
         if (!MatchesFilter(d.node_name, args.node_filter)) continue;
-        *os << d.node_name << ","
-            << d.process_mean_delta_usec << ","
-            << d.process_mean_delta_usec << ","
+        char buf[64];
+        *os << d.node_name << ",";
+        std::snprintf(buf, sizeof(buf), "%.3f",
+                      d.process_mean_delta_usec / 1000.0);
+        *os << buf << ",";
+        std::snprintf(buf, sizeof(buf), "%.3f",
+                      d.process_mean_delta_usec / 1000.0);
+        *os << buf << ","
             << d.process_mean_delta_pct << "\n";
       }
     } else {

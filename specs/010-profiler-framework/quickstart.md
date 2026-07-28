@@ -125,10 +125,10 @@ Graph completed.
 === Profile Results ===
 Node: work
   Process calls: 1
-  Process total: 5038 us
-  Process mean:  5038.00 us
-  Open:          722 us
-  Close:         9 us
+  Process total: 5.038 ms
+  Process mean:  5.038 ms
+  Open:          0.722 ms
+  Close:         0.009 ms
 
 Profile saved to: /tmp/profiler_demo_profile.json
 ```
@@ -138,10 +138,10 @@ Profile saved to: /tmp/profiler_demo_profile.json
 | 字段 | 说明 | 示例值 |
 |------|------|--------|
 | `Process calls` | Process() 被调用的次数 | `1` |
-| `Process total` | 所有 Process() 调用累计耗时（微秒） | `5038 us` |
-| `Process mean`  | 单次 Process() 平均耗时 | `5038.00 us` |
-| `Open`          | Open() 调用耗时（微秒） | `722 us` |
-| `Close`         | Close() 调用耗时（微秒） | `9 us` |
+| `Process total` | 所有 Process() 调用累计耗时（毫秒） | `5.038 ms` |
+| `Process mean`  | 单次 Process() 平均耗时 | `5.038 ms` |
+| `Open`          | Open() 调用耗时（毫秒） | `0.722 ms` |
+| `Close`         | Close() 调用耗时（毫秒） | `0.009 ms` |
 
 > `Process calls` 为 1 是因为 demo 使用 sync path（`Schedule()`），source node
 > 完成一轮数据生成后返回 `StatusStop()`，Process 仅在活跃期间被调用一次。
@@ -159,17 +159,17 @@ print_profile --files=/tmp/profiler_demo_profile.json
 输出示例：
 
 ```
-                  Node  Count  Mean(us)  Total(us)  Open(us)  Close(us)
+                  Node  Count  Mean(ms)  Total(ms)  Open(ms)  Close(ms)
 ──────────────────────  ─────  ────────  ─────────  ────────  ─────────
-                  work      1   5038.00       5038       722         9
+                  work      1    5.038     5.038     0.722     0.009
 ──────────────────────  ─────  ────────  ─────────  ────────  ─────────
-                 TOTAL      1   5038.00       5038    —       —
+                 TOTAL      1    5.038     5.038    —         —
 ```
 
 - **Count**: Process 调用次数
-- **Mean(us)**: 单次 Process 平均耗时（= Total / Count）
-- **Total(us)**: 所有 Process 累计耗时
-- **Open(us) / Close(us)**: 节点 Open/Close 的耗时
+- **Mean(ms)**: 单次 Process 平均耗时（= Total / Count）
+- **Total(ms)**: 所有 Process 累计耗时
+- **Open(ms) / Close(ms)**: 节点 Open/Close 的耗时
 - **TOTAL 行**: 所有节点聚合值
 
 #### 2. CSV 输出（可导入电子表格）
@@ -179,8 +179,8 @@ print_profile --files=/tmp/profiler_demo_profile.json --format=csv
 ```
 
 ```csv
-Node,Count,Mean(us),Total(us),Open(us),Close(us)
-work,1,5038,5038,722,9
+Node,Count,Mean(ms),Total(ms),Open(ms),Close(ms)
+work,1,5.038,5.038,0.722,0.009
 ```
 
 #### 3. 节点过滤
@@ -211,9 +211,9 @@ print_profile --files=/tmp/baseline.json,/tmp/experiment.json --compare
 对比输出：
 
 ```
-                  Node  Mean(us)  Delta(us)  Delta(%)
+                  Node  Mean(ms)  Delta(ms)  Delta(%)
 ──────────────────────  ────────  ─────────  ────────
-                  work   5038.00     +0.00     +0.0%
+                  work    5.038     +0.000     +0.0%
 ```
 
 #### 5. 保存报告到文件
