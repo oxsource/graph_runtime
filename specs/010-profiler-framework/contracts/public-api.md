@@ -57,8 +57,7 @@ class GRAPH_RUNTIME_API GraphRuntime {
   // ── Profiler Access ──
 
   // Returns the raw ProfilingContext handle for direct access.
-  // Returns non-null pointer regardless of build-time switch;
-  // methods are no-ops when profiler is disabled.
+  // Returns non-null pointer; methods are no-ops when profiler is disabled.
   ProfilingContext* profiler();
   const ProfilingContext* profiler() const;
 
@@ -114,13 +113,13 @@ The profiler configuration is embedded in the graph config file under the `profi
 
 All fields in `profiler_config` are optional. When absent, defaults from `ProfilerConfig` apply.
 
-## Build-Time Contract
+## Runtime-Only Contract (No Build-Time Switch)
+
+Profiling is controlled entirely at runtime via `ProfilerConfig::enable_profiler`.
+A single binary supports both profiled and non-profiled execution. When disabled,
+the Scope RAII wrapper performs a single atomic load (~1-2ns) and returns.
 
 ```bash
-# Enable profiler (real implementation)
-bazel build //... --define graph_runtime_profiler=true
-
-# Default (stub / no-op profiler)
 bazel build //...
 ```
 
@@ -128,9 +127,8 @@ bazel build //...
 
 | Scenario | GetNodeProfiles() | WriteProfile(path) | Notes |
 |----------|------------------------|--------------------|-------|
-| Build: profiler disabled | `{}` (empty) | No-op, OkStatus | Compile-time zero overhead |
-| Build: enabled, Config: enable_profiler=false | `{}` (empty) | No-op, OkStatus | Runtime no-op |
-| Build: enabled, Config: enable_profiler=true, graph executed | Filled profiles | Valid JSON file | Real timing data |
+| Config: enable_profiler=false | `{}` (empty) | No-op, OkStatus | Runtime no-op |
+| Config: enable_profiler=true, graph executed | Filled profiles | Valid JSON file | Real timing data |
 | Called before graph execution | `{}` (empty) | Empty JSON (0 nodes) | No data yet |
 | Called during graph execution | Partial data | Partial data in JSON | Best-effort snapshot |
 | After Reset() | `{}` (empty) | Empty JSON (0 nodes) | Data cleared |

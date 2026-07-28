@@ -137,9 +137,9 @@
 **Purpose**: Documentation, build switch verification, agent context update, and final validation
 
 - [X] T042 [P] Update `AGENTS.md` `<!-- SPECKIT START -->` block to reference `specs/010-profiler-framework/plan.md` and add profiler architecture notes (already partially done — verify and complete if needed)
-- [X] T043 [P] Write `ProfilerBuildStubIsNoOp` test: verify that default build (without `--define graph_runtime_profiler=true`) produces empty profiles and no crashes
+- [X] T043 [P] Write `ProfilerBuildStubIsNoOp` test: verify that runtime-disabled profiler produces empty profiles and no crashes
 - [X] T044 [P] Write `ProfilerScopeRecordsCorrectly` test: use a `MockClock` implementation to verify Scope constructor/destructor timing dispatch is correct
-- [X] T045 Verify all `bazel build //...` and `bazel test //...` pass with both default (`graph_profiler_stub`) and `--define graph_runtime_profiler=true` (`graph_profiler_real`) configurations
+- [X] T045 Verify `bazel build //...` and `bazel test //...` pass with profiler enabled at runtime
 - [X] T046 Run `bazel build //src/framework/public:runtime_shared` to verify shared library builds correctly with profiler symbols exported
 
 ---

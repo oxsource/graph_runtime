@@ -74,22 +74,11 @@ A developer collects profile files from multiple graph runs (e.g., as part of a 
 
 ---
 
-### User Story 4 - Build-Time Profiler Disabling for Production Deployment (Priority: P3)
+### User Story 4 - Runtime Profiler Disabling (Priority: P3)
 
-A production deployer wants to eliminate all profiling overhead from a release build. They use a build-time flag to compile out the profiler entirely, ensuring zero runtime overhead and zero code footprint.
+A production deployer wants to eliminate all profiling overhead from a release deployment. They set `enable_profiler: false` in the config, and the profiler's Scope RAII wrapper performs a single atomic load (~1-2ns) per Open/Process/Close call, returning immediately without reading the clock or updating histograms.
 
-**Why this priority**: Important for production environments where every microsecond counts, but lower priority than the basic functional use case since the profiler already has a runtime enable/disable toggle.
-
-**Independent Test**: Can be tested by:
-1. Building the same test twice: once with the profiler enabled and once with it disabled
-2. Verifying that the disabled build has no profiler symbols
-3. Verifying that the disabled build runs with identical behavior but the profiler API returns empty/no-op results
-
-**Acceptance Scenarios**:
-
-1. **Given** the library is built with `graph_runtime_profiler=false` (or default), **When** a caller invokes `runtime.profiler()`, **Then** the returned pointer is non-null but all profiling methods are no-ops, and `GetNodeProfiles()` returns an empty list.
-
-2. **Given** two builds of the same graph — one with profiling enabled and one disabled, **When** comparing binary sizes, **Then** the disabled build is measurably smaller.
+**Why this priority**: The runtime toggle is sufficient for nearly all use cases. A build-time compile-out was considered in the initial design but removed to eliminate the need for two build configurations. The ~1-2ns atomic check in the hot path is negligible compared to node execution times.
 
 ---
 
@@ -127,8 +116,8 @@ A test engineer wants to write deterministic unit tests for the profiler itself.
 - **FR-002**: The system MUST provide an abstract `Clock` interface for time measurement, with a real-time implementation using a monotonic clock source, and allow injection of custom clocks for testing.
 - **FR-003**: The system MUST provide a `TimeHistogram` that collects runtime samples into fixed-width buckets, tracks total count and total duration, and supports `Initialize(interval_size, num_intervals)`, `AddSample(start_usec, end_usec)`, `Reset()`, and read-only queries (count, total, mean, buckets).
 - **FR-004**: The system MUST provide a `GraphProfiler` class with a RAII `Scope` helper that records start time on construction and computes duration on destruction, dispatching timing data per node to the appropriate Open/Process/Close histogram based on the event type.
-- **FR-005**: The system MUST support a build-time switch that selects between the real profiler implementation and a no-op stub, with zero runtime overhead when the stub is selected.
-- **FR-006**: The system MUST provide `ProfilingContext` as a consistent class name that resolves to either `GraphProfiler` (real) or `GraphProfilerStub` (no-op) depending on the build-time switch, enabling uniform usage in framework code without conditional compilation at each call site.
+- **FR-005**: The system MUST support runtime enable/disable of profiling via `ProfilerConfig::enable_profiler`. When disabled, the Scope RAII wrapper MUST perform only an atomic flag check (~1-2ns) without reading the clock or updating histograms.
+- **FR-006**: The system MUST provide `ProfilingContext` as a consistent class name that always resolves to `GraphProfiler`. The profiler implementation is always compiled; runtime control is via the `is_profiling_` atomic flag.
 - **FR-007**: The `GraphRuntime` MUST expose:
   - `ProfilingContext* profiler()` for direct profiler handle access
   - `void SetProfilerConfig(const ProfilerConfig& config)` for programmatic configuration
@@ -150,8 +139,8 @@ A test engineer wants to write deterministic unit tests for the profiler itself.
 - **TimeHistogram**: Bucket-based accumulator for runtime samples — stores configurable-width intervals, total count, total sum. Buckets are pre-allocated on `Initialize()`.
 - **Clock**: Abstract interface for time measurement — provides monotonic microsecond timestamps. Supports both real-time and mock implementations.
 - **NodeProfile**: Per-node profile result — contains `node_name`, `open_runtime_usec`, `close_runtime_usec`, and `process_runtime` (TimeHistogram).
-- **GraphProfiler / GraphProfilerStub**: The real and no-op profiler implementations. The real version holds per-node `NodeProfile` data in a thread-safe map, manages the `Scope` RAII wrapper, and supports `Initialize`, `Start`, `Stop`, `Pause`, `Resume`, `Reset`, and `GetNodeProfiles`.
-- **ProfilingContext**: Class alias that inherits from either `GraphProfiler` or `GraphProfilerStub` depending on the build-time switch. Owned by `GraphRuntime` and passed to `Scheduler`/`SchedulerQueue` for instrumentation.
+- **GraphProfiler**: The real profiler implementation. Holds per-node `NodeProfile` data in a thread-safe map, manages the `Scope` RAII wrapper, and supports `Initialize`, `Start`, `Stop`, `Pause`, `Resume`, `Reset`, and `GetNodeProfiles`. Controlled at runtime via the `is_profiling_` atomic flag.
+- **ProfilingContext**: Class alias for `GraphProfiler`. Owned by `GraphRuntime` and passed to `Scheduler`/`SchedulerQueue` for instrumentation. Always the same class regardless of build configuration (no build-time switch).
 - **Scope**: RAII helper nested inside `ProfilingContext` — records `start_time_usec` on construction, dispatches to `SetOpenRuntime`, `AddProcessSample`, or `SetCloseRuntime` on destruction based on `EventType` (OPEN, PROCESS, CLOSE).
 - **Profile Json File**: On-disk representation of profile data — a JSON document with top-level keys: `graph_name` (string), `capture_time` (ISO 8601 string), `node_count` (int), and `nodes` (array of `NodeProfile` entries with histogram buckets). This file is the exchange format between the profiler (producer) and the Reporter (consumer).
 - **Reporter**: Offline analysis component that ingests one or more profile JSON files, computes per-node statistics (mean, min, max, count, p50, p95, p99), and produces formatted reports. Supports filtering, comparison (delta between two runs), and multiple output formats.
@@ -173,7 +162,7 @@ A test engineer wants to write deterministic unit tests for the profiler itself.
 
 - The profiler uses microsecond precision, which is sufficient for the expected use case of measuring node execution times in a graph runtime.
 - A monotonic real-time clock is available on all target platforms.
-- The build system's conditional compilation mechanism is sufficient for the build-time enable/disable switch.
+- Profiling is controlled at runtime via `ProfilerConfig::enable_profiler`. No build-time switch is required.
 - The profiler is single-graph-scoped: one `ProfilingContext` instance per `GraphRuntime`, not shared across graphs.
 - Thread safety is provided via a mutex for histogram updates and atomic flags for enable/disable checks; the fine-grained lock-free approach (MediaPipe's `CircularBuffer`) is deferred to Phase 2.
 - Node names in the graph are unique, so they can serve as keys for per-node profile data.

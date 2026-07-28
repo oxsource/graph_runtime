@@ -4,7 +4,7 @@
 
 ## Summary
 
-Add a MediaPipe-inspired profiling mechanism to graph_runtime for measuring per-node execution performance. The profiler supports RAII Scope-based Open/Process/Close timing, configurable TimeHistograms, an abstract Clock interface for testability, a build-time stub switch for zero-overhead production builds, and a public API on `GraphRuntime` for querying `NodeProfile` results.
+Add a MediaPipe-inspired profiling mechanism to graph_runtime for measuring per-node execution performance. The profiler supports RAII Scope-based Open/Process/Close timing, configurable TimeHistograms, an abstract Clock interface for testability, runtime enable/disable via `ProfilerConfig::enable_profiler` (no build-time switch), and a public API on `GraphRuntime` for querying `NodeProfile` results.
 
 ## Technical Context
 
@@ -20,7 +20,7 @@ Add a MediaPipe-inspired profiling mechanism to graph_runtime for measuring per-
 **Testing**: 
 - `bazel test //...` with `googletest` (existing)
 - New profiler unit tests under `src/tests/`
-- Build-time switch tested via `--define graph_runtime_profiler=true` and default
+- Runtime switch tested via `ProfilerConfig::enable_profiler = true/false`
 
 **Target Platform**: macOS ARM64, Linux x86_64 (existing platform support)
 
