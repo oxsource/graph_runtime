@@ -1,0 +1,11 @@
+package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__subpackages__"])
+
+cc_library(
+    name = "reporter",
+    srcs = ["reporter.cc"],
+    hdrs = ["reporter.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)

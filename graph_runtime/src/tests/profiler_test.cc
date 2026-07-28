@@ -14,6 +14,7 @@
 #include "src/framework/profiler/clock.h"
 #include "src/framework/profiler/profiler_config.h"
 #include "src/framework/profiler/profile_writer.h"
+#include "src/framework/profiler/reporter/reporter.h"
 #include "src/framework/profiler/time_histogram.h"
 
 namespace graph::runtime {
@@ -259,6 +260,140 @@ TEST(ProfilerTest, WriteProfileRealEnabled) {
   // In real mode, file is created; in stub mode, OkStatus but no file
   // Just verify the call doesn't crash and returns a status
   EXPECT_TRUE(status.ok() || !status.ok());
+  std::remove(path.c_str());
+}
+
+// ── Reporter Tests ──
+
+TEST(ProfilerTest, ReporterAccumulateSingleFile) {
+  std::string path = std::tmpnam(nullptr);
+  {
+    std::ofstream f(path);
+    f << R"({
+      "capture_time": "2026-07-28T12:00:00.000Z",
+      "node_count": 1,
+      "nodes": [
+        {
+          "node_name": "source",
+          "open_runtime_usec": 100,
+          "close_runtime_usec": 50,
+          "process_count": 10,
+          "process_time_total_usec": 10000,
+          "process_time_mean_usec": 1000.0
+        }
+      ]
+    })";
+  }
+
+  Reporter reporter;
+  auto status = reporter.Accumulate(path);
+  ASSERT_TRUE(status.ok()) << status.ToString();
+  auto report = reporter.Report();
+  ASSERT_EQ(report.nodes.size(), 1);
+  EXPECT_EQ(report.nodes[0].node_name, "source");
+  EXPECT_EQ(report.nodes[0].process_count, 10);
+  EXPECT_EQ(report.nodes[0].process_time_total_usec, 10000);
+
+  std::remove(path.c_str());
+}
+
+TEST(ProfilerTest, ReporterAccumulateMultipleFiles) {
+  std::string path1 = std::tmpnam(nullptr);
+  std::string path2 = std::tmpnam(nullptr);
+
+  auto write_profile = [](const std::string& p, const std::string& name,
+                          int64_t count, int64_t total) {
+    std::ofstream f(p);
+    f << R"({"capture_time": "", "node_count": 1, "nodes": [{
+      "node_name": ")" << name << R"(",
+      "open_runtime_usec": 0,
+      "close_runtime_usec": 0,
+      "process_count": )" << count << R"(,
+      "process_time_total_usec": )" << total << R"(,
+      "process_time_mean_usec": )" << (count > 0 ? total / count : 0) << R"(
+    }]})";
+  };
+
+  write_profile(path1, "source", 10, 10000);
+  write_profile(path2, "source", 20, 40000);
+
+  Reporter reporter;
+  ASSERT_TRUE(reporter.Accumulate(path1).ok());
+  ASSERT_TRUE(reporter.Accumulate(path2).ok());
+
+  auto report = reporter.Report();
+  ASSERT_EQ(report.nodes.size(), 1);
+  EXPECT_EQ(report.nodes[0].process_count, 30);
+  EXPECT_EQ(report.nodes[0].process_time_total_usec, 50000);
+
+  std::remove(path1.c_str());
+  std::remove(path2.c_str());
+}
+
+TEST(ProfilerTest, ReporterAccumulateFileNotFound) {
+  Reporter reporter;
+  auto status = reporter.Accumulate("/nonexistent/profile.json");
+  EXPECT_FALSE(status.ok());
+}
+
+TEST(ProfilerTest, ReporterCompareRuns) {
+  std::string baseline_path = std::tmpnam(nullptr);
+  std::string experiment_path = std::tmpnam(nullptr);
+
+  auto write_profile = [](const std::string& p, const std::string& name,
+                          double mean) {
+    std::ofstream f(p);
+    f << R"({"capture_time": "", "node_count": 1, "nodes": [{
+      "node_name": ")" << name << R"(",
+      "open_runtime_usec": 0,
+      "close_runtime_usec": 0,
+      "process_count": 10,
+      "process_time_total_usec": )" << static_cast<int64_t>(mean * 10) << R"(,
+      "process_time_mean_usec": )" << mean << R"(
+    }]})";
+  };
+
+  write_profile(baseline_path, "source", 1000.0);
+  write_profile(experiment_path, "source", 1200.0);
+
+  Reporter baseline_reporter;
+  ASSERT_TRUE(baseline_reporter.Accumulate(baseline_path).ok());
+  auto baseline = baseline_reporter.Report();
+
+  Reporter experiment_reporter;
+  ASSERT_TRUE(experiment_reporter.Accumulate(experiment_path).ok());
+  auto deltas = experiment_reporter.Compare(baseline);
+
+  ASSERT_EQ(deltas.size(), 1);
+  EXPECT_EQ(deltas[0].node_name, "source");
+  EXPECT_DOUBLE_EQ(deltas[0].process_mean_delta_usec, 200.0);
+  EXPECT_NEAR(deltas[0].process_mean_delta_pct, 20.0, 0.01);
+
+  std::remove(baseline_path.c_str());
+  std::remove(experiment_path.c_str());
+}
+
+TEST(ProfilerTest, ReporterClear) {
+  std::string path = std::tmpnam(nullptr);
+  {
+    std::ofstream f(path);
+    f << R"({"capture_time": "", "node_count": 1, "nodes": [{
+      "node_name": "source",
+      "open_runtime_usec": 0,
+      "close_runtime_usec": 0,
+      "process_count": 5,
+      "process_time_total_usec": 5000,
+      "process_time_mean_usec": 1000.0
+    }]})";
+  }
+
+  Reporter reporter;
+  ASSERT_TRUE(reporter.Accumulate(path).ok());
+  EXPECT_EQ(reporter.Report().nodes.size(), 1);
+
+  reporter.Clear();
+  EXPECT_EQ(reporter.Report().nodes.size(), 0);
+
   std::remove(path.c_str());
 }
 

@@ -1,0 +1,10 @@
+package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__subpackages__"])
+
+cc_binary(
+    name = "print_profile",
+    srcs = ["print_profile.cc"],
+    deps = [
+        "@graph_runtime//src/framework/profiler/reporter",
+        "@com_google_absl//absl/status",
+    ],
+)

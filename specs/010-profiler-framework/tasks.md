@@ -117,15 +117,15 @@
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] [US3] Create `src/framework/profiler/reporter/reporter.h` and `src/framework/profiler/reporter/reporter.cc` with `Reporter` class — `Accumulate(json_path)`, `Report()`, `Compare(baseline)`, `Clear()`, plus `ProfileReport` and `Delta` structs as specified in plan.md §1.10
-- [ ] T036 [P] [US3] Create `src/framework/profiler/reporter/BUILD.bazel` with `cc_library` target for the `Reporter` library
-- [ ] T037 [P] [US3] Create `src/framework/profiler/reporter/tools/print_profile.cc` — CLI entry point using `absl::Flags` or manual arg parsing for `--files`, `--node-filter`, `--compare`, `--format=(table|csv)`, `--output`
-- [ ] T038 [P] [US3] Create `src/framework/profiler/reporter/tools/BUILD.bazel` with `cc_binary` target for `print_profile` depending on the Reporter library
+- [X] T035 [P] [US3] Create `src/framework/profiler/reporter/reporter.h` and `src/framework/profiler/reporter/reporter.cc` with `Reporter` class — `Accumulate(json_path)`, `Report()`, `Compare(baseline)`, `Clear()`, plus `ProfileReport` and `Delta` structs as specified in plan.md §1.10
+- [X] T036 [P] [US3] Create `src/framework/profiler/reporter/BUILD.bazel` with `cc_library` target for the `Reporter` library
+- [X] T037 [P] [US3] Create `src/framework/profiler/reporter/tools/print_profile.cc` — CLI entry point using manual arg parsing for `--files`, `--node-filter`, `--compare`, `--format=(table|csv)`, `--output`
+- [X] T038 [P] [US3] Create `src/framework/profiler/reporter/tools/BUILD.bazel` with `cc_binary` target for `print_profile` depending on the Reporter library
 
 ### Tests for User Story 3
 
-- [ ] T039 [US3] Write `ReporterAccumulateMultipleFiles` test: create two profile files with different data → `Accumulate` both → verify aggregated stats
-- [ ] T040 [US3] Write `ReporterCompareRuns` test: create two profile files with known deltas → `Compare()` → verify delta values match
+- [X] T039 [US3] Write `ReporterAccumulateMultipleFiles` test: create two profile files with different data → `Accumulate` both → verify aggregated stats
+- [X] T040 [US3] Write `ReporterCompareRuns` test: create two profile files with known deltas → `Compare()` → verify delta values match
 - [ ] T041 [US3] Write `PrintProfileCliBasic` test: invoke CLI binary with `--files` → verify stdout contains expected table output
 
 **Checkpoint**: CLI tool produces formatted reports, supports filtering and comparison
