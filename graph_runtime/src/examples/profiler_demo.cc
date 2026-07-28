@@ -7,14 +7,11 @@
 //   5. Persist profiles to JSON via WriteProfile()
 //   6. Show how to analyze with the print_profile CLI tool
 //
-// Build (stub, no-op profiler):
+// Build:
 //   bazel build //src/examples:profiler_demo
 //
-// Build (real profiler):
-//   bazel build //src/examples:profiler_demo --define graph_runtime_profiler=true
-//
 // Run:
-//   bazel run //src/examples:profiler_demo --define graph_runtime_profiler=true
+//   bazel run //src/examples:profiler_demo
 //
 // Analyze with CLI:
 //   print_profile --files=/tmp/profiler_demo_profile.json
@@ -121,7 +118,7 @@ int main() {
   printf("=== Profile Results ===\n");
   if (profiles.empty()) {
     printf("(No profile data — profiler is disabled or no nodes were instrumented)\n");
-    printf("Build with: --define graph_runtime_profiler=true\n\n");
+    printf("Enable profiling via ProfilerConfig::enable_profiler = true\n\n");
   } else {
     for (const auto& p : profiles) {
       printf("Node: %s\n", p.node_name.c_str());

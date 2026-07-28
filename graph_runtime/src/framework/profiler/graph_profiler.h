@@ -16,8 +16,6 @@
 
 namespace graph::runtime {
 
-#ifdef GRAPH_RUNTIME_PROFILER_ENABLED
-
 class GraphProfiler {
  public:
   enum class EventType { OPEN, PROCESS, CLOSE };
@@ -80,45 +78,6 @@ class GraphProfiler {
 class ProfilingContext : public GraphProfiler {
   using GraphProfiler::GraphProfiler;
 };
-
-#else  // GRAPH_RUNTIME_PROFILER_ENABLED
-
-class GraphProfilerStub {
- public:
-  enum class EventType { OPEN, PROCESS, CLOSE };
-  class Scope {
-   public:
-    Scope(EventType, const std::string&, GraphProfilerStub*) {}
-    ~Scope() {}
-  };
-  void Initialize(const ProfilerConfig&, const std::vector<std::string>&) {}
-  void SetClock(std::shared_ptr<Clock>) {}
-  void Start() {}
-  void Stop() {}
-  void Pause() {}
-  void Resume() {}
-  void Reset() {}
-  absl::Status WriteProfile(const std::string&) {
-    return absl::OkStatus();
-  }
-  struct NodeProfile {
-    std::string node_name;
-    int64_t open_runtime_usec = 0;
-    int64_t close_runtime_usec = 0;
-    TimeHistogram process_runtime;
-  };
-  std::vector<NodeProfile> GetNodeProfiles() const { return {}; }
-  const ProfilerConfig& profiler_config() const { return config_; }
-
- private:
-  ProfilerConfig config_;
-};
-
-class ProfilingContext : public GraphProfilerStub {
-  using GraphProfilerStub::GraphProfilerStub;
-};
-
-#endif  // GRAPH_RUNTIME_PROFILER_ENABLED
 
 }  // namespace graph::runtime
 

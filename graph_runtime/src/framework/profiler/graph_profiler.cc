@@ -7,8 +7,6 @@
 
 namespace graph::runtime {
 
-#ifdef GRAPH_RUNTIME_PROFILER_ENABLED
-
 GraphProfiler::Scope::Scope(EventType type, const std::string& node_name,
                             GraphProfiler* profiler)
     : type_(type),
@@ -184,7 +182,5 @@ void GraphProfiler::SetCloseRuntime(const std::string& name,
     it->second->close_runtime_usec.store(duration, std::memory_order_relaxed);
   }
 }
-
-#endif  // GRAPH_RUNTIME_PROFILER_ENABLED
 
 }  // namespace graph::runtime

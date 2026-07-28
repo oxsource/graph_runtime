@@ -2,6 +2,11 @@
 
 This guide shows how library consumers use the profiler.
 
+Profiling is controlled at runtime via `ProfilerConfig::enable_profiler`. The same
+binary can enable or disable profiling without recompilation. When disabled, the
+Scope RAII wrapper performs a single atomic load (~1-2ns) and returns — no clock
+reads or histogram updates occur.
+
 ## Enable Profiling via Config File
 
 The `profiler_config` block is embedded in the graph config. Example in JSON format:
@@ -75,7 +80,7 @@ int main() {
 
 ```bash
 # Build the CLI tool
-bazel build //src/framework/profiler/reporter/tools:print_profile --define graph_runtime_profiler=true
+bazel build //src/framework/profiler/reporter/tools:print_profile
 
 # Generate report from a profile file
 ./bazel-bin/src/framework/profiler/reporter/tools/print_profile \
@@ -90,30 +95,17 @@ bazel build //src/framework/profiler/reporter/tools:print_profile --define graph
   --files=/tmp/profile.json --format=csv
 ```
 
-## Build with Profiler Enabled
-
-```bash
-bazel build //... --define graph_runtime_profiler=true
-```
-
-## Build without Profiler (default, zero overhead)
-
-```bash
-bazel build //...
-```
-
 ## Full Demo Example
 
-A complete, runnable example is at `src/examples/profiler_demo.cc`. It demonstrates the full profiler workflow with a node that simulates ~5ms of compute work per Process call.
+A complete, runnable example is at `src/examples/profiler_demo.cc`. It demonstrates
+the full profiler workflow with a node that simulates ~5ms of compute work per
+Process call.
 
 ### Build & Run
 
 ```bash
-# Build with real profiler enabled
-bazel build //src/examples:profiler_demo --define graph_runtime_profiler=true
-
-# Run
-bazel run //src/examples:profiler_demo --define graph_runtime_profiler=true
+bazel build //src/examples:profiler_demo
+bazel run //src/examples:profiler_demo
 ```
 
 ### Expected Output
@@ -143,25 +135,24 @@ Table output:
 ### Analyze with CLI
 
 ```bash
-bazel build //src/framework/profiler/reporter/tools:print_profile
-
 # Table output
-./bazel-bin/src/framework/profiler/reporter/tools/print_profile \
+bazel-bin/src/framework/profiler/reporter/tools/print_profile \
   --files=/tmp/profiler_demo_profile.json
 
 # CSV output
-./bazel-bin/src/framework/profiler/reporter/tools/print_profile \
+bazel-bin/src/framework/profiler/reporter/tools/print_profile \
   --files=/tmp/profiler_demo_profile.json --format=csv
 ```
 
-### Stub Mode (Default Build)
+### Runtime Disable (No Recompilation Needed)
 
-Without `--define graph_runtime_profiler=true`, the profiler compiles as a no-op stub.
-`GetNodeProfiles()` returns an empty vector and `WriteProfile()` returns `OkStatus`
-without performing any I/O. This ensures zero overhead in production builds.
-The demo binary still runs and shows `(No profile data ...)` — useful for
-verifying the API compiles and doesn't crash in either mode.
+When profiling is disabled at runtime (`enable_profiler: false`), `GetNodeProfiles()`
+returns an empty vector and `WriteProfile()` returns `OkStatus` without performing
+any I/O. The demo binary demonstrates this without any special build flag:
 
 ```bash
 bazel run //src/examples:profiler_demo
 ```
+
+No build-time switch (`--define`) is required. A single binary supports both
+profiled and non-profiled execution.

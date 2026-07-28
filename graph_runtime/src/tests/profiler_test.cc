@@ -257,8 +257,6 @@ TEST(ProfilerTest, WriteProfileRealEnabled) {
 
   std::string path = std::tmpnam(nullptr);
   auto status = profiler.WriteProfile(path);
-  // In real mode, file is created; in stub mode, OkStatus but no file
-  // Just verify the call doesn't crash and returns a status
   EXPECT_TRUE(status.ok() || !status.ok());
   std::remove(path.c_str());
 }
@@ -397,29 +395,6 @@ TEST(ProfilerTest, ReporterClear) {
   std::remove(path.c_str());
 }
 
-// ── Build Switch / Stub Tests ──
-
-#ifndef GRAPH_RUNTIME_PROFILER_ENABLED
-TEST(ProfilerTest, ProfilerBuildStubIsNoOp) {
-  // Verifies that the default build (stub) produces empty profiles
-  ProfilingContext profiler;
-  ProfilerConfig config;
-  config.enable_profiler = true;
-  profiler.Initialize(config, {"test_node"});
-  profiler.Start();
-  {
-    ProfilingContext::Scope scope(
-        ProfilingContext::EventType::PROCESS, "test_node", &profiler);
-  }
-  profiler.Stop();
-  auto profiles = profiler.GetNodeProfiles();
-  // In stub mode, GetNodeProfiles always returns empty
-  EXPECT_TRUE(profiles.empty());
-}
-#endif
-
-#ifdef GRAPH_RUNTIME_PROFILER_ENABLED
-
 TEST(ProfilerTest, ProfilerScopeRecordsCorrectly) {
   ProfilingContext profiler;
   auto mock_clock = std::make_shared<MockClock>(
@@ -446,8 +421,6 @@ TEST(ProfilerTest, ProfilerScopeRecordsCorrectly) {
   EXPECT_EQ(profiles[0].process_runtime.total(), 100);
   EXPECT_EQ(profiles[0].open_runtime_usec, 100);
 }
-
-#endif  // GRAPH_RUNTIME_PROFILER_ENABLED
 
 // ── Integration: Write + Read (works in both modes) ──
 
@@ -488,8 +461,6 @@ TEST(ProfilerTest, WriteProfileReadableByReporter) {
   std::remove(path.c_str());
 }
 
-#ifdef GRAPH_RUNTIME_PROFILER_ENABLED
-
 TEST(ProfilerTest, ProfilerEnabledRecordsRuntimes) {
   ProfilingContext profiler;
   auto mock_clock = std::make_shared<MockClock>(
@@ -512,8 +483,6 @@ TEST(ProfilerTest, ProfilerEnabledRecordsRuntimes) {
   EXPECT_EQ(profiles[0].process_runtime.total(), 30000);
   EXPECT_DOUBLE_EQ(profiles[0].process_runtime.mean(), 10000.0);
 }
-
-#endif  // GRAPH_RUNTIME_PROFILER_ENABLED
 
 }  // namespace
 }  // namespace graph::runtime

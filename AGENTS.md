@@ -18,7 +18,7 @@ Public headers: `graph_runtime/src/framework/public/include/graph_runtime/` with
 Consumer include path: `#include "graph_runtime/graph_runtime.h"` (umbrella header).
 Shared library: `bazel build //src/framework/public:runtime_shared` → `libruntime_shared.dylib`.
 Consumer demo: `cd graph_runtime/examples/consumer_demo && bazel test //...`.
-Profiler build switch: `bazel build //... --define graph_runtime_profiler=true` enables real profiler; default uses no-op stub.
-Profiler module: `src/framework/profiler/` — `GraphProfiler` (real), `GraphProfilerStub` (no-op), `ProfilingContext`, `TimeHistogram`, `Clock`, `RealClock`, `profile_writer` (JSON serialization), `reporter/` (offline analysis with `Reporter` class, `print_profile` CLI tool).
+Profiler is controlled at runtime via `ProfilerConfig::enable_profiler` (no build-time switch needed).
+Profiler module: `src/framework/profiler/` — `GraphProfiler`, `ProfilingContext`, `TimeHistogram`, `Clock`, `RealClock`, `profile_writer` (JSON serialization), `reporter/` (offline analysis with `Reporter` class, `print_profile` CLI tool).
 Integration: `GraphRuntime` exposes `profiler()`, `SetProfilerConfig()`, `GetNodeProfiles()`, `WriteProfile()`. `Scheduler`/`SchedulerQueue` instrument Open/Process/Close via `ProfilingContext::Scope` RAII wrappers.
 <!-- SPECKIT END -->
