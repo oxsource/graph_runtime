@@ -96,6 +96,15 @@ class Scheduler {
   SchedulerQueue& GetQueue(const std::string& executor_name);
   void OnNodeOpened(Node* node);
 
+  // Result of a deterministic drain pass over all input streams.
+  enum class DrainStatus {
+    kNotDone,   // Some stream is not yet done; keep waiting (no reschedule).
+    kScheduled, // Buffered packets found; owning nodes rescheduled for another
+                // pass. Caller must defer termination and return.
+    kDrained,   // Every non-source input stream is done and empty.
+  };
+  DrainStatus DrainInputQueues();
+
   SchedulerState state_ = SchedulerState::kNotStarted;
   bool stopping_ = false;
   bool has_error_ = false;

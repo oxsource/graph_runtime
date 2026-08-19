@@ -77,6 +77,38 @@ void Scheduler::HandleIdle() {
 
     bool no_more_sources = active_sources_.empty();
 
+    // Deterministic drain (MediaPipe parity): a source-free graph may still
+    // hold packets mid-flight — an encoder's done-triggered Flush, a batch
+    // buffered in a downstream input queue, or a stream whose done signal has
+    // not yet propagated from its upstream producer. Such a graph must not
+    // terminate. "Input empty" alone is not sufficient: under parallel
+    // execution a consumer can drain ahead of its producer, leaving its stream
+    // empty but not yet done. Only when every non-source node's input streams
+    // are both done and empty is the graph truly finished. Packets in an input
+    // queue are drained by scheduling the owning node; a not-yet-done stream is
+    // driven by its upstream producer, so here we simply keep waiting.
+    if (no_more_sources && !has_error_ && !inputs_remaining &&
+        state_ != SchedulerState::kCancelling) {
+      switch (DrainInputQueues()) {
+        case DrainStatus::kScheduled:
+          // Buffered packets found and owning nodes rescheduled: defer
+          // termination and await the next pass.
+          --handling_idle_;
+          return;
+        case DrainStatus::kNotDone:
+          // All input queues empty but not every stream done yet: the done
+          // signal is still propagating from upstream producers. Those
+          // consumers will be scheduled by their streams' arrival callbacks
+          // when done arrives, so do not busy-wait here — break and await the
+          // next event-driven HandleIdle.
+          break;
+        case DrainStatus::kDrained:
+          // All input streams done and empty: the graph has fully drained.
+          // Fall through to the normal termination check below.
+          break;
+      }
+    }
+
     bool should_quit;
     if (has_error_) {
       should_quit = true;
@@ -85,7 +117,8 @@ void Scheduler::HandleIdle() {
       // node remains and every graph input stream is closed. Draining of
       // buffered downstream packets is event-driven (input-stream arrival
       // callbacks + post-process re-scheduling in SchedulerQueue::RunNode), so
-      // idle queues imply drained input streams.
+      // idle queues imply drained input streams. The deterministic drain guard
+      // above already guarantees every input is done and empty at this point.
       should_quit = !inputs_remaining;
     } else {
       should_quit = false;
@@ -121,6 +154,44 @@ void Scheduler::HandleIdle() {
     break;
   }
   --handling_idle_;
+}
+
+Scheduler::DrainStatus Scheduler::DrainInputQueues() {
+  // Single pass: determine whether any non-source input stream still holds
+  // packets and whether every stream has received its done signal. If any
+  // queue is non-empty, reschedule its owning node for another pass so the
+  // buffered packets are deterministically consumed; if some stream is not yet
+  // done, do nothing here and rely on the upstream producer (or the arrival
+  // callback) to schedule the consumer once done arrives.
+  bool all_inputs_done = true;
+  bool any_input_nonempty = false;
+  for (auto* node : all_nodes_) {
+    if (node->input_port_count() == 0) continue;
+    for (const auto& [name, mgr] : node->InputPorts()) {
+      if (!mgr->IsDone()) all_inputs_done = false;
+      if (!mgr->IsEmpty()) any_input_nonempty = true;
+    }
+  }
+
+  if (any_input_nonempty) {
+    for (auto* node : all_nodes_) {
+      if (node->input_port_count() == 0) continue;
+      bool has_input = false;
+      for (const auto& [name, mgr] : node->InputPorts()) {
+        if (!mgr->IsEmpty()) {
+          has_input = true;
+          break;
+        }
+      }
+      if (has_input) {
+        auto* q = node->GetSchedulerQueue();
+        if (q && q->IsRunning()) q->AddNode(node);
+      }
+    }
+    return DrainStatus::kScheduled;
+  }
+
+  return all_inputs_done ? DrainStatus::kDrained : DrainStatus::kNotDone;
 }
 
 absl::Status Scheduler::Schedule() {
