@@ -46,8 +46,9 @@ absl::StatusOr<std::unique_ptr<GraphRuntime>> GraphBuilder::Build(
     auto node = NodeFactoryRegistry::CreateByName(
         ndef.type, ndef.name, ndef.options);
     if (!node) {
-      return absl::NotFoundError(
-          absl::StrCat("Node type not registered: ", ndef.type));
+      return absl::NotFoundError(absl::StrCat(
+          "Node type not registered: ", ndef.type, " (node '", ndef.name,
+          "')"));
     }
     node->SetExecutorName(ndef.executor);
     node->SetSourceLayer(ndef.source_layer);

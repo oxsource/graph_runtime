@@ -1,5 +1,7 @@
 #include "src/framework/stream/output_stream_handler.h"
 
+#include "src/framework/config/stream_name.h"
+
 namespace graph::runtime {
 
 OutputStreamHandler::OutputStreamHandler(
@@ -16,9 +18,12 @@ void OutputStreamHandler::Open(OutputStreamShardSet* shards) {
 
 void OutputStreamHandler::PrepareOutputs(
     Timestamp input_timestamp, OutputStreamShardSet* shards) {
-  for (size_t i = 0; i < managers_.size(); ++i) {
-    auto& shard = shards->Index(static_cast<int>(i));
-    managers_[i]->ResetShard(&shard);
+  // Address shards by port name (the key nodes use via ctx.Outputs().Get()),
+  // creating entries on demand. Indexing an empty shard set would dereference
+  // the map's end() iterator, so always resolve by port name.
+  for (auto* mgr : managers_) {
+    auto& shard = shards->Get(PortName(mgr->Name()));
+    mgr->ResetShard(&shard);
   }
 }
 
@@ -28,12 +33,12 @@ void OutputStreamHandler::PostProcess(
 }
 
 void OutputStreamHandler::Close(OutputStreamShardSet* shards) {
-  for (size_t i = 0; i < managers_.size(); ++i) {
+  for (auto* mgr : managers_) {
     if (shards) {
-      auto& shard = shards->Index(static_cast<int>(i));
-      managers_[i]->PropagateUpdatesToMirrors(Timestamp::Done(), &shard);
+      auto& shard = shards->Get(PortName(mgr->Name()));
+      mgr->PropagateUpdatesToMirrors(Timestamp::Done(), &shard);
     }
-    managers_[i]->Close();
+    mgr->Close();
   }
 }
 
@@ -69,11 +74,12 @@ void OutputStreamHandler::ClearOutputStreamCallback(
 
 void OutputStreamHandler::PropagateOutputPackets(
     Timestamp input_timestamp, OutputStreamShardSet* shards) {
-  for (size_t i = 0; i < managers_.size(); ++i) {
-    auto* mgr = managers_[i];
+  for (auto* mgr : managers_) {
     if (mgr->IsClosed()) continue;
 
-    auto& shard = shards->Index(static_cast<int>(i));
+    // Resolve by port name so packets written via ctx.Outputs().Get(port)
+    // (or Get(tag, index) whose key equals the port name) are propagated.
+    auto& shard = shards->Get(PortName(mgr->Name()));
     Timestamp output_bound =
         mgr->ComputeOutputTimestampBound(shard, input_timestamp);
 

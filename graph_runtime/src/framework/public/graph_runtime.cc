@@ -5,6 +5,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "graph_runtime/profiler.h"
+#include "src/framework/config/stream_name.h"
 #include "src/framework/utils/hook.h"
 #include "src/framework/scheduler/scheduler.h"
 #include "src/framework/scheduler/input_stream_handler.h"
@@ -43,8 +44,9 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
   scheduler_->SetProfiler(profiler_.get());
 
   // Create InputStreamManagers for each declared input stream and register
-  // them on their owning node. This enables AddPacketToInputStream to find
-  // the correct queue by stream name.
+  // them on their owning node. Ports are registered by port name (the "port"
+  // part of "port:stream") so nodes read Inputs().Get(port); the full
+  // "port:stream" string remains the lookup key for AddPacketToInputStream.
   for (const auto& ndef : config_.nodes) {
     for (const auto& input_stream : ndef.input_streams) {
       if (stream_managers_.find(input_stream) != stream_managers_.end()) continue;
@@ -54,15 +56,18 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
 
       auto mgr = std::make_unique<InputStreamManager>(input_stream);
       auto* raw = mgr.get();
-      node->SetInputPort(input_stream, raw);
+      node->SetInputPort(PortName(input_stream), raw);
       owned_stream_managers_.push_back(std::move(mgr));
       stream_managers_[input_stream] = raw;
+    }
+  }
 
-      if (graph_input_streams_set_.find(input_stream) ==
-          graph_input_streams_set_.end()) {
-        graph_input_streams_set_.insert(input_stream);
-        ++num_open_input_streams_;
-      }
+  // Only graph-level input streams (config.input_streams, external injection)
+  // count towards graph completion; node-to-node streams are driven by their
+  // producers through the mirror wiring below.
+  for (const auto& input_stream : config_.input_streams) {
+    if (graph_input_streams_set_.insert(input_stream).second) {
+      ++num_open_input_streams_;
     }
   }
 
@@ -141,6 +146,32 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
     node->SetInputStreamHandler(owned_input_stream_handlers_.back().get());
   }
 
+  // Wire internal node-to-node streams: each declared input stream mirrors its
+  // producer's OutputStreamManager so packets flow producer → consumer without
+  // external injection. The stream part of "port:stream" links consumer inputs
+  // to producer outputs (mirror id = input index in the consumer's handler).
+  std::map<std::string, OutputStreamManager*> output_by_stream;
+  for (const auto& ndef : config_.nodes) {
+    auto* node = FindNode(ndef.name);
+    if (!node || !node->GetOutputStreamHandler()) continue;
+    const auto& mgrs = node->GetOutputStreamHandler()->managers();
+    for (size_t i = 0; i < ndef.output_streams.size() && i < mgrs.size(); ++i) {
+      output_by_stream[StreamName(ndef.output_streams[i])] = mgrs[i];
+    }
+  }
+  for (const auto& ndef : config_.nodes) {
+    if (ndef.input_streams.empty()) continue;
+    auto* node = FindNode(ndef.name);
+    if (!node || !node->GetInputStreamHandler()) continue;
+    auto* in_handler = node->GetInputStreamHandler();
+    for (size_t i = 0; i < ndef.input_streams.size(); ++i) {
+      auto it = output_by_stream.find(StreamName(ndef.input_streams[i]));
+      if (it != output_by_stream.end()) {
+        it->second->AddMirror(in_handler, static_cast<CollectionItemId>(i));
+      }
+    }
+  }
+
   return absl::OkStatus();
 }
 
@@ -155,6 +186,14 @@ absl::Status GraphRuntime::Start() {
   }
   scheduler_->SetInputSidePackets(side_packets);
   return scheduler_->Start();
+}
+
+void GraphRuntime::SetErrorCallback(ErrorCallback cb) {
+  if (scheduler_) scheduler_->SetErrorCallback(std::move(cb));
+}
+
+bool GraphRuntime::HasError() const {
+  return scheduler_ && scheduler_->HasError();
 }
 
 absl::Status GraphRuntime::Schedule() {

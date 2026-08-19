@@ -82,6 +82,7 @@ class Scheduler {
   virtual absl::Status RemoveNode(Node* node);
 
   void HandleIdle();
+  void CloseAllNodes();
   void AddedPacketToInputStream();
   void SetTotalGraphInputStreams(int n) { total_graph_input_streams_ = n; }
   void IncClosedGraphInputStreams() { ++num_closed_graph_input_streams_; }

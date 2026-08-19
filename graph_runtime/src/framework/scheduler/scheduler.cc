@@ -23,6 +23,13 @@ void Scheduler::SetInputStreamHandler(
 
 void Scheduler::SetErrorCallback(ErrorCallback cb) {
   error_callback_ = std::move(cb);
+  // Propagate node Process errors (async path) to the scheduler: mark the
+  // graph as failed and forward the original status to the registered
+  // callback (so Close() sees the failure before nodes are closed).
+  default_queue_.SetErrorCallback([this](const absl::Status& status) {
+    has_error_ = true;
+    if (error_callback_) error_callback_(status);
+  });
 }
 
 absl::Status Scheduler::SetDefaultExecutor(
@@ -79,6 +86,7 @@ void Scheduler::HandleIdle() {
       if (error_callback_ && has_error_) {
         error_callback_(absl::InternalError("Graph execution error"));
       }
+      CloseAllNodes();
       if (profiler_) profiler_->Stop();
       state_ = SchedulerState::kTerminated;
       cv_.notify_all();
@@ -104,6 +112,7 @@ void Scheduler::HandleIdle() {
       if (!q->IsIdle()) { any_pending = true; break; }
     }
     if (!any_pending) {
+      CloseAllNodes();
       state_ = SchedulerState::kTerminated;
       cv_.notify_all();
       --handling_idle_;
@@ -221,7 +230,17 @@ absl::Status Scheduler::Schedule() {
   }
 
   // Close all nodes
+  CloseAllNodes();
+
+  if (profiler_) profiler_->Stop();
+  state_ = SchedulerState::kTerminated;
+  cv_.notify_all();
+  return absl::OkStatus();
+}
+
+void Scheduler::CloseAllNodes() {
   for (auto* node : all_nodes_) {
+    if (node == nullptr) continue;
     ProfilingContext::Scope scope(
         ProfilingContext::EventType::CLOSE, node->name(), profiler_);
     InputStreamShardSet input_shards;
@@ -230,18 +249,15 @@ absl::Status Scheduler::Schedule() {
     GraphContext ctx(node->name(), reinterpret_cast<int64_t>(node),
                      "node", Timestamp::Done(),
                      &input_shards, &output_shards, &opts);
+    ctx.SetInputSidePackets(input_side_packets_);
     auto status = node->Close(ctx);
     if (!status.ok()) {
-      Logger::Error(std::string("Close error for " + node->name() + ": " + std::string(status.ToString())).c_str());
+      Logger::Error(std::string("Close error for " + node->name() + ": " +
+                                std::string(status.ToString())).c_str());
     }
     Logger::Info(std::string("Closed " + node->name()).c_str());
     perf_counters_.nodes_closed.Increment();
   }
-
-  if (profiler_) profiler_->Stop();
-  state_ = SchedulerState::kTerminated;
-  cv_.notify_all();
-  return absl::OkStatus();
 }
 
 absl::Status Scheduler::Start() {

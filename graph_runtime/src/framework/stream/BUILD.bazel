@@ -83,6 +83,7 @@ cc_library(
         ":output_stream_shard",
         ":packet",
         ":timestamp",
+        "@graph_runtime//src/framework/config:graph_config",
         "@graph_runtime//src/framework/node:graph_context",
         "@graph_runtime//src/framework/public:types",
     ],

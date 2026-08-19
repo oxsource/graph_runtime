@@ -2,6 +2,7 @@
 #define GRAPH_RUNTIME_SCHEDULER_QUEUE_H_
 
 #include <functional>
+#include <mutex>
 #include <queue>
 #include <string>
 
@@ -9,6 +10,7 @@
 #include "src/framework/node/node.h"
 
 #include "src/framework/profiler/graph_profiler.h"
+#include "src/framework/public/types.h"
 
 namespace graph::runtime {
 
@@ -52,6 +54,7 @@ class SchedulerQueue : public TaskQueue {
   void SetExecutor(Executor* executor) { executor_ = executor; }
   void SetIdleCallback(IdleCallback cb) { idle_callback_ = std::move(cb); }
   void SetSourceStoppedCallback(SourceStoppedCallback cb) { source_stopped_callback_ = std::move(cb); }
+  void SetErrorCallback(ErrorCallback cb) { error_callback_ = std::move(cb); }
 
   void SetRunning(bool running);
   bool IsRunning() const { return running_; }
@@ -63,11 +66,22 @@ class SchedulerQueue : public TaskQueue {
   void AddNodeForOpen(Node* node);
   void RunNextTask() override;
 
+  // Pop the highest-priority pending item, or nullptr if none. Thread-safe.
+  // Used by the executor worker to dequeue without racing producers.
+  bool TryPop(Item* item);
+  void OnTaskFinished();
+
   void SetPerfCounters(PerfCounters* counters) { perf_counters_ = counters; }
   void SetProfiler(ProfilingContext* profiler) { profiler_ = profiler; }
 
-  bool IsIdle() const { return queue_.empty() && num_pending_tasks_ == 0; }
-  int NumPendingTasks() const { return num_pending_tasks_; }
+  bool IsIdle() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return queue_.empty() && num_pending_tasks_ == 0;
+  }
+  int NumPendingTasks() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return num_pending_tasks_;
+  }
 
  private:
   void SubmitToExecutor();
@@ -78,9 +92,11 @@ class SchedulerQueue : public TaskQueue {
   Executor* executor_ = nullptr;
   IdleCallback idle_callback_;
   SourceStoppedCallback source_stopped_callback_;
+  ErrorCallback error_callback_;
   PerfCounters* perf_counters_ = nullptr;
   ProfilingContext* profiler_ = nullptr;
   bool running_ = false;
+  mutable std::mutex mutex_;
   std::priority_queue<Item> queue_;
   int num_pending_tasks_ = 0;
   int64_t timestamp_counter_ = 0;

@@ -6,18 +6,11 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
+#include "src/framework/config/stream_name.h"
 
 namespace graph::runtime {
 
 namespace {
-
-// Extract the stream name from "port:stream" format. Returns the part
-// after the colon, or the full string if no colon is present.
-std::string StreamName(const std::string& port_stream) {
-  auto pos = port_stream.find(':');
-  if (pos == std::string::npos) return port_stream;
-  return port_stream.substr(pos + 1);
-}
 
 // Build a set of all output stream names from all nodes.
 std::set<std::string> CollectOutputStreams(const GraphConfig& config) {

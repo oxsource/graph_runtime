@@ -1,4 +1,7 @@
 #include "src/framework/scheduler/scheduler_queue.h"
+
+#include "absl/strings/str_cat.h"
+
 #include "src/framework/node/graph_context.h"
 #include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/output_stream_handler.h"
@@ -12,74 +15,119 @@ namespace graph::runtime {
 SchedulerQueue::SchedulerQueue(std::string name) : name_(std::move(name)) {}
 
 void SchedulerQueue::SetRunning(bool running) {
-  running_ = running;
-  if (running_) {
+  bool should_submit = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    running_ = running;
+    should_submit = running_ && !queue_.empty();
+  }
+  if (should_submit) {
     SubmitToExecutor();
   }
 }
 
 void SchedulerQueue::Reset() {
+  std::lock_guard<std::mutex> lock(mutex_);
   queue_ = {};
   num_pending_tasks_ = 0;
 }
 
 void SchedulerQueue::CleanupAfterRun() {
-  Reset();
+  std::lock_guard<std::mutex> lock(mutex_);
+  queue_ = {};
   num_pending_tasks_ = 0;
   running_ = false;
 }
 
 void SchedulerQueue::AddNode(Node* node) {
-  // Check MaxInFlight constraint. pending_count includes the current
-  // execution, so compare > not >= to allow scheduling the next
-  // invocation before the current one completes.
-  int max_in_flight = node ? node->GetContract().MaxInFlight() : 1;
-  if (node && node->pending_count() > max_in_flight) {
-    // Node has reached its concurrency limit; defer scheduling.
-    return;
+  bool should_submit = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    // Check MaxInFlight constraint. pending_count includes the current
+    // execution, so compare > not >= to allow scheduling the next
+    // invocation before the current one completes.
+    int max_in_flight = node ? node->GetContract().MaxInFlight() : 1;
+    if (node && node->pending_count() > max_in_flight) {
+      // Node has reached its concurrency limit; defer scheduling.
+      return;
+    }
+    Item item;
+    item.node = node;
+    item.is_open_node = false;
+    item.source_layer = node ? node->SourceLayer() : 0;
+    item.node_id = reinterpret_cast<int64_t>(node);
+    queue_.push(item);
+    should_submit = running_;
   }
-  Item item;
-  item.node = node;
-  item.is_open_node = false;
-  item.source_layer = node ? node->SourceLayer() : 0;
-  item.node_id = reinterpret_cast<int64_t>(node);
-  queue_.push(item);
-  if (running_) {
+  if (should_submit) {
     SubmitToExecutor();
   }
 }
 
 void SchedulerQueue::AddNodeForOpen(Node* node) {
-  Item item;
-  item.node = node;
-  item.is_open_node = true;
-  item.source_layer = node ? node->SourceLayer() : 0;
-  item.node_id = reinterpret_cast<int64_t>(node);
-  queue_.push(item);
-  if (running_) {
+  bool should_submit = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    Item item;
+    item.node = node;
+    item.is_open_node = true;
+    item.source_layer = node ? node->SourceLayer() : 0;
+    item.node_id = reinterpret_cast<int64_t>(node);
+    queue_.push(item);
+    should_submit = running_;
+  }
+  if (should_submit) {
     SubmitToExecutor();
   }
 }
 
+bool SchedulerQueue::TryPop(Item* item) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (queue_.empty()) return false;
+  *item = queue_.top();
+  queue_.pop();
+  return true;
+}
+
+void SchedulerQueue::OnTaskFinished() {
+  bool should_submit = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (num_pending_tasks_ > 0) --num_pending_tasks_;
+    should_submit = running_ && !queue_.empty();
+  }
+  if (should_submit) {
+    SubmitToExecutor();
+  }
+  UpdateIdleState();
+}
+
 void SchedulerQueue::RunNextTask() {
-  if (queue_.empty()) {
-    --num_pending_tasks_;
+  Item item;
+  if (!TryPop(&item)) {
+    // No work item: account for the pending-task slot this run consumed
+    // (it was incremented by SubmitToExecutor) and report idle.
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (num_pending_tasks_ > 0) --num_pending_tasks_;
+    }
     UpdateIdleState();
     return;
   }
-  Item item = queue_.top();
-  queue_.pop();
+
+  // Execute the node without holding the queue lock so producers can enqueue
+  // and other workers can proceed.
   RunNode(item.node, item.is_open_node);
-  --num_pending_tasks_;
-  UpdateIdleState();
-  if (!queue_.empty() && running_) {
-    SubmitToExecutor();
-  }
+
+  OnTaskFinished();
 }
 
 void SchedulerQueue::SubmitToExecutor() {
   if (!executor_) return;
-  ++num_pending_tasks_;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    ++num_pending_tasks_;
+  }
   if (perf_counters_) perf_counters_->tasks_submitted.Increment();
   executor_->AddTask(this);
 }
@@ -125,6 +173,12 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     return;
   }
 
+  // Reset output shards for this invocation so PostProcess always has one
+  // shard per output stream (even when the node writes nothing this round).
+  if (node->GetOutputStreamHandler()) {
+    node->GetOutputStreamHandler()->PrepareOutputs(ts, &outputs);
+  }
+
   // Mark node as in-flight (MaxInFlight tracking).
   node->IncrementPending();
 
@@ -136,7 +190,11 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
 
   if (IsStopStatus(status)) {
     if (node->GetOutputStreamHandler()) {
+      // Propagate any in-flight packets, then close the output streams so
+      // downstream nodes observe Timestamp::Done() and can finalize (e.g.
+      // encoder Flush, muxer finalize) before the graph is torn down.
       node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
+      node->GetOutputStreamHandler()->Close(&outputs);
     }
     node->DecrementPending();
     if (node->input_port_count() > 0) {
@@ -157,6 +215,13 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
       node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
     }
     node->DecrementPending();
+    if (error_callback_) {
+      // Keep the original error code and prefix the failing node name so the
+      // caller can locate the node that aborted the run.
+      error_callback_(absl::Status(
+          status.code(),
+          absl::StrCat(node->name(), ": ", status.message())));
+    }
     return;
   }
 
@@ -164,6 +229,24 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (node->GetOutputStreamHandler()) {
     node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
   }
+
+  // If every input stream of this node is now closed (done) AND the node
+  // produced nothing new this round, propagate done downstream so sink nodes
+  // can finalize (e.g. encoder Flush, muxer finalize). This mirrors MediaPipe:
+  // an input-done event closes the node's output streams.
+  if (node->input_port_count() > 0 && node->GetOutputStreamHandler()) {
+    bool all_inputs_done = true;
+    for (const auto& [name, mgr] : node->InputPorts()) {
+      if (!mgr->IsDone()) {
+        all_inputs_done = false;
+        break;
+      }
+    }
+    if (all_inputs_done) {
+      node->GetOutputStreamHandler()->Close(&outputs);
+    }
+  }
+
   node->DecrementPending();
   if (perf_counters_) {
     perf_counters_->tasks_completed.Increment();
@@ -178,7 +261,12 @@ void SchedulerQueue::UpdateIdleState() {
 }
 
 void SchedulerQueue::SubmitWaitingTasksToExecutor() {
-  if (!queue_.empty() && running_) {
+  bool should_submit = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    should_submit = !queue_.empty() && running_;
+  }
+  if (should_submit) {
     SubmitToExecutor();
   }
 }

@@ -76,6 +76,14 @@ class GraphRuntime {
   /// Returns the current scheduler state (async path).
   SchedulerState GetGraphState() const;
 
+  /// Register a callback invoked when a node reports an error during
+  /// execution (async path). The callback runs before nodes are closed, so
+  /// it can record error state consumed by Close().
+  void SetErrorCallback(ErrorCallback cb);
+
+  /// Returns true if any node reported an error during execution.
+  bool HasError() const;
+
   /// Force-terminate the graph (async path only).
   void Shutdown();
 

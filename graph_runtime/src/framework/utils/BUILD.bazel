@@ -11,10 +11,10 @@ cc_library(
     name = "logger",
     srcs = ["logger.cc"],
     hdrs = ["logger.h"],
-    copts = [
-        "-fvisibility=hidden",
-        "-fvisibility-inlines-hidden",
-    ],
+    # NOTE: do not compile with -fvisibility=hidden here. libscheduler (and
+    # other internal dylibs) cross-call graph::runtime::Logger::Info/Error
+    # etc. Those symbols must stay exported, otherwise the lazy binding in the
+    # calling dylib resolves to NULL and crashes at runtime (GOT=0 -> pc=0).
     deps = [
         "@graph_runtime//src/framework/utils:hook",
         "@com_google_absl//absl/synchronization",

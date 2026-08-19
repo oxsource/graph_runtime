@@ -33,6 +33,12 @@ class OutputStreamHandler {
                                std::function<void(const Packet&)> callback);
   void ClearOutputStreamCallback(const std::string& stream_name);
 
+  // Output stream managers in config declaration order (used by the runtime
+  // to wire producer → consumer mirrors for internal streams).
+  const std::vector<OutputStreamManager*>& managers() const {
+    return managers_;
+  }
+
  protected:
   void PropagateOutputPackets(Timestamp input_timestamp,
                                OutputStreamShardSet* shards);

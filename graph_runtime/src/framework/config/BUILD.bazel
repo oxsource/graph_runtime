@@ -2,7 +2,10 @@ package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__
 
 cc_library(
     name = "graph_config",
-    hdrs = ["graph_config.h"],
+    hdrs = [
+        "graph_config.h",
+        "stream_name.h",
+    ],
     deps = [
         "@graph_runtime//src/framework/node:node_options",
         "@graph_runtime//src/framework/profiler:graph_profiler",
