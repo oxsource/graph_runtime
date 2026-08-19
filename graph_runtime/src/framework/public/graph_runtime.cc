@@ -20,9 +20,29 @@ GraphRuntime::GraphRuntime()
 
 GraphRuntime::~GraphRuntime() = default;
 
-absl::Status GraphRuntime::Initialize(const GraphConfig& config) {
+void GraphRuntime::Options::Apply(GraphConfig* config) const {
+  if (config == nullptr || nodes.empty()) return;
+  for (auto& ndef : config->nodes) {
+    auto it = nodes.find(ndef.type);
+    if (it == nodes.end()) continue;
+    for (const auto& key : it->second.Keys()) {
+      ndef.options.SetRaw(key, it->second.GetRaw(key));
+    }
+  }
+}
+
+absl::Status GraphRuntime::Initialize(const GraphConfig& config,
+                                      const Options& options) {
   config_ = config;
-  auto result = GraphBuilder::Build(config);
+
+  // Apply per-type node option overrides to a working copy of the config
+  // before the graph is built, so patched options land in each matching
+  // node's options object. An empty Options (the default) means no
+  // overrides and the config is used as-is.
+  GraphConfig merged = config_;
+  options.Apply(&merged);
+
+  auto result = GraphBuilder::Build(merged);
   if (!result.ok()) return result.status();
   auto built = std::move(*result);
   scheduler_ = std::move(built->scheduler_);

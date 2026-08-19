@@ -27,6 +27,36 @@ namespace graph::runtime {
 
 class GraphRuntime {
  public:
+  /// Optional runtime configuration for Initialize(). Parameter-object
+  /// pattern: instead of scattering one-off setters, all optional runtime
+  /// inputs travel in a single nested struct so the initialization
+  /// signature stays stable as the runtime grows. Defaults to empty (no
+  /// overrides) when omitted.
+  ///
+  /// Usage:
+  /// \code
+  ///   runtime.Initialize(config);                        // no overrides
+  ///
+  ///   GraphRuntime::Options opts;                        // with overrides
+  ///   opts.nodes["StreamInputNode"].Set("fps", 30);
+  ///   runtime.Initialize(config, opts);
+  /// \endcode
+  ///
+  /// Extension: add new fields here (e.g. hooks, side packets, profiler
+  /// overrides, backpressure tuning) — Initialize consumes the whole struct
+  /// in one place.
+  struct Options {
+    /// Per-node-type option overrides, merged into every node whose `type`
+    /// matches at Initialize() time.
+    std::map<std::string, NodeOptions> nodes;
+
+    /// Merge this bundle's per-type node option overrides into `config` in
+    /// place, patching each matching node's `options` object (keys are
+    /// overwritten, unrelated node types are untouched). No-op when `nodes`
+    /// is empty or `config` is null.
+    void Apply(GraphConfig* config) const;
+  };
+
   GraphRuntime();
   ~GraphRuntime();
 
@@ -53,8 +83,22 @@ class GraphRuntime {
   /// @{
 
   /// Initialize the graph from a config. Must be called before any
-  /// execution method.
-  absl::Status Initialize(const GraphConfig& config);
+  /// execution method. Optional runtime configuration travels in the
+  /// GraphRuntime::Options parameter-object (defaults to empty = no
+  /// overrides):
+  ///
+  ///   runtime.Initialize(config);                        // no overrides
+  ///   GraphRuntime::Options opts;                        // with overrides
+  ///   opts.nodes["StreamInputNode"].Set("fps", 30);
+  ///   runtime.Initialize(config, opts);
+  ///
+  /// The options' `nodes` map is merged on top of the config's per-node
+  /// options (explicit options win on key conflicts). Extension point: as
+  /// the runtime gains optional configuration (hooks, side packets,
+  /// profiler overrides, ...), add fields to GraphRuntime::Options instead
+  /// of adding new Initialize overloads.
+  absl::Status Initialize(const GraphConfig& config,
+                          const Options& options = {});
 
   /// @name Async execution path
 
@@ -157,6 +201,7 @@ class GraphRuntime {
 
   friend class GraphBuilder;
   GraphConfig config_;
+
   std::unique_ptr<Scheduler> scheduler_;
   std::vector<std::unique_ptr<Node>> all_nodes_;
   std::list<std::unique_ptr<InputStreamManager>> owned_stream_managers_;

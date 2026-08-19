@@ -146,6 +146,19 @@ cc_test(
 
 cc_test(
     size = "small",
+    name = "runtime_options_test",
+    srcs = ["runtime_options_test.cc"],
+    deps = [
+        "@graph_runtime//src/framework/node:graph_context",
+        "@graph_runtime//src/framework/node:node_factory",
+        "@graph_runtime//src/framework/node:node_factory_registry",
+        "@graph_runtime//src/framework/public:runtime",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    size = "small",
     name = "stream_io_test",
     srcs = ["stream_io_test.cc"],
     linkstatic = 1,
