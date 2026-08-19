@@ -86,6 +86,16 @@ cc_library(
         "include/graph_runtime/logger.h",
         "include/graph_runtime/hook.h",
         "include/graph_runtime/profiler.h",
+        "include/graph_runtime/runtime.h",
+        # Node implementation surface (node libraries):
+        "include/graph_runtime/node.h",
+        "include/graph_runtime/node_options.h",
+        "include/graph_runtime/node_contract.h",
+        "include/graph_runtime/node_registry.h",
+        "include/graph_runtime/graph_context.h",
+        # Config parsing / validation surface (drivers):
+        "include/graph_runtime/json_parser.h",
+        "include/graph_runtime/config_validator.h",
     ],
     strip_include_prefix = "include",
     alwayslink = 1,
@@ -96,7 +106,10 @@ cc_library(
         "@graph_runtime//src/framework/utils:logger",
         "@graph_runtime//src/framework/scheduler:scheduler",
         "@graph_runtime//src/framework/config:graph_config",
+        "@graph_runtime//src/framework/config:config",
         "@graph_runtime//src/framework/config/json:json_parser",
+        "@graph_runtime//src/framework/node:graph_context",
+        "@graph_runtime//src/framework/node:node_factory_registry",
         "@graph_runtime//src/framework/public:types",
     ],
 )
