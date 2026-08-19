@@ -55,4 +55,32 @@ TEST(PublicApiTest, ExportMacroIsDefined) {
 #endif
 }
 
+TEST(PublicApiTest, GraphConfigGetNodeOptionWithDefaults) {
+  GraphConfig config;
+  config.nodes.push_back(
+      {"n1", "StreamInputNode", {}, {}, {}, {}, {}, "", "", 1, 0});
+  config.nodes[0].options.Set("fps", 30);
+  config.nodes[0].options.Set("name", std::string("video"));
+  // Second node of the same type sets a different key only.
+  config.nodes.push_back(
+      {"n2", "StreamInputNode", {}, {}, {}, {}, {}, "", "", 1, 0});
+  config.nodes[1].options.Set("fps", 60);
+  config.nodes.push_back(
+      {"n3", "SinkNode", {}, {}, {}, {}, {}, "", "", 1, 0});
+
+  // Typed reads from the first node of the type that has the key.
+  EXPECT_EQ(config.GetNodeOption<int>("StreamInputNode", "fps"), 30);
+  EXPECT_EQ(config.GetNodeOption<std::string>("StreamInputNode", "name"),
+            "video");
+
+  // Defaults: implicit T{} when the key is missing...
+  EXPECT_EQ(config.GetNodeOption<int>("StreamInputNode", "missing"), 0);
+  EXPECT_EQ(config.GetNodeOption<std::string>("StreamInputNode", "missing"),
+            "");
+  // ...or explicit fallback for unknown types / missing keys.
+  EXPECT_EQ(config.GetNodeOption<int>("SinkNode", "fps"), 0);
+  EXPECT_EQ(config.GetNodeOption<int>("UnknownType", "fps"), 0);
+  EXPECT_EQ(config.GetNodeOption<int>("SinkNode", "fps", -1), -1);
+}
+
 }  // namespace graph::runtime

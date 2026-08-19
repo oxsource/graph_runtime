@@ -38,6 +38,29 @@ struct GraphConfig {
   std::vector<ExecutorDef> executors;
   std::vector<std::string> input_streams;
   std::vector<std::string> output_streams;
+
+  /// Reads an option of type `T` from the first node whose `type` matches
+  /// `node_type` and has the key set. Falls back to `default_value` when no
+  /// node of that type sets the key (or the graph has no such node).
+  ///
+  /// \code
+  ///   int fps = config.GetNodeOption<int>("StreamInputNode", "fps");
+  ///   int fps2 = config.GetNodeOption<int>("StreamInputNode", "fps", 30);
+  /// \endcode
+  ///
+  /// Note: the value must have been stored with the same C++ type T
+  /// (NodeOptions keys are type-checked at retrieval via std::any).
+  template <typename T>
+  T GetNodeOption(const std::string& node_type, const std::string& key,
+                  const T& default_value = T{}) const {
+    for (const auto& def : nodes) {
+      if (def.type != node_type) continue;
+      if (const T* v = def.options.Get<T>(key)) {
+        return *v;
+      }
+    }
+    return default_value;
+  }
 };
 
 }  // namespace graph::runtime
