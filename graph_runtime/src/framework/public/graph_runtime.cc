@@ -129,11 +129,14 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config,
             [this](InputStreamManager* m, bool*) { OnInputStreamNotFull(m); });
 
         // When a packet arrives on this stream, schedule the owning node.
+        // No IsRunning() check here: SchedulerQueue::AddNode queues the item
+        // while paused and submits it to the executor on Resume (MediaPipe
+        // model), so buffered packets are not lost across pause/resume.
         auto* owning_node = FindNode(ndef.name);
         if (owning_node) {
           mgr->SetArrivalCallback([owning_node]() {
             auto* q = owning_node->GetSchedulerQueue();
-            if (q && q->IsRunning()) {
+            if (q) {
               q->AddNode(owning_node);
             }
           });

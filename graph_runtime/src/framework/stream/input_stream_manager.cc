@@ -86,8 +86,12 @@ void InputStreamManager::SetNextTimestampBound(Timestamp bound) {
 }
 
 void InputStreamManager::Close() {
+  if (closed_) return;
   closed_ = true;
   next_timestamp_bound_ = Timestamp::Done();
+  // Notify the owning node so it can run its final flush (the MediaPipe
+  // kReadyForClose equivalent) even when the queue is already empty.
+  if (arrival_callback_) arrival_callback_();
 }
 
 Packet InputStreamManager::PopPacketAtTimestamp(

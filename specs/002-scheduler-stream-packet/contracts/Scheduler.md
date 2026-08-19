@@ -145,6 +145,9 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
   // Output propagation via OutputStreamHandler
   output_stream_handler_->PostProcess(scheduled_timestamp, &output_shards);
 
+  // Drain: re-schedule while any input packet remains buffered
+  // (HasPendingInput → AddNode; MediaPipe EndScheduling → SchedulingLoop)
+
   // Source rescheduling via node->GetSchedulerQueue()->AddNode(node)
 
 --- CloseNode task runs ---
@@ -161,20 +164,37 @@ kNotStarted ──Schedule()──► kRunning ──Pause()──► kPaused
     → if 0: HandleIdle()
 ```
 
-**HandleIdle** — triggered from: `Schedule()`, `Resume()`, error callback, `non_idle_queue_count_ == 0`.
+**HandleIdle** — triggered from: `Start()`, `Resume()`, idle callbacks, error callback, `AddedPacketToInputStream`.
 
 ```
 HandleIdle():
-  [handling_idle_++ reentrancy guard]
-  if HasError() && non_idle_queue_count_ == 0:
-    Quit() → state_ = kTerminated
-  CleanupActiveSources()
-  if all sources closed AND all inputs closed AND no pending tasks:
-    Quit() → state_ = kTerminated
-  if throttled sources exist: auto-unthrottle (deadlock prevention)
-  if sources active but idle: wait for events
-  [handling_idle_--]
+  [++handling_idle_ reentrancy guard]
+  if kCancelling && HasError(): CleanupAfterRun() all queues → kTerminated
+  while IsIdle() && (kRunning || kCancelling):
+    CleanupActiveSources()
+    if HasError() || (no_more_sources && !inputs_remaining):
+      Quit() → state_ = kTerminated
+    if active sources: re-add them to the default queue → return
+    if graph input streams still open: return (wait for external packets)
+  [--handling_idle_]
 ```
+
+`inputs_remaining` is true while any graph-level input stream is still open
+(`total_graph_input_streams_ > 0 && num_closed < total`); it is the
+counterpart of MediaPipe's `graph_input_streams_closed_`. Note that `HandleIdle`
+does **not** scan input queues: draining is event-driven (see below), so
+"all queues idle" already implies "all input streams drained".
+
+**Event-driven drain (MediaPipe parity)**: a node is kept scheduled while its
+input holds work, so the graph never goes idle with unconsumed packets:
+- Per-stream arrival callbacks (wired in `GraphRuntime::Initialize`) add the
+  owning node to its `SchedulerQueue` whenever a stream becomes non-empty.
+- `SchedulerQueue::RunNode` re-adds the node after every `Process` invocation
+  while any input packet remains buffered (`HasPendingInput`) — the
+  `EndScheduling → SchedulingLoop` pattern. This drains batches such as the
+  packets an encoder emits during Flush.
+- `InputStreamManager::Close()` notifies the owning node so a final flush runs
+  even when the queue is already empty (MediaPipe `kReadyForClose`).
 
 **Default configuration** (Phase 1):
 - Executor: `ThreadPoolExecutor` with `num_threads = min(CPUs, node_count)` — multi-threaded by default.

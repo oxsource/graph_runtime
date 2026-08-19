@@ -26,21 +26,25 @@ Start()
   │                                 │   ├─ RunNode()
   │                                 │   │   ├─ PopQueueHead() [InputStreamManager]
   │                                 │   │   ├─ node->Process()
-  │                                 │   │   └─ PostProcess() [OutputStreamHandler]
+  │                                 │   │   ├─ PostProcess() [OutputStreamHandler]
+  │                                 │   │   └─ re-schedule while input remains (drain)
   │                                 │   ├─ --num_pending_tasks_
   │                                 │   └─ UpdateIdleState() → HandleIdle()
   │                                 │       └─ cv_.notify_all()
   │                                 
 AddPacketToInputStream("in", pkt)   
   ├─ AddPackets() [InputStreamManager]
+  │   └─ arrival callback → q->AddNode(node) → SubmitToExecutor()
   └─ AddedPacketToInputStream()
-       ├─ q->AddNode(node) → SubmitToExecutor()
-       └─ HandleIdle()
+       └─ HandleIdle()   // termination re-check only
   │                                 │  ThreadPool worker wakes
   │                                 ├─ RunNextTask() ...
+  │                                 │   └─ RunNode(): pop → Process → PostProcess
+  │                                 │       └─ re-schedule while input remains (drain)
   │                                 
 CloseInputStream("in")              
   ├─ Close() [InputStreamManager]    
+  │   └─ arrival callback → q->AddNode(node)   // final flush (kReadyForClose)
   ├─ IncClosedGraphInputStreams()   
   └─ AddedPacketToInputStream()
        └─ HandleIdle() → Quit() → STATE_TERMINATED
@@ -59,6 +63,7 @@ WaitUntilDone()
 | `SchedulerQueue` | `AddNode()` / `AddNodeForOpen()` | Lock-free (single consumer) |
 | `ThreadPoolExecutor` | `Schedule()` | Mutex + condition variable |
 | `InputStreamManager` | `AddPackets()` | Called from application thread only |
+| `InputStreamManager` | Arrival callback → `SchedulerQueue::AddNode()` | Fires on producer threads (app or executor); `AddNode` is internally locked |
 | `NodeFactoryRegistry` | All public methods | Static mutex |
 | `OutputStreamHandler` | `SetOutputStreamCallback()` | Called from application thread |
 
@@ -70,6 +75,32 @@ WaitUntilDone()
 | `SchedulerQueue::RunNode()` | `PopQueueHead()` | Single consumer — only one executor thread processes a given queue at a time. |
 | `GraphRuntime::AddPacketToInputStream()` | `AddPackets()` | Called from application thread while scheduler runs on executor threads. |
 | `GraphRuntime::SetOutputStreamCallback()` | Register callback | Set before `Start()`; storage is application-thread-only. |
+
+## Event-Driven Draining (MediaPipe parity)
+
+Buffered packets are drained by input-state events, not by polling in
+`HandleIdle`. Three triggers keep a node scheduled while its input holds work:
+
+1. **Stream arrival** — `GraphRuntime::Initialize` wires a per-stream arrival
+   callback on every `InputStreamManager`. Whenever a stream transitions from
+   empty to non-empty (`AddPackets`/`MovePackets`), the owning node is added to
+   its `SchedulerQueue`. No `IsRunning()` guard is used: `AddNode` queues the
+   item while paused and the executor submission happens on `Resume`.
+2. **Post-process re-scheduling** — after each `Process` invocation,
+   `SchedulerQueue::RunNode` re-adds the node while any input packet remains
+   buffered (`HasPendingInput`). This mirrors MediaPipe's
+   `EndScheduling → SchedulingLoop` pattern and drains a batch (e.g. packets
+   emitted by an encoder during Flush) one packet per invocation.
+3. **Stream close** — `InputStreamManager::Close()` notifies the owning node
+   so a final flush runs even when the queue is already empty (MediaPipe
+   `kReadyForClose` equivalent; the done signal is delivered with the last
+   packet otherwise).
+
+Consequence: when every scheduler queue is idle, every input stream is drained,
+so `Scheduler::HandleIdle` can terminate on `has_error_` or
+`no_more_sources && !inputs_remaining` alone (matching MediaPipe's
+`active_sources_.empty() && sources_queue_.empty() && graph_input_streams_closed_`)
+without scanning input queues.
 
 ## HandleIdle Re-entrance
 

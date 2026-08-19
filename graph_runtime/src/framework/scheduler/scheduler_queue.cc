@@ -3,14 +3,27 @@
 #include "absl/strings/str_cat.h"
 
 #include "src/framework/node/graph_context.h"
+#include "src/framework/scheduler/counters.h"
 #include "src/framework/scheduler/input_stream_handler.h"
 #include "src/framework/stream/output_stream_handler.h"
-#include "src/framework/scheduler/counters.h"
 
 #define GRAPHRT_LOG_TAG "graphrt::scheduler_queue"
 #include "src/framework/utils/logger.h"
 
 namespace graph::runtime {
+
+namespace {
+
+// True when at least one input manager of the node still holds an unconsumed
+// packet. Used to keep a node scheduled while its buffered input drains.
+bool HasPendingInput(const Node* node) {
+  for (const auto& [name, mgr] : node->InputPorts()) {
+    if (mgr && !mgr->IsEmpty()) return true;
+  }
+  return false;
+}
+
+}  // namespace
 
 SchedulerQueue::SchedulerQueue(std::string name) : name_(std::move(name)) {}
 
@@ -198,10 +211,12 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     }
     node->DecrementPending();
     if (node->input_port_count() > 0) {
-      if (node->GetInputStreamHandler()) {
-        Timestamp input_bound;
-        int ma = std::max(1, node->GetContract().MaxInFlight());
-        node->GetInputStreamHandler()->ScheduleInvocations(ma, &input_bound, *node, ctx);
+      // Drain any packets still buffered after the stop so downstream does
+      // not observe a premature close (MediaPipe: non-source nodes keep
+      // processing until their inputs are consumed).
+      if (HasPendingInput(node)) {
+        auto* q = node->GetSchedulerQueue();
+        if (q) q->AddNode(node);
       }
       if (idle_callback_) idle_callback_(true);
     } else {
@@ -251,6 +266,18 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (perf_counters_) {
     perf_counters_->tasks_completed.Increment();
     perf_counters_->packets_processed.Increment();
+  }
+
+  // MediaPipe-style drain: re-schedule the node while any input packet is
+  // still buffered (EndScheduling -> SchedulingLoop pattern). This keeps a
+  // batch produced downstream of a stopping source (e.g. packets emitted by
+  // an encoder during Flush) flowing through the graph without the scheduler
+  // polling input queues in HandleIdle. When all inputs are empty, no
+  // re-scheduling happens, so the queue becomes idle and HandleIdle can
+  // terminate the graph.
+  if (node->input_port_count() > 0 && HasPendingInput(node)) {
+    auto* q = node->GetSchedulerQueue();
+    if (q) q->AddNode(node);
   }
 }
 

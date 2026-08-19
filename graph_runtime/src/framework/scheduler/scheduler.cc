@@ -75,12 +75,21 @@ void Scheduler::HandleIdle() {
       }
     }
 
-    bool all_inputs_closed = (total_graph_input_streams_ > 0 &&
-                              num_closed_graph_input_streams_ >= total_graph_input_streams_);
     bool no_more_sources = active_sources_.empty();
-    bool should_quit = has_error_ ||
-                       (no_more_sources && all_inputs_closed) ||
-                       (no_more_sources && total_graph_input_streams_ == 0);
+
+    bool should_quit;
+    if (has_error_) {
+      should_quit = true;
+    } else if (no_more_sources) {
+      // MediaPipe parity (scheduler.cc HandleIdle): quit only when no source
+      // node remains and every graph input stream is closed. Draining of
+      // buffered downstream packets is event-driven (input-stream arrival
+      // callbacks + post-process re-scheduling in SchedulerQueue::RunNode), so
+      // idle queues imply drained input streams.
+      should_quit = !inputs_remaining;
+    } else {
+      should_quit = false;
+    }
 
     if (should_quit) {
       if (error_callback_ && has_error_) {
@@ -107,17 +116,8 @@ void Scheduler::HandleIdle() {
       return;
     }
 
-    bool any_pending = false;
-    for (auto* q : all_queues_) {
-      if (!q->IsIdle()) { any_pending = true; break; }
-    }
-    if (!any_pending) {
-      CloseAllNodes();
-      state_ = SchedulerState::kTerminated;
-      cv_.notify_all();
-      --handling_idle_;
-      return;
-    }
+    // Nothing left to do (sources exhausted, inputs closed, queues idle):
+    // the loop re-enters only when new work is added elsewhere.
     break;
   }
   --handling_idle_;
@@ -318,22 +318,9 @@ absl::Status Scheduler::Start() {
 }
 
 void Scheduler::AddedPacketToInputStream() {
-  for (auto* node : all_nodes_) {
-    if (node->input_port_count() == 0) continue;
-    bool has_data = false;
-    for (const auto& [name, mgr] : node->InputPorts()) {
-      if (!mgr->IsEmpty()) {
-        has_data = true;
-        break;
-      }
-    }
-    if (has_data) {
-      auto* q = node->GetSchedulerQueue();
-      if (q && q->IsRunning()) {
-        q->AddNode(node);
-      }
-    }
-  }
+  // Scheduling on packet arrival is handled by the per-stream arrival
+  // callbacks wired in GraphRuntime::Initialize; here we only re-check graph
+  // termination, mirroring MediaPipe's AddedPacketToGraphInputStream.
   HandleIdle();
 }
 

@@ -11,6 +11,10 @@
 #include "src/framework/tool/tag_map.h"
 #include "src/framework/tool/validate_name.h"
 #include "src/framework/scheduler/input_stream_handler.h"
+#include "src/framework/node/node.h"
+#include "src/framework/node/node_contract.h"
+#include "src/framework/node/node_factory.h"
+#include "src/framework/node/node_registry.h"
 
 namespace graph::runtime {
 
@@ -461,6 +465,148 @@ TEST_F(CancelTest, StateIsCancellingAfterCancel) {
   EXPECT_TRUE(state == SchedulerState::kCancelling ||
               state == SchedulerState::kTerminated);
   (void)runtime_->WaitUntilDone();
+}
+
+// --- Drain regression test ------------------------------------------------
+//
+// Reproduces the encoder-Flush-tail scenario: a source stops, a downstream
+// node emits a batch of packets on the invocation that observes the input
+// done signal, and a sink must receive every packet of that batch before the
+// graph terminates. Scheduling is event-driven (input-stream arrival
+// callbacks + post-process re-scheduling), so the graph must not terminate
+// while any input queue still holds unconsumed packets.
+
+namespace {
+
+class DrainBatchEmitterNode;
+class DrainCountingSinkNode;
+
+// Captured at construction so tests can inspect node state after the graph
+// terminates (GraphRuntime has no public node accessor).
+DrainBatchEmitterNode* g_last_emitter = nullptr;
+DrainCountingSinkNode* g_last_sink = nullptr;
+
+class DrainSourceNode : public Node {
+ public:
+  DrainSourceNode(const std::string& n, const NodeOptions&) : Node(n) {}
+  static absl::Status GetContract(NodeContract* c) {
+    c->Outputs().Get("src_out").Set<std::string>();
+    return absl::OkStatus();
+  }
+  absl::Status Open(GraphContext&) override { return absl::OkStatus(); }
+  absl::Status Process(GraphContext& ctx) override {
+    if (sent_ >= total_) return StatusStop();
+    ctx.Outputs().Get("src_out").AddPacket(
+        Packet::MakePacket<std::string>("tick").At(ctx.InputTimestamp()));
+    ++sent_;
+    return absl::OkStatus();
+  }
+  absl::Status Close(GraphContext&) override { return absl::OkStatus(); }
+  int sent_ = 0;
+  int total_ = 3;
+};
+
+class DrainBatchEmitterNode : public Node {
+ public:
+  DrainBatchEmitterNode(const std::string& n, const NodeOptions&)
+      : Node(n) {
+    g_last_emitter = this;
+  }
+  static absl::Status GetContract(NodeContract* c) {
+    c->Inputs().Get("in").Set<std::string>();
+    c->Outputs().Get("emitter_out").Set<std::string>();
+    return absl::OkStatus();
+  }
+  absl::Status Open(GraphContext&) override { return absl::OkStatus(); }
+  absl::Status Process(GraphContext& ctx) override {
+    auto& shard = ctx.Inputs().Get("in");
+    if (!shard.IsEmpty()) ++consumed_;
+    // On the invocation that observes the input done signal, flush a batch
+    // of outputs (encoder-Flush behavior). The done signal arrives either
+    // with the last packet or in a separate empty invocation after the
+    // upstream closes the stream.
+    if (shard.IsDone()) {
+      for (int i = 0; i < batch_size_; ++i) {
+        ctx.Outputs().Get("emitter_out").AddPacket(
+            Packet::MakePacket<std::string>("flush_" + std::to_string(i))
+                .At(Timestamp((consumed_ + 1) * 1000 + i)));
+      }
+      flushed_ = true;
+    }
+    return absl::OkStatus();
+  }
+  absl::Status Close(GraphContext&) override { return absl::OkStatus(); }
+  int consumed_ = 0;
+  int batch_size_ = 50;
+  bool flushed_ = false;
+};
+
+class DrainCountingSinkNode : public Node {
+ public:
+  DrainCountingSinkNode(const std::string& n, const NodeOptions&)
+      : Node(n) {
+    g_last_sink = this;
+  }
+  static absl::Status GetContract(NodeContract* c) {
+    c->Inputs().Get("in").Set<std::string>();
+    return absl::OkStatus();
+  }
+  absl::Status Open(GraphContext&) override { return absl::OkStatus(); }
+  absl::Status Process(GraphContext& ctx) override {
+    auto& shard = ctx.Inputs().Get("in");
+    if (shard.IsEmpty()) return absl::OkStatus();
+    auto r = shard.Get<std::string>();
+    if (!r.ok()) return absl::OkStatus();
+    received_.push_back(*r);
+    return absl::OkStatus();
+  }
+  absl::Status Close(GraphContext&) override { return absl::OkStatus(); }
+  std::vector<std::string> received_;
+};
+
+bool RegisterDrainNodes() {
+  static const bool registered = []() {
+    NodeFactoryRegistry::Register(
+        "DrainSourceNode", std::make_unique<NodeFactoryFor<DrainSourceNode>>());
+    NodeFactoryRegistry::Register(
+        "DrainBatchEmitterNode",
+        std::make_unique<NodeFactoryFor<DrainBatchEmitterNode>>());
+    NodeFactoryRegistry::Register(
+        "DrainCountingSinkNode",
+        std::make_unique<NodeFactoryFor<DrainCountingSinkNode>>());
+    return true;
+  }();
+  return registered;
+}
+
+}  // namespace
+
+TEST(DrainTest, BatchEmittedOnDoneIsFullyConsumedBeforeTermination) {
+  RegisterDrainNodes();
+  g_last_emitter = nullptr;
+  g_last_sink = nullptr;
+
+  GraphConfig config;
+  config.nodes.push_back(
+      {"src", "DrainSourceNode", {}, {"src_out"}, {}, {}, {}, "", "", 1, 0});
+  config.nodes.push_back({"emitter", "DrainBatchEmitterNode",
+                          {"in:src_out"}, {"emitter_out"}, {}, {}, {}, "", "",
+                          1, 0});
+  config.nodes.push_back({"sink", "DrainCountingSinkNode", {"in:emitter_out"},
+                          {}, {}, {}, {}, "", "", 1, 0});
+
+  GraphRuntime runtime;
+  ASSERT_TRUE(runtime.Initialize(config).ok());
+  ASSERT_TRUE(runtime.Start().ok());
+  ASSERT_TRUE(runtime.WaitUntilDone().ok());
+
+  ASSERT_NE(g_last_emitter, nullptr);
+  ASSERT_NE(g_last_sink, nullptr);
+  EXPECT_TRUE(g_last_emitter->flushed_)
+      << "Emitter never observed the done signal";
+  EXPECT_EQ(g_last_sink->received_.size(),
+            static_cast<size_t>(g_last_emitter->batch_size_))
+      << "All flush packets must be drained before the graph terminates";
 }
 
 }  // namespace graph::runtime
