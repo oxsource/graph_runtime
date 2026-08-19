@@ -1,4 +1,8 @@
-package(default_visibility = ["//src/framework:__subpackages__", "//src/tests:__subpackages__", "//src/examples:__subpackages__"])
+package(default_visibility = [
+    "//src/framework:__subpackages__",
+    "//src/tests:__subpackages__",
+    "//src/examples:__subpackages__",
+])
 
 # @nlohmann_json dependency is intentionally restricted to this package.
 # No module outside //src/config/json may depend on nlohmann/json.
@@ -9,6 +13,7 @@ cc_library(
     name = "json_parser",
     srcs = ["json_parser.cc"],
     hdrs = ["json_parser.h"],
+    visibility = ["//visibility:public"],  # external consumers parse GraphConfig
     deps = [
         "@graph_runtime//src/framework/config:config",
         "@nlohmann_json//:json",

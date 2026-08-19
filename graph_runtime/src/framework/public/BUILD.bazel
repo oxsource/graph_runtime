@@ -96,6 +96,7 @@ cc_library(
         "@graph_runtime//src/framework/utils:logger",
         "@graph_runtime//src/framework/scheduler:scheduler",
         "@graph_runtime//src/framework/config:graph_config",
+        "@graph_runtime//src/framework/config/json:json_parser",
         "@graph_runtime//src/framework/public:types",
     ],
 )
