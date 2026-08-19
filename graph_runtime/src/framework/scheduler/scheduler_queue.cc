@@ -56,14 +56,19 @@ void SchedulerQueue::AddNode(Node* node) {
   bool should_submit = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    // Check MaxInFlight constraint. pending_count includes the current
-    // execution, so compare > not >= to allow scheduling the next
-    // invocation before the current one completes.
+    // Enforce MaxInFlight atomically: pending_count tracks in-flight Process
+    // invocations (queued + running). Checking it here and incrementing under
+    // the same lock prevents a second worker from dequeuing an item while the
+    // first is still running — which would race node member state (e.g. an
+    // encoder's bsf/packet buffers) and reorder its output. The previous ">"
+    // (and the separate IncrementPending in RunNode) left a window where two
+    // invocations of a MaxInFlight=1 node could overlap.
     int max_in_flight = node ? node->GetContract().MaxInFlight() : 1;
-    if (node && node->pending_count() > max_in_flight) {
+    if (node && node->pending_count() >= max_in_flight) {
       // Node has reached its concurrency limit; defer scheduling.
       return;
     }
+    if (node) node->IncrementPending();
     Item item;
     item.node = node;
     item.is_open_node = false;
@@ -191,9 +196,6 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (node->GetOutputStreamHandler()) {
     node->GetOutputStreamHandler()->PrepareOutputs(ts, &outputs);
   }
-
-  // Mark node as in-flight (MaxInFlight tracking).
-  node->IncrementPending();
 
   ProfilingContext::Scope scope(
       ProfilingContext::EventType::PROCESS, node->name(), profiler_);
