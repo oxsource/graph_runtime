@@ -25,6 +25,7 @@ constexpr char kKeyName[]               = "name";
 constexpr char kKeyType[]               = "type";
 constexpr char kKeyNumThreads[]         = "num_threads";
 constexpr char kKeyExecutor[]           = "executor";
+constexpr char kKeyOptions[]            = "options";
 constexpr char kKeyInputStreamHandler[] = "input_stream_handler";
 constexpr char kKeyMaxInFlight[]        = "max_in_flight";
 constexpr char kKeySourceLayer[]        = "source_layer";
@@ -51,6 +52,35 @@ absl::StatusOr<GraphConfig> ParseJsonText(const std::string& json_text,
     return absl::InvalidArgumentError(
         absl::StrCat(source_name, ": JSON parse error: ", e.what()));
   }
+
+  // Internal: copy a per-node JSON "options" object into NodeOptions.
+  // JSON value types map to NodeOptions C++ types: string -> std::string,
+  // bool -> bool, integer -> int, float -> double. Non-scalar JSON values
+  // (arrays / objects / null) are rejected so misconfigurations surface at
+  // parse time instead of silently dropping the option.
+  auto ParseNodeOptions = [](const nlohmann::json& opts,
+                             const std::string& node_name,
+                             GraphConfig::NodeDef* def)
+      -> absl::Status {
+    for (auto it = opts.begin(); it != opts.end(); ++it) {
+      const std::string& key = it.key();
+      const auto& value = it.value();
+      if (value.is_string()) {
+        def->options.Set(key, value.get<std::string>());
+      } else if (value.is_boolean()) {
+        def->options.Set(key, value.get<bool>());
+      } else if (value.is_number_integer()) {
+        def->options.Set(key, value.get<int>());
+      } else if (value.is_number_float()) {
+        def->options.Set(key, value.get<double>());
+      } else {
+        return absl::InvalidArgumentError(absl::StrCat(
+            "node '", node_name, "': option '", key,
+            "' has an unsupported JSON value type (must be scalar)"));
+      }
+    }
+    return absl::OkStatus();
+  };
 
   GraphConfig config;
   config.max_queue_size = root.value(kKeyMaxQueueSize, kDefaultMaxQueueSize);
@@ -107,6 +137,15 @@ absl::StatusOr<GraphConfig> ParseJsonText(const std::string& json_text,
       def.input_stream_handler = nj.value(kKeyInputStreamHandler, "");
       def.max_in_flight = nj.value(kKeyMaxInFlight, kDefaultMaxInFlight);
       def.source_layer = nj.value(kKeySourceLayer, kDefaultSourceLayer);
+      if (nj.contains(kKeyOptions)) {
+        if (!nj[kKeyOptions].is_object()) {
+          return absl::InvalidArgumentError(absl::StrCat(
+              "node '", def.name, "': 'options' must be a JSON object"));
+        }
+        const absl::Status opt_status =
+            ParseNodeOptions(nj[kKeyOptions], def.name, &def);
+        if (!opt_status.ok()) return opt_status;
+      }
       config.nodes.push_back(std::move(def));
     }
   }

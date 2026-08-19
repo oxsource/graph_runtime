@@ -51,6 +51,82 @@ TEST(ConfigParserTest, CorrectStructure) {
   EXPECT_FALSE(config.report_deadlock);
 }
 
+TEST(ConfigParserTest, ParsesPerNodeOptions) {
+  JsonParser parser;
+  auto result = parser.ParseFromString(
+      R"json({
+        "nodes": [
+          {
+            "name": "producer",
+            "type": "A",
+            "output_streams": ["out:x"],
+            "options": {
+              "name": "cam1",
+              "fps": 30,
+              "width": 1280,
+              "enabled": true,
+              "ratio": 1.5
+            }
+          },
+          { "name": "consumer", "type": "B", "input_streams": ["in:x"] }
+        ]
+      })json");
+  ASSERT_TRUE(result.ok()) << result.status();
+  ASSERT_EQ(result->nodes.size(), 2u);
+  const auto& opts = result->nodes[0].options;
+
+  const std::string* name = opts.Get<std::string>("name");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(*name, "cam1");
+
+  const int* fps = opts.Get<int>("fps");
+  ASSERT_NE(fps, nullptr);
+  EXPECT_EQ(*fps, 30);
+
+  const int* width = opts.Get<int>("width");
+  ASSERT_NE(width, nullptr);
+  EXPECT_EQ(*width, 1280);
+
+  const bool* enabled = opts.Get<bool>("enabled");
+  ASSERT_NE(enabled, nullptr);
+  EXPECT_TRUE(*enabled);
+
+  const double* ratio = opts.Get<double>("ratio");
+  ASSERT_NE(ratio, nullptr);
+  EXPECT_DOUBLE_EQ(*ratio, 1.5);
+
+  // A node without an options object parses empty options.
+  EXPECT_TRUE(result->nodes[1].options.Keys().empty());
+}
+
+TEST(ConfigParserTest, RejectsNonObjectOptions) {
+  JsonParser parser;
+  auto result = parser.ParseFromString(
+      R"json({
+        "nodes": [
+          { "name": "producer", "type": "A", "output_streams": ["out:x"],
+            "options": [1, 2, 3] }
+        ]
+      })json");
+  ASSERT_FALSE(result.ok());
+  EXPECT_NE(result.status().ToString().find("'options' must be a JSON object"),
+            std::string::npos);
+}
+
+TEST(ConfigParserTest, RejectsNonScalarOptionValue) {
+  JsonParser parser;
+  auto result = parser.ParseFromString(
+      R"json({
+        "nodes": [
+          { "name": "producer", "type": "A", "output_streams": ["out:x"],
+            "options": { "bad": {"nested": true} } }
+        ]
+      })json");
+  ASSERT_FALSE(result.ok());
+  EXPECT_NE(result.status().ToString().find("unsupported JSON value type"),
+            std::string::npos);
+}
+
 // --- US5: Config Validation Tests ---
 
 TEST(ConfigValidatorTest, ValidConnectivityPasses) {
