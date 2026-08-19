@@ -331,17 +331,16 @@ TEST_F(MaxInFlightTest, AddNodeRespectsMaxInFlight) {
   contract.SetMaxInFlight(1);
   node.SetContract(contract);
 
-  // AddNode should succeed when pending < MaxInFlight.
+  // AddNode counts the invocation as in-flight (queued + running) and
+  // increments pending under lock, so pending becomes 1.
   EXPECT_EQ(node.pending_count(), 0);
   queue.AddNode(&node);
+  EXPECT_EQ(node.pending_count(), 1);
   EXPECT_FALSE(queue.IsIdle());
 
-  // Simulate that the node is running.
-  node.IncrementPending();
-  EXPECT_EQ(node.pending_count(), 1);
-
-  // AddNode should be deferred since pending >= MaxInFlight.
-  // But we can't easily test the queue content. Just verify no crash.
+  // A second AddNode while pending >= MaxInFlight is deferred: it must NOT
+  // bump pending_count, preventing two invocations of a MaxInFlight=1 node
+  // from overlapping (which would race node member state).
   queue.AddNode(&node);
   EXPECT_EQ(node.pending_count(), 1);
 }
