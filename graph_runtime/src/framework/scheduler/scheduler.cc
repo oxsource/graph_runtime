@@ -138,7 +138,11 @@ void Scheduler::HandleIdle() {
 
     if (!active_sources_.empty()) {
       for (auto* source : active_sources_) {
-        default_queue_.AddNode(source);
+        // Use the source's own queue (respects executor binding); a source
+        // also re-schedules itself after each Process (MediaPipe
+        // EndScheduling), so this path is a safety net when a source was
+        // back-pressured and parked.
+        source->GetSchedulerQueue()->AddNode(source);
       }
       --handling_idle_;
       return;
@@ -364,7 +368,7 @@ absl::Status Scheduler::Start() {
     }
     if (node->input_port_count() == 0) {
       active_sources_.insert(node);
-      default_queue_.AddNode(node);
+      node->GetSchedulerQueue()->AddNode(node);
     }
   }
 

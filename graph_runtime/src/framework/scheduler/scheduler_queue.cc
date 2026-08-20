@@ -281,6 +281,20 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     auto* q = node->GetSchedulerQueue();
     if (q) q->AddNode(node);
   }
+
+  // MediaPipe EndScheduling for SOURCE nodes: a source re-schedules itself
+  // immediately after a successful Process() so it keeps producing without
+  // waiting for the whole graph to go idle (previously sources were driven
+  // only from HandleIdle, serializing source production behind every
+  // downstream node and killing pipeline overlap). The source's MaxInFlight
+  // (default 1) throttles the re-schedule naturally: AddNode() skips a node
+  // already at its concurrency limit, so a slow downstream back-pressures the
+  // source through the input stream's MaxInFlight + pending_count. A source
+  // that returned Stop or an error never reaches here (handled above).
+  if (node->input_port_count() == 0) {
+    auto* q = node->GetSchedulerQueue();
+    if (q) q->AddNode(node);
+  }
 }
 
 void SchedulerQueue::UpdateIdleState() {
