@@ -15,158 +15,212 @@ static bool CheckTimestamp(const Packet& p) {
 
 absl::Status InputStreamManager::AddPackets(const std::list<Packet>& packets,
                                              bool* notify) {
-  *notify = false;
-  bool was_queue_full = IsFull();
+  bool was_queue_full = false;
+  bool queue_became_non_empty = false;
+  PacketArrivalCallback arrival;
+  QueueSizeCallback full_cb;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    *notify = false;
+    was_queue_full =
+        max_queue_size_ != -1 &&
+        static_cast<int>(queue_.size()) >= max_queue_size_;
 
-  if (closed_) {
-    return absl::FailedPreconditionError("Stream is closed");
-  }
-
-  bool queue_became_non_empty = queue_.empty() && !packets.empty();
-
-  for (const auto& packet : packets) {
-    if (enable_timestamps_ && !CheckTimestamp(packet)) {
-      return absl::InvalidArgumentError("Invalid timestamp");
+    if (closed_) {
+      return absl::FailedPreconditionError("Stream is closed");
     }
-    next_timestamp_bound_ = packet.timestamp().NextAllowedInStream();
-    ++num_packets_added_;
-    queue_.push_back(packet);
+
+    queue_became_non_empty = queue_.empty() && !packets.empty();
+
+    for (const auto& packet : packets) {
+      if (enable_timestamps_ && !CheckTimestamp(packet)) {
+        return absl::InvalidArgumentError("Invalid timestamp");
+      }
+      next_timestamp_bound_ = packet.timestamp().NextAllowedInStream();
+      ++num_packets_added_;
+      queue_.push_back(packet);
+    }
+
+    if (!was_queue_full &&
+        max_queue_size_ != -1 &&
+        static_cast<int>(queue_.size()) >= max_queue_size_) {
+      full_cb = becomes_full_callback_;
+    }
+    arrival = arrival_callback_;
+    *notify = queue_became_non_empty;
   }
 
-  if (!was_queue_full && IsFull() && becomes_full_callback_) {
-    becomes_full_callback_(this, &last_reported_stream_full_);
-  }
-
-  *notify = queue_became_non_empty;
-  if (*notify && arrival_callback_) {
-    arrival_callback_();
-  }
+  if (full_cb) full_cb(this, &last_reported_stream_full_);
+  if (*notify && arrival) arrival();
   return absl::OkStatus();
 }
 
 absl::Status InputStreamManager::MovePackets(std::list<Packet>* packets,
                                               bool* notify) {
-  *notify = false;
-  bool was_queue_full = IsFull();
+  bool was_queue_full = false;
+  bool queue_became_non_empty = false;
+  PacketArrivalCallback arrival;
+  QueueSizeCallback full_cb;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    *notify = false;
+    was_queue_full =
+        max_queue_size_ != -1 &&
+        static_cast<int>(queue_.size()) >= max_queue_size_;
 
-  if (closed_) {
-    return absl::FailedPreconditionError("Stream is closed");
-  }
-
-  bool queue_became_non_empty = queue_.empty() && !packets->empty();
-
-  for (auto& packet : *packets) {
-    if (enable_timestamps_ && !CheckTimestamp(packet)) {
-      return absl::InvalidArgumentError("Invalid timestamp");
+    if (closed_) {
+      return absl::FailedPreconditionError("Stream is closed");
     }
-    next_timestamp_bound_ = packet.timestamp().NextAllowedInStream();
-    ++num_packets_added_;
-    queue_.push_back(std::move(packet));
-  }
-  packets->clear();
 
-  if (!was_queue_full && IsFull() && becomes_full_callback_) {
-    becomes_full_callback_(this, &last_reported_stream_full_);
+    queue_became_non_empty = queue_.empty() && !packets->empty();
+
+    for (auto& packet : *packets) {
+      if (enable_timestamps_ && !CheckTimestamp(packet)) {
+        return absl::InvalidArgumentError("Invalid timestamp");
+      }
+      next_timestamp_bound_ = packet.timestamp().NextAllowedInStream();
+      ++num_packets_added_;
+      queue_.push_back(std::move(packet));
+    }
+    packets->clear();
+
+    if (!was_queue_full &&
+        max_queue_size_ != -1 &&
+        static_cast<int>(queue_.size()) >= max_queue_size_) {
+      full_cb = becomes_full_callback_;
+    }
+    arrival = arrival_callback_;
+    *notify = queue_became_non_empty;
   }
 
-  *notify = queue_became_non_empty;
-  if (*notify && arrival_callback_) {
-    arrival_callback_();
-  }
+  if (full_cb) full_cb(this, &last_reported_stream_full_);
+  if (*notify && arrival) arrival();
   return absl::OkStatus();
 }
 
 void InputStreamManager::SetNextTimestampBound(Timestamp bound) {
-  if (bound > next_timestamp_bound_) {
-    next_timestamp_bound_ = bound;
-    if (arrival_callback_ && queue_.empty()) {
-      arrival_callback_();
+  bool notify = false;
+  PacketArrivalCallback arrival;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (bound > next_timestamp_bound_) {
+      next_timestamp_bound_ = bound;
+      notify = arrival_callback_ && queue_.empty();
+      arrival = arrival_callback_;
     }
   }
+  if (notify && arrival) arrival();
 }
 
 void InputStreamManager::Close() {
-  if (closed_) return;
-  closed_ = true;
-  next_timestamp_bound_ = Timestamp::Done();
-  // Notify the owning node so it can run its final flush (the MediaPipe
-  // kReadyForClose equivalent) even when the queue is already empty.
-  if (arrival_callback_) arrival_callback_();
+  PacketArrivalCallback arrival;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (closed_) return;
+    closed_ = true;
+    next_timestamp_bound_ = Timestamp::Done();
+    // Notify the owning node so it can run its final flush (the MediaPipe
+    // kReadyForClose equivalent) even when the queue is already empty.
+    arrival = arrival_callback_;
+  }
+  if (arrival) arrival();
 }
 
 Packet InputStreamManager::PopPacketAtTimestamp(
     Timestamp timestamp, int* num_packets_dropped, bool* stream_is_done) {
-  *num_packets_dropped = -1;
-  bool was_queue_full = IsFull();
   Packet packet;
-  Timestamp current_timestamp = Timestamp::Unset();
+  QueueSizeCallback not_full_cb;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    *num_packets_dropped = -1;
+    const bool was_queue_full =
+        max_queue_size_ != -1 &&
+        static_cast<int>(queue_.size()) >= max_queue_size_;
+    Timestamp current_timestamp = Timestamp::Unset();
 
-  if (!queue_.empty() && queue_.front().timestamp() <= timestamp) {
-    packet = std::move(queue_.front());
-    queue_.pop_front();
-    current_timestamp = packet.timestamp();
-    *num_packets_dropped = 0;
+    if (!queue_.empty() && queue_.front().timestamp() <= timestamp) {
+      packet = std::move(queue_.front());
+      queue_.pop_front();
+      current_timestamp = packet.timestamp();
+      *num_packets_dropped = 0;
+    }
+
+    if (current_timestamp != timestamp) {
+      Timestamp bound =
+          !queue_.empty() ? queue_.front().timestamp() : next_timestamp_bound_;
+      packet = Packet().At(bound.PreviousAllowedInStream());
+      ++(*num_packets_dropped);
+    }
+
+    last_select_timestamp_ = timestamp;
+
+    if (next_timestamp_bound_ <= timestamp) {
+      next_timestamp_bound_ = timestamp.NextAllowedInStream();
+    }
+
+    const bool queue_became_non_full =
+        (was_queue_full && !(max_queue_size_ != -1 &&
+                             static_cast<int>(queue_.size()) >= max_queue_size_));
+    if (queue_became_non_full) not_full_cb = becomes_not_full_callback_;
+
+    *stream_is_done =
+        queue_.empty() && next_timestamp_bound_ == Timestamp::Done();
   }
-
-  if (current_timestamp != timestamp) {
-    Timestamp bound = MinTimestampOrBound(nullptr);
-    packet = Packet().At(bound.PreviousAllowedInStream());
-    ++(*num_packets_dropped);
-  }
-
-  last_select_timestamp_ = timestamp;
-
-  if (next_timestamp_bound_ <= timestamp) {
-    next_timestamp_bound_ = timestamp.NextAllowedInStream();
-  }
-
-  bool queue_became_non_full = (was_queue_full && !IsFull());
-  if (queue_became_non_full && becomes_not_full_callback_) {
-    becomes_not_full_callback_(this, &last_reported_stream_full_);
-  }
-
-  *stream_is_done = IsDone();
+  if (not_full_cb) not_full_cb(this, &last_reported_stream_full_);
   return packet;
 }
 
 Packet InputStreamManager::PopQueueHead(bool* stream_is_done) {
+  Packet p;
+  std::lock_guard<std::mutex> lock(mutex_);
   if (queue_.empty()) {
-    *stream_is_done = IsDone();
+    *stream_is_done =
+        queue_.empty() && next_timestamp_bound_ == Timestamp::Done();
     return Packet();
   }
-  Packet p = std::move(queue_.front());
+  p = std::move(queue_.front());
   queue_.pop_front();
-  *stream_is_done = IsDone();
+  *stream_is_done =
+      queue_.empty() && next_timestamp_bound_ == Timestamp::Done();
   return p;
 }
 
 Packet InputStreamManager::QueueHead() const {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (queue_.empty()) return Packet();
   return queue_.front();
 }
 
-bool InputStreamManager::IsEmpty() const { return queue_.empty(); }
+bool InputStreamManager::IsEmpty() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return queue_.empty();
+}
 
 bool InputStreamManager::IsFull() const {
+  std::lock_guard<std::mutex> lock(mutex_);
   return max_queue_size_ != -1 &&
          static_cast<int>(queue_.size()) >= max_queue_size_;
 }
 
 bool InputStreamManager::IsDone() const {
+  std::lock_guard<std::mutex> lock(mutex_);
   return queue_.empty() && next_timestamp_bound_ == Timestamp::Done();
 }
 
 int InputStreamManager::QueueSize() const {
+  std::lock_guard<std::mutex> lock(mutex_);
   return static_cast<int>(queue_.size());
 }
 
 int InputStreamManager::MaxQueueSize() const { return max_queue_size_; }
 
 int64_t InputStreamManager::NumPacketsAdded() const {
+  std::lock_guard<std::mutex> lock(mutex_);
   return num_packets_added_;
 }
 
 Timestamp InputStreamManager::MinTimestampOrBound(bool* is_empty) const {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (!queue_.empty()) {
     if (is_empty) *is_empty = false;
     return queue_.front().timestamp();
@@ -176,20 +230,24 @@ Timestamp InputStreamManager::MinTimestampOrBound(bool* is_empty) const {
 }
 
 void InputStreamManager::SetMaxQueueSize(int max_queue_size) {
+  std::lock_guard<std::mutex> lock(mutex_);
   max_queue_size_ = max_queue_size;
 }
 
 void InputStreamManager::SetQueueSizeCallbacks(
     QueueSizeCallback full_cb, QueueSizeCallback not_full_cb) {
+  std::lock_guard<std::mutex> lock(mutex_);
   becomes_full_callback_ = std::move(full_cb);
   becomes_not_full_callback_ = std::move(not_full_cb);
 }
 
 void InputStreamManager::SetArrivalCallback(PacketArrivalCallback cb) {
+  std::lock_guard<std::mutex> lock(mutex_);
   arrival_callback_ = std::move(cb);
 }
 
 void InputStreamManager::PrepareForRun() {
+  std::lock_guard<std::mutex> lock(mutex_);
   queue_.clear();
   num_packets_added_ = 0;
   next_timestamp_bound_ = Timestamp::PreStream();
@@ -199,6 +257,7 @@ void InputStreamManager::PrepareForRun() {
 }
 
 void InputStreamManager::CleanupAfterRun() {
+  std::lock_guard<std::mutex> lock(mutex_);
   queue_.clear();
 }
 

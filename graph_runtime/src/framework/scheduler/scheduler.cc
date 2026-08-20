@@ -45,6 +45,8 @@ absl::Status Scheduler::SetNonDefaultExecutor(
   queue->SetExecutor(executor.get());
   all_queues_.push_back(queue.get());
   non_default_queues_[name] = std::move(queue);
+  // Retain the shared_ptr so the queue's bare executor_ pointer stays valid.
+  non_default_executors_[name] = std::move(executor);
   return absl::OkStatus();
 }
 

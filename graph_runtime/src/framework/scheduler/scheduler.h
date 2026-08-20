@@ -118,6 +118,11 @@ class Scheduler {
 
   std::unique_ptr<InputStreamHandler> input_stream_handler_;
   std::shared_ptr<Executor> default_executor_;
+  // Owns the non-default executors so the bare Executor* handed to each
+  // SchedulerQueue stays alive for the graph's lifetime (SetNonDefaultExecutor
+  // would otherwise drop its shared_ptr on return, leaving the queue's
+  // executor_ pointer dangling — a crash on multi-executor graphs).
+  std::map<std::string, std::shared_ptr<Executor>> non_default_executors_;
   ErrorCallback error_callback_;
   std::vector<Node*> all_nodes_;
   std::vector<Node*> source_nodes_;

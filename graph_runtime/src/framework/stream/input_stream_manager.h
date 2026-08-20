@@ -4,6 +4,7 @@
 #include <deque>
 #include <functional>
 #include <list>
+#include <mutex>
 #include <string>
 
 #include "absl/status/status.h"
@@ -52,6 +53,12 @@ class InputStreamManager {
 
  private:
   std::string name_;
+  // Protects queue_ and the packet/stream state below. Multi-executor graphs
+  // run producers (MovePackets/AddPackets, e.g. an encoder thread) and
+  // consumers (PopQueueHead/PopPacketAtTimestamp, e.g. a muxer thread) on
+  // different threads; without the lock those concurrent deque accesses race
+  // and crash (observed as a segfault with the parallel android config).
+  mutable std::mutex mutex_;
   std::deque<Packet> queue_;
   int64_t num_packets_added_ = 0;
   Timestamp next_timestamp_bound_{Timestamp::PreStream()};
