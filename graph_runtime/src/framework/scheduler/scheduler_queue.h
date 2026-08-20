@@ -4,6 +4,7 @@
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <set>
 #include <string>
 
 #include "src/framework/scheduler/executor.h"
@@ -98,6 +99,10 @@ class SchedulerQueue : public TaskQueue {
   bool running_ = false;
   mutable std::mutex mutex_;
   std::priority_queue<Item> queue_;
+  // Nodes whose inputs are all done but which have not yet run their finalize
+  // Process (e.g. an encoder Flush). They are scheduled once more with outputs
+  // still open, then their output streams are closed (see RunNode).
+  std::set<Node*> close_pending_;
   int num_pending_tasks_ = 0;
   int64_t timestamp_counter_ = 0;
 };

@@ -65,7 +65,7 @@ void SchedulerQueue::AddNode(Node* node) {
     // invocations of a MaxInFlight=1 node could overlap.
     int max_in_flight = node ? node->GetContract().MaxInFlight() : 1;
     if (node && node->pending_count() >= max_in_flight) {
-      // Node has reached its concurrency limit; defer scheduling.
+      // Node is at its concurrency limit; defer scheduling.
       return;
     }
     if (node) node->IncrementPending();
@@ -247,20 +247,39 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     node->GetOutputStreamHandler()->PostProcess(ts, &outputs);
   }
 
-  // If every input stream of this node is now closed (done) AND the node
-  // produced nothing new this round, propagate done downstream so sink nodes
-  // can finalize (e.g. encoder Flush, muxer finalize). This mirrors MediaPipe:
-  // an input-done event closes the node's output streams.
+  // When every input stream is done, the node must run ONE more Process to
+  // observe the done state and finalize (e.g. an encoder Flush draining
+  // codec-buffered frames) BEFORE its output streams are closed — otherwise
+  // the finalize output (Flush packets) is dropped by the closed shard. This
+  // mirrors MediaPipe: a node finalizes (kReadyForClose -> EndScheduling) and
+  // only then are its output streams closed.
+  bool all_inputs_done = false;
   if (node->input_port_count() > 0 && node->GetOutputStreamHandler()) {
-    bool all_inputs_done = true;
+    all_inputs_done = true;
     for (const auto& [name, mgr] : node->InputPorts()) {
       if (!mgr->IsDone()) {
         all_inputs_done = false;
         break;
       }
     }
-    if (all_inputs_done) {
-      node->GetOutputStreamHandler()->Close(&outputs);
+  }
+
+  // Decide close_pending_ transitions UNDER THE LOCK, but do not call AddNode
+  // here (it checks pending_count, which is still 1 until DecrementPending
+  // below). Store the action; apply it after DecrementPending.
+  enum class FinalizeAction { kNone, kSchedule, kClose };
+  FinalizeAction action = FinalizeAction::kNone;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (all_inputs_done && close_pending_.count(node) == 0) {
+      // First time observing done: schedule the node once more so it can
+      // finalize (Flush) while its outputs are still open, then close later.
+      close_pending_.insert(node);
+      action = FinalizeAction::kSchedule;
+    } else if (close_pending_.erase(node) > 0) {
+      // The node has finalized (its done Process ran); now it is safe to close
+      // its output streams so downstream sees Done and can also finalize.
+      action = FinalizeAction::kClose;
     }
   }
 
@@ -268,6 +287,13 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (perf_counters_) {
     perf_counters_->tasks_completed.Increment();
     perf_counters_->packets_processed.Increment();
+  }
+
+  if (action == FinalizeAction::kClose) {
+    node->GetOutputStreamHandler()->Close(&outputs);
+  } else if (action == FinalizeAction::kSchedule) {
+    auto* q = node->GetSchedulerQueue();
+    if (q) q->AddNode(node);
   }
 
   // MediaPipe-style drain: re-schedule the node while any input packet is

@@ -99,17 +99,20 @@ absl::Status InputStreamManager::MovePackets(std::list<Packet>* packets,
 }
 
 void InputStreamManager::SetNextTimestampBound(Timestamp bound) {
-  bool notify = false;
   PacketArrivalCallback arrival;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (bound > next_timestamp_bound_) {
       next_timestamp_bound_ = bound;
-      notify = arrival_callback_ && queue_.empty();
+      // Always wake the owning node on a bound advance (including Timestamp::
+      // Done from a stopping upstream source). The consumer must run one more
+      // Process to observe the done state and finalize (e.g. an encoder Flush
+      // draining codec-buffered frames); without this, a source that stops
+      // while the consumer is momentarily busy leaves the done signal lost.
       arrival = arrival_callback_;
     }
   }
-  if (notify && arrival) arrival();
+  if (arrival) arrival();
 }
 
 void InputStreamManager::Close() {
@@ -180,8 +183,12 @@ Packet InputStreamManager::PopQueueHead(bool* stream_is_done) {
   }
   p = std::move(queue_.front());
   queue_.pop_front();
-  *stream_is_done =
-      queue_.empty() && next_timestamp_bound_ == Timestamp::Done();
+  // Frame and done are SEPARATE signals (MediaPipe): popping a frame must NOT
+  // also report done, even if the stream is now empty and its bound is Done.
+  // The done state is only observed on a later empty invocation, so a node that
+  // flushes on IsDone() (e.g. an encoder) does not flush twice (once on the
+  // last-frame invocation and again on the finalize invocation).
+  *stream_is_done = false;
   return p;
 }
 
