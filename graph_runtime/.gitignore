@@ -46,3 +46,5 @@ __pycache__/
 .venv/
 venv/
 *.log
+.bazel_git_lfs/*
+!.bazel_git_lfs/.bazelconfig

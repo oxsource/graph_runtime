@@ -31,3 +31,6 @@ Thumbs.db
 
 # Temp
 *.tmp
+
+.bazel_git_lfs/*
+!.bazel_git_lfs/.bazelconfig
