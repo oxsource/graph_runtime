@@ -203,7 +203,7 @@ bool WaitUntilDoneBounded(GraphRuntime& runtime) {
   std::promise<bool> done;
   auto future = done.get_future();
   std::thread worker([&]() {
-    runtime.WaitUntilDone();
+    (void)runtime.WaitUntilDone();
     done.set_value(true);
   });
   bool finished = future.wait_for(kTimeout) == std::future_status::ready;
