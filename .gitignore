@@ -32,5 +32,15 @@ Thumbs.db
 # Temp
 *.tmp
 
+# Credentials & secrets (do not commit)
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+*.der
+.env*
+secrets/
+
 .bazel_git_lfs/*
 !.bazel_git_lfs/.bazelconfig
