@@ -1,7 +1,7 @@
 {
   "integration": "opencode",
   "version": "0.8.16",
-  "installed_at": "2026-07-23T03:25:26.445440+00:00",
+  "installed_at": "2026-09-02T06:39:24.714599+00:00",
   "files": {
     ".opencode/commands/speckit.analyze.md": "699032fdd49afe31d23c7191f3fe7bcb1d14b081fbc94c2287e6ba3a57574fda",
     ".opencode/commands/speckit.checklist.md": "d7d691689fe45427c868dcf18ade4df500f0c742a6c91923fefba405d6466dde",
