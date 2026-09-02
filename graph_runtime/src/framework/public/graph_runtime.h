@@ -205,7 +205,6 @@ class GraphRuntime {
   std::unique_ptr<Scheduler> scheduler_;
   std::vector<std::unique_ptr<Node>> all_nodes_;
   std::list<std::unique_ptr<InputStreamManager>> owned_stream_managers_;
-  std::map<std::string, InputStreamManager*> stream_managers_;
   std::set<std::string> graph_input_streams_set_;
   int num_open_input_streams_ = 0;
 
@@ -216,6 +215,12 @@ class GraphRuntime {
   // Owned output stream infrastructure (list for pointer stability).
   std::list<std::unique_ptr<OutputStreamManager>> owned_output_stream_managers_;
   std::list<std::unique_ptr<OutputStreamHandler>> owned_output_stream_handlers_;
+
+  // Graph inputs (config.input_streams) modeled as virtual source output
+  // managers (Plan B / MediaPipe GraphInputStream). AddPacketToInputStream
+  // writes into one and PropagateUpdatesToMirrors fans it out to every
+  // consumer wired as a mirror.
+  std::map<std::string, OutputStreamManager*> graph_input_outputs_;
 
   // Owned input stream handlers.
   std::list<std::unique_ptr<InputStreamHandler>> owned_input_stream_handlers_;

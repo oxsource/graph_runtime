@@ -39,7 +39,7 @@ enum class SchedulerState {
 class Scheduler {
  public:
   Scheduler();
-  virtual ~Scheduler() = default;
+  ~Scheduler();
 
   void SetInputStreamHandler(std::unique_ptr<InputStreamHandler> handler);
   void SetErrorCallback(ErrorCallback cb);

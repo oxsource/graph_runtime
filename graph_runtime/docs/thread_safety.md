@@ -127,3 +127,28 @@ pending executor tasks complete:
 | Variable | Purpose |
 |----------|---------|
 | `handling_idle_` | Guards re-entrance into `HandleIdle`. `std::atomic` chosen over a bare `int` because the function is called from both the application and executor threads without a shared mutex. |
+
+## Stream Fan-Out (1→N) & Done Semantics
+
+One output stream can be consumed by any number of downstream nodes
+(MediaPipe-style fan-out). Thread-model notes for this wiring:
+
+- **Per-edge input queues**: each (consumer node, input edge) has its own
+  `InputStreamManager`; producers write once into their `OutputStreamManager`
+  and `PropagateUpdatesToMirrors` copies to N-1 mirrors and moves to the last.
+  Each consumer's `InputStreamHandler` routes to its own queue, so consumers do
+  not contend for a shared queue.
+- **Finalize-on-done**: a node whose inputs are all done must run one more
+  `Process` to observe input-done and finalize (`Close`). This is enforced for
+  output-less consumers too (sinks at the end of a fan-out branch). State
+  transitions (`close_pending_`, `finalized_nodes_`) in `SchedulerQueue` are
+  mutex-guarded; `DrainInputQueues` defers termination while a done-but-
+  unfinalized node remains, so the graph cannot terminate (or deadlock) on a
+  lost done-signal arrival (MaxInFlight-dropped `AddNode`).
+- **Graph inputs as virtual sources**: `AddPacketToInputStream` injects into a
+  virtual source `OutputStreamManager` whose mirrors are all consumers; the
+  injection shard is a per-call `OutputStreamShard` (no shared mutable state).
+- **Teardown ordering**: `GraphRuntime` and `Scheduler` destructors drop the
+  executors (joining worker threads and draining in-flight tasks) before the
+  nodes/queues they reference are destroyed, so a task still running at teardown
+  never touches freed `Node*` or a destroyed `SchedulerQueue`.

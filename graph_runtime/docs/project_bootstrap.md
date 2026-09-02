@@ -22,6 +22,12 @@ Atlas 参考源码位于 `/Users/moks/Develop/docker/ubuntu24/codes/atlas`，其
 
 一期目标专注于 Runtime Core，为 DVR、AVM、DMS 等视觉算法项目提供统一的数据流执行基础。
 
+框架定位于 **sub-MediaPipe**：借鉴 MediaPipe 的 Stream-Based 图运行时数据模型
+（per-input-edge `InputStreamManager`、输出侧 `OutputStreamManager` + mirror
+扇出、图输入作为虚拟 source 输出流），支持一路输出流被多个下游节点独立消费
+（1→N fan-out），图输入（`AddPacketToInputStream`）同样经 mirror 扇出到所有
+消费者。详见 `specs/011-stream-fanout/`。
+
 ---
 
 ## 1.2 Goals

@@ -65,6 +65,8 @@ absl::Status ConfigValidator::Validate(const GraphConfig& config) {
   if (!status.ok()) return status;
   status = ValidateUniqueExecutors(config);
   if (!status.ok()) return status;
+  status = ValidateNoDuplicateNodeInputs(config);
+  if (!status.ok()) return status;
   status = ValidateConnectivity(config);
   if (!status.ok()) return status;
   status = ValidateNoCycles(config);
@@ -91,6 +93,25 @@ absl::Status ConfigValidator::ValidateUniqueExecutors(
     if (!executor_names.insert(executor.name).second) {
       return absl::InvalidArgumentError(
           absl::StrCat("duplicate executor name: ", executor.name));
+    }
+  }
+  return absl::OkStatus();
+}
+
+// A node must not consume the same output stream twice (two input edges to
+// the same stream inside one node): MediaPipe rejects this, and per-edge input
+// managers would otherwise give the node two queues for one producer stream.
+absl::Status ConfigValidator::ValidateNoDuplicateNodeInputs(
+    const GraphConfig& config) {
+  for (const auto& node : config.nodes) {
+    std::set<std::string> seen;
+    for (const auto& is : node.input_streams) {
+      auto stream = StreamName(is);
+      if (!seen.insert(stream).second) {
+        return absl::InvalidArgumentError(absl::StrCat(
+            "node '", node.name, "': consumes stream '", stream,
+            "' more than once (duplicate input edge)"));
+      }
     }
   }
   return absl::OkStatus();

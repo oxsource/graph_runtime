@@ -18,7 +18,14 @@ namespace graph::runtime {
 GraphRuntime::GraphRuntime()
     : scheduler_(std::make_unique<Scheduler>()) {}
 
-GraphRuntime::~GraphRuntime() = default;
+GraphRuntime::~GraphRuntime() {
+  // Destroy the scheduler (and its executors) while all_nodes_ is still alive:
+  // the ThreadPool destructor joins worker threads, so any in-flight RunNode
+  // task (which references Node* owned by all_nodes_) completes before the
+  // nodes are freed. Without this, a task still running when the test harness
+  // tears a graph down (e.g. after a watchdog Shutdown) touches freed nodes.
+  scheduler_.reset();
+}
 
 void GraphRuntime::Options::Apply(GraphConfig* config) const {
   if (config == nullptr || nodes.empty()) return;
@@ -63,22 +70,23 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config,
   profiler_->Initialize(pcfg, node_names);
   scheduler_->SetProfiler(profiler_.get());
 
-  // Create InputStreamManagers for each declared input stream and register
-  // them on their owning node. Ports are registered by port name (the "port"
-  // part of "port:stream") so nodes read Inputs().Get(port); the full
-  // "port:stream" string remains the lookup key for AddPacketToInputStream.
+  // Create one InputStreamManager per (node, input edge) so a single output
+  // stream can be consumed independently by many nodes (1→N fan-out). Each
+  // manager carries its own packet queue, arrival callback, and done state.
+  // Managers are NOT deduped by the full "port:stream" name: every consumer
+  // edge gets its own queue (MediaPipe parity).
+  std::map<std::string, std::vector<InputStreamManager*>> node_input_managers;
   for (const auto& ndef : config_.nodes) {
+    auto* node = FindNode(ndef.name);
+    if (!node) continue;
+    std::vector<InputStreamManager*>& node_managers =
+        node_input_managers[ndef.name];
     for (const auto& input_stream : ndef.input_streams) {
-      if (stream_managers_.find(input_stream) != stream_managers_.end()) continue;
-
-      auto* node = FindNode(ndef.name);
-      if (!node) continue;
-
       auto mgr = std::make_unique<InputStreamManager>(input_stream);
       auto* raw = mgr.get();
       node->SetInputPort(PortName(input_stream), raw);
+      node_managers.push_back(raw);
       owned_stream_managers_.push_back(std::move(mgr));
-      stream_managers_[input_stream] = raw;
     }
   }
 
@@ -119,52 +127,47 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config,
   }
 
   // Wire backpressure callbacks and arrival callbacks on each input stream.
+  // Each callback is bound to the owning node's OWN manager, so a consumer is
+  // never scheduled through another consumer's queue (the pre-fix bug where a
+  // later-declared consumer's registration overwrote the earlier one's).
   for (const auto& ndef : config_.nodes) {
-    for (const auto& input_stream : ndef.input_streams) {
-      auto it = stream_managers_.find(input_stream);
-      if (it != stream_managers_.end()) {
-        auto* mgr = it->second;
-        mgr->SetQueueSizeCallbacks(
-            [this](InputStreamManager* m, bool*) { OnInputStreamFull(m); },
-            [this](InputStreamManager* m, bool*) { OnInputStreamNotFull(m); });
+    auto* node = FindNode(ndef.name);
+    if (!node) continue;
+    auto it = node_input_managers.find(ndef.name);
+    if (it == node_input_managers.end()) continue;
+    for (auto* mgr : it->second) {
+      mgr->SetQueueSizeCallbacks(
+          [this](InputStreamManager* m, bool*) { OnInputStreamFull(m); },
+          [this](InputStreamManager* m, bool*) { OnInputStreamNotFull(m); });
 
-        // When a packet arrives on this stream, schedule the owning node.
-        // No IsRunning() check here: SchedulerQueue::AddNode queues the item
-        // while paused and submits it to the executor on Resume (MediaPipe
-        // model), so buffered packets are not lost across pause/resume.
-        auto* owning_node = FindNode(ndef.name);
-        if (owning_node) {
-          mgr->SetArrivalCallback([owning_node]() {
-            auto* q = owning_node->GetSchedulerQueue();
-            if (q) {
-              q->AddNode(owning_node);
-            }
-          });
+      // When a packet arrives on this stream, schedule the owning node.
+      // No IsRunning() check here: SchedulerQueue::AddNode queues the item
+      // while paused and submits it to the executor on Resume (MediaPipe
+      // model), so buffered packets are not lost across pause/resume.
+      mgr->SetArrivalCallback([node]() {
+        auto* q = node->GetSchedulerQueue();
+        if (q) {
+          q->AddNode(node);
         }
-      }
+      });
     }
   }
 
-  // Create InputStreamHandler for each node based on config.
+  // Create one InputStreamHandler per node. Each handler collects ONLY that
+  // node's own managers, in input_streams declaration order (mirror id = input
+  // index), so AddPacketsToStream(id) routes to managers_[id] of this node.
   for (const auto& ndef : config_.nodes) {
     if (ndef.input_streams.empty()) continue;
 
     auto* node = FindNode(ndef.name);
     if (!node) continue;
 
-    // Collect managers from the node's input ports.
-    std::vector<InputStreamManager*> mgrs;
-    for (const auto& is : ndef.input_streams) {
-      auto it = stream_managers_.find(is);
-      if (it != stream_managers_.end()) {
-        mgrs.push_back(it->second);
-      }
-    }
-    if (mgrs.empty()) continue;
+    auto it = node_input_managers.find(ndef.name);
+    if (it == node_input_managers.end() || it->second.empty()) continue;
 
     auto handler = CreateInputStreamHandler(ndef.input_stream_handler,
                                             ndef.max_in_flight);
-    handler->SetInputStreamManagers(mgrs);
+    handler->SetInputStreamManagers(it->second);
     owned_input_stream_handlers_.push_back(std::move(handler));
     node->SetInputStreamHandler(owned_input_stream_handlers_.back().get());
   }
@@ -173,6 +176,10 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config,
   // producer's OutputStreamManager so packets flow producer → consumer without
   // external injection. The stream part of "port:stream" links consumer inputs
   // to producer outputs (mirror id = input index in the consumer's handler).
+  // Each consumer has its OWN InputStreamHandler over its OWN per-edge
+  // managers (created above), so registering a mirror per (consumer, input
+  // edge) fans every produced packet out to each consumer's own queue —
+  // PropagateUpdatesToMirrors copies to N-1 mirrors and moves to the last.
   std::map<std::string, OutputStreamManager*> output_by_stream;
   for (const auto& ndef : config_.nodes) {
     auto* node = FindNode(ndef.name);
@@ -181,6 +188,18 @@ absl::Status GraphRuntime::Initialize(const GraphConfig& config,
     for (size_t i = 0; i < ndef.output_streams.size() && i < mgrs.size(); ++i) {
       output_by_stream[StreamName(ndef.output_streams[i])] = mgrs[i];
     }
+  }
+  // Graph inputs are modeled as virtual source output managers (Plan B /
+  // MediaPipe GraphInputStream): each config.input_streams entry becomes an
+  // OutputStreamManager that mirrors out to every consumer. They join
+  // output_by_stream so the common mirror-wiring loop below fans each injected
+  // packet out to all consumers (FR-005/006/009, SC-002).
+  for (const auto& stream : config_.input_streams) {
+    auto mgr = std::make_unique<OutputStreamManager>(stream);
+    auto* raw = mgr.get();
+    owned_output_stream_managers_.push_back(std::move(mgr));
+    graph_input_outputs_[stream] = raw;
+    output_by_stream[stream] = raw;
   }
   for (const auto& ndef : config_.nodes) {
     if (ndef.input_streams.empty()) continue;
@@ -277,26 +296,27 @@ absl::Status GraphRuntime::Resume() {
 
 absl::Status GraphRuntime::AddPacketToInputStream(
     const std::string& stream_name, Packet packet) {
-  auto it = stream_managers_.find(stream_name);
-  if (it == stream_managers_.end()) {
+  auto it = graph_input_outputs_.find(stream_name);
+  if (it == graph_input_outputs_.end()) {
     return absl::NotFoundError(
         absl::StrCat("Unknown input stream: ", stream_name));
   }
 
-  // Throttle check: if queue is full, reject
-  if (it->second->IsFull()) {
-    return absl::UnavailableError(
-        absl::StrCat("Input stream is full: ", stream_name));
+  auto* mgr = it->second;
+  if (mgr->IsClosed()) {
+    return absl::FailedPreconditionError(
+        absl::StrCat("Input stream is closed: ", stream_name));
   }
 
-  std::list<Packet> packets;
-  packets.push_back(std::move(packet));
-  bool notify = false;
-  absl::Status st = it->second->AddPackets(packets, &notify);
-  if (!st.ok()) return st;
+  // Inject into the virtual source output manager and propagate to every
+  // mirror (fan-out). Each consumer receives a full independent copy, exactly
+  // like a node-to-node edge (data-model unification, SC-006).
+  OutputStreamShard shard(mgr->Spec());
+  shard.AddPacket(std::move(packet));
+  Timestamp bound =
+      mgr->ComputeOutputTimestampBound(shard, Timestamp::Min());
+  mgr->PropagateUpdatesToMirrors(bound, &shard);
 
-  // Notify the scheduler that a packet arrived. The scheduler will schedule
-  // the owning node.
   scheduler_->AddedPacketToInputStream();
   return absl::OkStatus();
 }
@@ -309,8 +329,8 @@ absl::Status GraphRuntime::AddPacketToInputStream(
 
 absl::Status GraphRuntime::CloseInputStream(
     const std::string& stream_name) {
-  auto it = stream_managers_.find(stream_name);
-  if (it == stream_managers_.end()) {
+  auto it = graph_input_outputs_.find(stream_name);
+  if (it == graph_input_outputs_.end()) {
     return absl::NotFoundError(
         absl::StrCat("Unknown input stream: ", stream_name));
   }
@@ -320,6 +340,8 @@ absl::Status GraphRuntime::CloseInputStream(
     return absl::OkStatus();
   }
 
+  // Close the virtual source manager → Done broadcast to all mirrors, so each
+  // consumer observes its input done and finalizes (FR-007).
   it->second->Close();
   closed_streams_.insert(stream_name);
   scheduler_->IncClosedGraphInputStreams();

@@ -252,9 +252,11 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   // codec-buffered frames) BEFORE its output streams are closed — otherwise
   // the finalize output (Flush packets) is dropped by the closed shard. This
   // mirrors MediaPipe: a node finalizes (kReadyForClose -> EndScheduling) and
-  // only then are its output streams closed.
+  // only then are its output streams closed. Output-less consumers (sinks)
+  // are included: they still need a final Process to observe input-done, so
+  // completion semantics hold for the last node of a fan-out branch too.
   bool all_inputs_done = false;
-  if (node->input_port_count() > 0 && node->GetOutputStreamHandler()) {
+  if (node->input_port_count() > 0) {
     all_inputs_done = true;
     for (const auto& [name, mgr] : node->InputPorts()) {
       if (!mgr->IsDone()) {
@@ -264,22 +266,33 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
     }
   }
 
-  // Decide close_pending_ transitions UNDER THE LOCK, but do not call AddNode
-  // here (it checks pending_count, which is still 1 until DecrementPending
-  // below). Store the action; apply it after DecrementPending.
+  // Decide close_pending_/finalized_nodes_ transitions UNDER THE LOCK (the
+  // queue's workers may run different nodes concurrently), but do not call
+  // AddNode here (it checks pending_count, which is still 1 until
+  // DecrementPending below). Store the action; apply it after DecrementPending.
+  // finalized_nodes_ marks nodes whose done-observation + close is complete, so
+  // a node whose inputs became done mid-run (and whose done-signal arrival may
+  // have been dropped by the MaxInFlight gate) is guaranteed exactly one
+  // finalize.
   enum class FinalizeAction { kNone, kSchedule, kClose };
   FinalizeAction action = FinalizeAction::kNone;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (all_inputs_done && close_pending_.count(node) == 0) {
-      // First time observing done: schedule the node once more so it can
-      // finalize (Flush) while its outputs are still open, then close later.
-      close_pending_.insert(node);
-      action = FinalizeAction::kSchedule;
-    } else if (close_pending_.erase(node) > 0) {
-      // The node has finalized (its done Process ran); now it is safe to close
-      // its output streams so downstream sees Done and can also finalize.
-      action = FinalizeAction::kClose;
+    const bool already_finalized = finalized_nodes_.count(node) > 0;
+    if (node->input_port_count() > 0 && all_inputs_done &&
+        !already_finalized) {
+      if (close_pending_.count(node) == 0) {
+        // First time observing done: schedule the node once more so it can
+        // finalize (Flush) while its outputs are still open, then close later.
+        close_pending_.insert(node);
+        action = FinalizeAction::kSchedule;
+      } else if (close_pending_.erase(node) > 0) {
+        // The node has finalized (its done Process ran); now it is safe to
+        // close its output streams so downstream sees Done and can also
+        // finalize.
+        finalized_nodes_.insert(node);
+        action = FinalizeAction::kClose;
+      }
     }
   }
 
@@ -290,7 +303,9 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   }
 
   if (action == FinalizeAction::kClose) {
-    node->GetOutputStreamHandler()->Close(&outputs);
+    if (node->GetOutputStreamHandler()) {
+      node->GetOutputStreamHandler()->Close(&outputs);
+    }
   } else if (action == FinalizeAction::kSchedule) {
     auto* q = node->GetSchedulerQueue();
     if (q) q->AddNode(node);
@@ -320,6 +335,29 @@ void SchedulerQueue::RunNode(Node* node, bool is_open) {
   if (node->input_port_count() == 0) {
     auto* q = node->GetSchedulerQueue();
     if (q) q->AddNode(node);
+  }
+
+  // Safety net: if this run did NOT already schedule a finalize, and the node's
+  // inputs all became done during it (the done-signal arrival can be dropped by
+  // the MaxInFlight gate above while this run was in flight), schedule a single
+  // finalize run so the node observes input-done exactly once. Without this, a
+  // fan-out consumer can idle with its inputs done but never finalize, and the
+  // graph can fail to drain/terminate. finalized_nodes_ + close_pending_ dedup
+  // so this cannot loop.
+  if (node->input_port_count() > 0 &&
+      action != FinalizeAction::kSchedule &&
+      !IsFinalized(node)) {
+    bool all_done = true;
+    for (const auto& [name, mgr] : node->InputPorts()) {
+      if (!mgr->IsDone()) {
+        all_done = false;
+        break;
+      }
+    }
+    if (all_done) {
+      auto* q = node->GetSchedulerQueue();
+      if (q) q->AddNode(node);
+    }
   }
 }
 

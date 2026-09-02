@@ -170,6 +170,34 @@ cc_test(
 
 cc_test(
     size = "small",
+    name = "fanout_repro_test",
+    srcs = ["fanout_repro_test.cc"],
+    linkstatic = 1,
+    deps = [
+        "@graph_runtime//src/framework/node:graph_context",
+        "@graph_runtime//src/framework/node:node_factory_registry",
+        "@graph_runtime//src/framework/public:runtime",
+        "@graph_runtime//src/framework/stream:packet",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    size = "small",
+    name = "fanout_graph_test",
+    srcs = ["fanout_graph_test.cc"],
+    linkstatic = 1,
+    deps = [
+        "@graph_runtime//src/framework/node:graph_context",
+        "@graph_runtime//src/framework/node:node_factory_registry",
+        "@graph_runtime//src/framework/public:runtime",
+        "@graph_runtime//src/framework/stream:packet",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    size = "small",
     name = "logger_test",
     srcs = ["logger_test.cc"],
     linkstatic = 1,

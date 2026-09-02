@@ -84,6 +84,15 @@ class SchedulerQueue : public TaskQueue {
     return num_pending_tasks_;
   }
 
+  // True if the node has completed its done-observation/finalize+close
+  // sequence (see finalized_nodes_). Used by the scheduler to guarantee the
+  // graph never terminates while a consumer has done+empty inputs but has not
+  // yet observed input-done.
+  bool IsFinalized(Node* node) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return finalized_nodes_.count(node) > 0;
+  }
+
  private:
   void SubmitToExecutor();
   void RunNode(Node* node, bool is_open);
@@ -103,6 +112,10 @@ class SchedulerQueue : public TaskQueue {
   // Process (e.g. an encoder Flush). They are scheduled once more with outputs
   // still open, then their output streams are closed (see RunNode).
   std::set<Node*> close_pending_;
+  // Nodes that have completed their done-observation/finalize sequence. They
+  // must not be re-scheduled for finalize again (prevents a runaway loop when
+  // the done-signal arrival was dropped by the MaxInFlight gate mid-run).
+  std::set<Node*> finalized_nodes_;
   int num_pending_tasks_ = 0;
   int64_t timestamp_counter_ = 0;
 };

@@ -16,6 +16,17 @@ Scheduler::Scheduler() {
   all_queues_.push_back(&default_queue_);
 }
 
+Scheduler::~Scheduler() {
+  // Drop the executors (joining their worker threads and draining any queued
+  // tasks) BEFORE the SchedulerQueues they reference are destroyed. The
+  // ThreadPool destructor runs remaining tasks after `stopped_`; if the queues
+  // were already freed, a worker would call RunNextTask on a destroyed queue
+  // (SEGV). Nodes are still alive here (GraphRuntime resets the scheduler
+  // before freeing all_nodes_), so in-flight RunNode tasks complete safely.
+  non_default_executors_.clear();
+  default_executor_.reset();
+}
+
 void Scheduler::SetInputStreamHandler(
     std::unique_ptr<InputStreamHandler> handler) {
   input_stream_handler_ = std::move(handler);
@@ -195,6 +206,30 @@ Scheduler::DrainStatus Scheduler::DrainInputQueues() {
       }
     }
     return DrainStatus::kScheduled;
+  }
+
+  // All input queues are empty. A consumer may still not have OBSERVED the
+  // done signal: the done-signal arrival can be dropped by the MaxInFlight
+  // gate while its last packet-drain run was in flight, leaving the node idle
+  // with done+empty inputs but unfinalized. The graph must not terminate
+  // before every such node runs its finalize Process (observes input-done), so
+  // schedule it and defer termination (MediaPipe kReadyForClose semantics).
+  for (auto* node : all_nodes_) {
+    if (node->input_port_count() == 0) continue;
+    bool all_done = true;
+    for (const auto& [name, mgr] : node->InputPorts()) {
+      if (!mgr->IsDone()) {
+        all_done = false;
+        break;
+      }
+    }
+    if (all_done) {
+      auto* q = node->GetSchedulerQueue();
+      if (q && !q->IsFinalized(node)) {
+        q->AddNode(node);
+        return DrainStatus::kScheduled;
+      }
+    }
   }
 
   return all_inputs_done ? DrainStatus::kDrained : DrainStatus::kNotDone;
